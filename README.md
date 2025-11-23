@@ -3,5 +3,5 @@
 <img src="./assets/kitsu.svg" height=200 width=200 align=center />
 </p>
 <p align="center">
-Kitsu is a cute, fox-powered GitHub Action that helps maintain your project by reviewing pull requests, generating summaries, and auto-triaging issues.
+Kitsu is your friendly open-source co-maintainer — reviewing PRs, summarizing changes, and auto-triaging issues to keep your projects healthy and organized.
 </p>
