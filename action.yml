@@ -1,0 +1,19 @@
+name: kitsu
+description: AI powered co-maintainer for your GitHub projects
+
+inputs:
+  name:
+    description: Who to greet
+    default: ${{ github.actor }}
+
+outputs:
+  time:
+    description: The time we greeted you
+
+runs:
+  using: composite
+  steps:
+    - name: Make binary executable
+      run: chmod +x ./kitsu
+    - name: Run kitsu
+      run: ./kitsu
