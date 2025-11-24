@@ -15,5 +15,7 @@ runs:
   steps:
     - name: Make binary executable
       run: chmod +x ./kitsu
+      shell: bash
     - name: Run kitsu
       run: ./kitsu
+      shell: bash
