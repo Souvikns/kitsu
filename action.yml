@@ -2,9 +2,17 @@ name: kitsu
 description: AI powered co-maintainer for your GitHub projects
 
 inputs:
-  name:
-    description: Who to greet
-    default: ${{ github.actor }}
+  provider:
+    description: AI provider to use (openai or gemini)
+    required: true
+    default: 'openai'
+  api_key:
+    description: API key for the selected provider
+    required: true
+  model:
+    description: Model name to be used with the provider
+    required: true
+    default: gpt-4o-mini
 
 outputs:
   time:
