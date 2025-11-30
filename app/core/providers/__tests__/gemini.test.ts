@@ -1,5 +1,5 @@
 import GeminiProvider from "../gemini";
-import {fetchRawPatch} from '../../../github/utils';
+import { fetchRawPatch } from '../../../github/utils';
 
 describe('Gemini Provider', () => {
     it('Should load API KEY', () => {

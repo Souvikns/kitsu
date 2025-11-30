@@ -1,4 +1,4 @@
-import {fetchRawPatch} from '../utils';
+import { fetchRawPatch } from '../utils';
 
 describe('GitHub utils ', () => {
     it('Should fetch pr patch', async () => {
