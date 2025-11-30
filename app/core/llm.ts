@@ -1,4 +1,4 @@
 
 export interface LLMProvider {
-    generateSummary(diff: string): Promise<string>
+    generateSummary(prompt: Array<any>): Promise<string>
 }

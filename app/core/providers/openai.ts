@@ -11,7 +11,7 @@ class OpenAIProvider implements LLMProvider {
         })
     }
 
-    generateSummary(diff: string): Promise<string> {
+    generateSummary(prompt: Array<any>): Promise<string> {
         throw new Error('Method not implemented.');
     }
 }
