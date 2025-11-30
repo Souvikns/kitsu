@@ -1,19 +1,19 @@
 export class LLMProvider {
-    generateSummary(prompt: Array<any>): Promise<string> {
-        throw new Error("Method not implemented.");
-    }
+  generateSummary(patch: string): Promise<string> {
+    throw new Error("Method not implemented.");
+  }
 
-    static summaryPrompt(patch: string) {
-        let system = {
-            role: 'system',
-            content: `You are an expert software engineer who specializes in reading GitHub pull request patches.
+  protected summaryPrompt(patch: string): Array<any> {
+    let system = {
+      role: "system",
+      content: `You are an expert software engineer who specializes in reading GitHub pull request patches.
 Your job is to analyze a given patch file and produce a clear, concise, and technically accurate summary.
 You must understand file-level changes, code modifications, additions, deletions, and overall intent.
-`
-        }
-        let user = {
-            role: 'human',
-            content: `You are given a GitHub Pull Request patch file.
+`,
+    };
+    let user = {
+      role: "human",
+      content: `You are given a GitHub Pull Request patch file.
 
 Your tasks:
 1. Provide an overall high-level summary of what the PR does.
@@ -31,8 +31,8 @@ Your tasks:
 Here is the patch file:
 
 {${patch}}
-`
-        }
-        return [system, user];
-    }
+`,
+    };
+    return [system, user];
+  }
 }

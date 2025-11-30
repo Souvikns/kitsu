@@ -2,7 +2,7 @@ import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { LLMProvider } from '../llm';
 
 
-class GeminiProvider extends LLMProvider {
+export class GeminiProvider extends LLMProvider {
     private gemini
 
     constructor(apikey: string, model: string) {
@@ -13,11 +13,10 @@ class GeminiProvider extends LLMProvider {
         })
     }
 
-    override async generateSummary(prompt: Array<any>): Promise<string> {
+    override async generateSummary(patch: string): Promise<string> {
+        let prompt = this.summaryPrompt(patch);
         const llmResponse = await this.gemini.invoke(prompt);
 
         return llmResponse.content as string;
     }
 }
-
-export default GeminiProvider;
