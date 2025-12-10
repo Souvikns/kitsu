@@ -1,6 +1,11 @@
-export class LLMProvider {
+export interface ProviderParams {
+  apikey: string;
+  model: string;
+}
+
+export class Provider {
   generateSummary(patch: string): Promise<string> {
-    throw new Error("Method not implemented.");
+    throw new Error("Method not implemented");
   }
 
   protected summaryPrompt(patch: string): Array<any> {
