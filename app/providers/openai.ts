@@ -1,14 +1,14 @@
+import { Provider, type ProviderParams } from "../models/provider";
 import { ChatOpenAI } from "@langchain/openai";
-import { LLMProvider } from "../llm";
 
-export class OpenAIProvider extends LLMProvider {
+export class OpenAIProvider extends Provider {
   private openai;
 
-  constructor(apikey: string, model: string) {
+  constructor(params: ProviderParams) {
     super();
     this.openai = new ChatOpenAI({
-      apiKey: apikey,
-      model: model,
+      apiKey: params.apikey,
+      model: params.model,
     });
   }
 
