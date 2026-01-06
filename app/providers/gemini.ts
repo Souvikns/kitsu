@@ -12,10 +12,8 @@ export class GeminiProvider extends Provider {
     });
   }
 
-  override async generateSummary(patch: string): Promise<string> {
-    let prompt = this.summaryPrompt(patch);
+  protected override async invokeModel(prompt: Array<any>): Promise<string> {
     const llmResponse = await this.gemini.invoke(prompt);
-
     return llmResponse.content as string;
   }
 }
