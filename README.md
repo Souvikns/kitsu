@@ -13,17 +13,20 @@ Kitsu is your friendly open-source co-maintainer — reviewing PRs, summarizing 
   - [Adding `env` Variables](#adding-env-variables)
 - [Reporting Issues](#reporting-issues)
 - [Contributing](#contributing)
-  - [Contributing Guide](#contributing-guide)
-    - [Getting Started Quick](#getting-started-quick)
+  - [Prerequisites](#prerequisites)
+  - [Local Setup](#local-setup)
+  - [Running Tests](#running-tests)
+  - [Submitting Changes](#submitting-changes)
 - [Community Support](#community-support)
 
 ## Setup Guide
 
-To use Kitsu in all it's glory you need to write a GitHub workflow and with your own API Keys.
+To use Kitsu you only need a GitHub repository where you want the action to run and an API key for your preferred AI provider. The steps below will add a minimal workflow you can tweak later.
 
 ### Setting up GitHub Workflow
 
-Create a file `kitsu.yml` in the folder `.github/workflows` and add these lines
+1. Create a repository secret named `KITSU_API_KEY` that stores your provider API key.
+2. Create a file `.github/workflows/kitsu.yml` and add the workflow below. Update the `uses` version to a published tag when one is available.
 
 ```yaml
 name: Kitsu AI Maintainer
@@ -41,12 +44,19 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Use Kitsu Action
-        uses: your-org/kitsu@v1
+        uses: Souvikns/kitsu@v1
         with:
           provider: openai
           api_key: ${{ secrets.KITSU_API_KEY }}
           model: gpt-4o-mini
 ```
+
+3. Commit the workflow to the branch where you want Kitsu to run. The action currently triggers on `pull_request` events and will execute with the inputs you provide.
+
+Notes:
+
+- Set `provider` to either `openai` or `gemini` depending on which key you have available.
+- `model` defaults to `gpt-4o-mini` for OpenAI; choose a compatible model name for the provider you select.
 
 ### Adding `env` variables
 
@@ -55,34 +65,38 @@ You need to setup some `env` variables for the workflow to run.
 | variable name | description                         | Required |
 | ------------- | ----------------------------------- | -------- |
 | provider      | `openai` or `gemini`                | `true`   |
-| api_key       | api key of your respective service  | `true`   |
-| model         | model name you want to kitsu to use | `true`   |
+| api_key       | API key of your respective service  | `true`   |
+| model         | Model name you want Kitsu to use    | `true`   |
 
 ## Reporting Issues
 
-Currently `Kitsu` is under development and it will have a lot of bugs, that we will be fixing as they come up. Feel free to let us know if you encounter any bug, it would help get the tool better. To report a bug just open a [issue](https://github.com/Souvikns/kitsu/issues) describing the bug.
+Currently `Kitsu` is under development and it will have a lot of bugs, that we will be fixing as they come up. Feel free to let us know if you encounter any bug, it would help get the tool better. To report a bug just open an [issue](https://github.com/Souvikns/kitsu/issues) describing the bug.
 
 ## Contributing
 
-Please take a moment to read our [contributing guide](#contributing-guide) to learn about our development process. It woud be adviced to open a [issues](https://github.com/Souvikns/kitsu/issues) first to discuss potential changes/additions.
+Please take a moment to read our contributing guide to learn about our development process. It would be advised to open an [issue](https://github.com/Souvikns/kitsu/issues) first to discuss potential changes/additions.
 
-### Contributing Guide
+### Prerequisites
 
-This project is built using [bun](https://bun.sh/) and [nodejs](https://nodejs.org) so go head and get those for your respective system.
+- [bun](https://bun.sh/) for dependency installation and running scripts
+- [Node.js](https://nodejs.org) v18 or newer
+- [git](https://git-scm.com/) for version control
 
-#### Getting Started Quick
+### Local Setup
 
-In order to contribute to this project, you should:
+1. Fork this repository and clone your fork locally.
+2. Install dependencies with `bun install` in the project directory.
+3. Create a new branch with a meaningful name for your change.
 
-1. Clone this repository from your fork
-2. Run `npm install` in the project directory to install all the requried dependencies. (You have to have npm on your system, if you have nodejs you most probably have npm installed as well)
-3. Create a new branch with a meaningful name.
-4. Develop a new feature or fix a bug you want.
-5. Open a pull request to the `main` branch
+### Running Tests
 
-- Remember to build and package the code before you commit run -
-  - `npm run build`
-  - `npm run package`
+- Use `bun run test` to execute the Jest suite. Ensure tests pass before opening a pull request.
+
+### Submitting Changes
+
+1. Commit your work following conventional commit messages where possible.
+2. Push your branch and open a pull request against the `main` branch.
+3. Provide a clear description of the change and any steps to verify it.
 
 ## Community Support
 
