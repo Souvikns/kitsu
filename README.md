@@ -44,7 +44,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Use Kitsu Action
-        uses: Souvikns/kitsu@v1
+        uses: Souvikns/kitsu@main
         with:
           provider: openai
           api_key: ${{ secrets.KITSU_API_KEY }}
