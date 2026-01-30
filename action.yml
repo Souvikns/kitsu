@@ -17,13 +17,14 @@ inputs:
 outputs:
   time:
     description: The time we greeted you
+    value: something...
 
 runs:
   using: composite
   steps:
     - name: Make binary executable
-      run: chmod +x ./kitsu
+      run: chmod +x "$GITHUB_ACTION_PATH/kitsu"
       shell: bash
     - name: Run kitsu
-      run: ./kitsu
+      run: "$GITHUB_ACTION_PATH/kitsu"
       shell: bash
