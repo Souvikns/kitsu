@@ -4,7 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "bun x jest"
+    "test": "bun x jest",
+    "build": "bun build app/main.ts --target=node --outfile=dist/index.js"
   },
   "devDependencies": {
     "@types/bun": "latest",
