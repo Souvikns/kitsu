@@ -74,19 +74,6 @@ const main = async () => {
     }),
     new GithubPlatform()
   );
-  let { makeComment, summary } = await kitsu.generatePatchSummary({
-    owner: inputs.owner,
-    pullno: inputs.prNumber,
-    repo: inputs.repo,
-  });
-
-  makeComment({
-    owner: inputs.owner,
-    pullNo: inputs.prNumber,
-    repo: inputs.repo,
-    token: process.env.GITHUB_TOKEN || "",
-    summary: summary,
-  });
 
   const agent = new Agent(
     getAgentModel(inputs.provider, {
