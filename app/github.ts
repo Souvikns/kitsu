@@ -1,4 +1,9 @@
-import { Platform, type CommentInPrParams, type FetchRawPatchParams} from "./models/platform";
+import {
+  Platform,
+  type CommentInPrParams,
+  type FetchRawPatchParams,
+  type CreateReviewCommentParams,
+} from "./models/platform";
 import { Octokit } from "@octokit/rest";
 
 export class GithubPlatform extends Platform {
@@ -18,11 +23,50 @@ export class GithubPlatform extends Platform {
     try {
       const octokit = new Octokit({ auth: params.token });
 
-      await octokit.issues.createComment({
+      await octokit.rest.issues.createComment({
         owner: params.owner,
         repo: params.repo,
         issue_number: params.pullNo,
         body: params.summary,
+      });
+    } catch (error: any) {
+      throw new Error(error);
+    }
+  }
+
+  override async createReviewComment(
+    params: CreateReviewCommentParams,
+  ): Promise<void> {
+    try {
+      const octokit = new Octokit({ auth: params.token });
+
+      const hasPosition = typeof params.position === "number";
+      const hasLine = typeof params.line === "number";
+      const hasSide = typeof params.side === "string";
+
+      if (!hasPosition && !(hasLine && hasSide)) {
+        throw new Error(
+          "Review comment requires either position or line+side per GitHub API.",
+        );
+      }
+
+      const location = hasPosition
+        ? { position: params.position }
+        : {
+            line: params.line,
+            side: params.side,
+            start_line: params.startLine,
+            start_side: params.startSide,
+          };
+
+      await octokit.rest.pulls.createReviewComment({
+        owner: params.owner,
+        repo: params.repo,
+        pull_number: params.pullNo,
+        body: params.body,
+        commit_id: params.commitId,
+        path: params.path,
+        ...location,
       });
     } catch (error: any) {
       throw new Error(error);
