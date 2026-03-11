@@ -22,9 +22,6 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Make binary executable
-      run: chmod +x "$GITHUB_ACTION_PATH/kitsu"
-      shell: bash
     - name: Run kitsu
-      run: "$GITHUB_ACTION_PATH/kitsu"
-      shell: bash
+      using: 'node20'
+      main: 'dist/index.js'
