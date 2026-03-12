@@ -8,7 +8,28 @@ import { Octokit } from "@octokit/rest";
 
 export class GithubPlatform extends Platform {
   override async fetchRawPatch(params: FetchRawPatchParams): Promise<string> {
-    let url = `https://patch-diff.githubusercontent.com/raw/${params.owner}/${params.repo}/pull/${params.pullno}.patch`;
+    const url = `https://patch-diff.githubusercontent.com/raw/${params.owner}/${params.repo}/pull/${params.pullno}.patch`;
+
+    if (params.token) {
+      const octokit = new Octokit({ auth: params.token });
+      const res = await octokit.request(
+        "GET /repos/{owner}/{repo}/pulls/{pull_number}",
+        {
+          owner: params.owner,
+          repo: params.repo,
+          pull_number: params.pullno,
+          headers: {
+            accept: "application/vnd.github.v3.patch",
+          },
+        },
+      );
+
+      if (typeof res.data !== "string" || !(res.data as string).trim()) {
+        throw new Error("Error fetching raw patch file from GitHub API.");
+      }
+
+      return res.data;
+    }
 
     const res = await fetch(url);
     if (!res.ok) {
@@ -21,6 +42,11 @@ export class GithubPlatform extends Platform {
 
   override async commentInPr(params: CommentInPrParams): Promise<void> {
     try {
+      if (!params.token) {
+        throw new Error(
+          "Missing GitHub token. Provide github_token input or GITHUB_TOKEN env.",
+        );
+      }
       const octokit = new Octokit({ auth: params.token });
 
       await octokit.rest.issues.createComment({
@@ -38,6 +64,11 @@ export class GithubPlatform extends Platform {
     params: CreateReviewCommentParams,
   ): Promise<void> {
     try {
+      if (!params.token) {
+        throw new Error(
+          "Missing GitHub token. Provide github_token input or GITHUB_TOKEN env.",
+        );
+      }
       const octokit = new Octokit({ auth: params.token });
 
       const hasPosition = typeof params.position === "number";

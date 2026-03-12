@@ -25,6 +25,7 @@ function getInputs() {
   let provider = core.getInput("provider");
   let apiKey = core.getInput("api_key");
   let model = core.getInput("model");
+  let githubToken = core.getInput("github_token") || process.env.GITHUB_TOKEN;
 
   return {
     owner,
@@ -34,6 +35,7 @@ function getInputs() {
     provider,
     apiKey,
     model,
+    githubToken,
   };
 }
 
@@ -87,7 +89,7 @@ const main = async () => {
     owner: inputs.owner,
     repo: inputs.repo,
     pullNo: inputs.prNumber,
-    token: process.env.GITHUB_TOKEN || "",
+    token: inputs.githubToken || "",
     commitId: inputs.commitId,
   });
 };

@@ -13,6 +13,9 @@ inputs:
     description: Model name to be used with the provider
     required: true
     default: gpt-4o-mini
+  github_token:
+    description: GitHub token with permission to comment on PRs (e.g. secrets.GITHUB_TOKEN)
+    required: true
 
 outputs:
   time:

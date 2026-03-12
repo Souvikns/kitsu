@@ -28,6 +28,7 @@ export class Agent {
       owner: params.owner,
       repo: params.repo,
       pullno: params.pullNo,
+      token: params.token,
     });
 
     const fallbackLocation = this.pickReviewLocation(patch);
