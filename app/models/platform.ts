@@ -7,9 +7,10 @@ export interface CommentInPrParams {
 }
 
 export interface FetchRawPatchParams {
-  owner: string,
-  repo: string,
-  pullno: number
+  owner: string;
+  repo: string;
+  pullno: number;
+  token?: string;
 }
 
 export interface CreateReviewCommentParams {

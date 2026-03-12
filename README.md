@@ -38,6 +38,8 @@ on:
 jobs:
   run-kitsu:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
 
     steps:
       - name: Checkout repository
@@ -49,6 +51,7 @@ jobs:
           provider: openai
           api_key: ${{ secrets.KITSU_API_KEY }}
           model: gpt-4o-mini
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 3. Commit the workflow to the branch where you want Kitsu to run. The action currently triggers on `pull_request` events and will execute with the inputs you provide.
@@ -57,6 +60,7 @@ Notes:
 
 - Set `provider` to either `openai` or `gemini` depending on which key you have available.
 - `model` defaults to `gpt-4o-mini` for OpenAI; choose a compatible model name for the provider you select.
+- `github_token` is required to post PR comments. Use `${{ secrets.GITHUB_TOKEN }}` or a PAT.
 
 ### Adding `env` variables
 
@@ -67,6 +71,7 @@ You need to setup some `env` variables for the workflow to run.
 | provider      | `openai` or `gemini`                | `true`   |
 | api_key       | API key of your respective service  | `true`   |
 | model         | Model name you want Kitsu to use    | `true`   |
+| github_token  | GitHub token to comment on PRs      | `true`   |
 
 ## Reporting Issues
 
