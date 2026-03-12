@@ -20,8 +20,5 @@ outputs:
     value: something...
 
 runs:
-  using: composite
-  steps:
-    - name: Run kitsu
-      using: 'node20'
-      main: 'dist/index.js'
+  using: node20
+  main: dist/index.js
