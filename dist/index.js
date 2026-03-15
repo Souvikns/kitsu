@@ -28632,34 +28632,34 @@ var require_dist6 = __commonJS((exports) => {
   }
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/max.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/max.js
 var require_max6 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.default = undefined;
-  var _default8 = exports.default = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+  var _default7 = exports.default = "ffffffff-ffff-ffff-ffff-ffffffffffff";
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/nil.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/nil.js
 var require_nil6 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.default = undefined;
-  var _default8 = exports.default = "00000000-0000-0000-0000-000000000000";
+  var _default7 = exports.default = "00000000-0000-0000-0000-000000000000";
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/regex.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/regex.js
 var require_regex6 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.default = undefined;
-  var _default8 = exports.default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/i;
+  var _default7 = exports.default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/i;
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/validate.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/validate.js
 var require_validate6 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -28672,10 +28672,10 @@ var require_validate6 = __commonJS((exports) => {
   function validate13(uuid9) {
     return typeof uuid9 === "string" && _regex4.default.test(uuid9);
   }
-  var _default8 = exports.default = validate13;
+  var _default7 = exports.default = validate13;
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/parse.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/parse.js
 var require_parse8 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -28685,7 +28685,7 @@ var require_parse8 = __commonJS((exports) => {
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
-  function parse21(uuid9) {
+  function parse19(uuid9) {
     if (!(0, _validate.default)(uuid9)) {
       throw TypeError("Invalid UUID");
     }
@@ -28709,10 +28709,10 @@ var require_parse8 = __commonJS((exports) => {
     arr5[15] = v & 255;
     return arr5;
   }
-  var _default8 = exports.default = parse21;
+  var _default7 = exports.default = parse19;
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/stringify.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/stringify.js
 var require_stringify6 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -28737,10 +28737,10 @@ var require_stringify6 = __commonJS((exports) => {
     }
     return uuid9;
   }
-  var _default8 = exports.default = stringify8;
+  var _default7 = exports.default = stringify8;
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/rng.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/rng.js
 var require_rng6 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -28761,14 +28761,14 @@ var require_rng6 = __commonJS((exports) => {
   }
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v1.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/v1.js
 var require_v16 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.default = undefined;
   var _rng = _interopRequireDefault(require_rng6());
-  var _stringify4 = require_stringify6();
+  var _stringify3 = require_stringify6();
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
@@ -28837,40 +28837,40 @@ var require_v16 = __commonJS((exports) => {
     for (let n4 = 0;n4 < 6; ++n4) {
       b[i + n4] = node[n4];
     }
-    return buf || (0, _stringify4.unsafeStringify)(b);
+    return buf || (0, _stringify3.unsafeStringify)(b);
   }
-  var _default8 = exports.default = v16;
+  var _default7 = exports.default = v16;
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v1ToV6.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/v1ToV6.js
 var require_v1ToV66 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.default = v1ToV66;
   var _parse4 = _interopRequireDefault(require_parse8());
-  var _stringify4 = require_stringify6();
+  var _stringify3 = require_stringify6();
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
   function v1ToV66(uuid9) {
     const v1Bytes = typeof uuid9 === "string" ? (0, _parse4.default)(uuid9) : uuid9;
     const v6Bytes = _v1ToV6(v1Bytes);
-    return typeof uuid9 === "string" ? (0, _stringify4.unsafeStringify)(v6Bytes) : v6Bytes;
+    return typeof uuid9 === "string" ? (0, _stringify3.unsafeStringify)(v6Bytes) : v6Bytes;
   }
   function _v1ToV6(v1Bytes, randomize = false) {
     return Uint8Array.of((v1Bytes[6] & 15) << 4 | v1Bytes[7] >> 4 & 15, (v1Bytes[7] & 15) << 4 | (v1Bytes[4] & 240) >> 4, (v1Bytes[4] & 15) << 4 | (v1Bytes[5] & 240) >> 4, (v1Bytes[5] & 15) << 4 | (v1Bytes[0] & 240) >> 4, (v1Bytes[0] & 15) << 4 | (v1Bytes[1] & 240) >> 4, (v1Bytes[1] & 15) << 4 | (v1Bytes[2] & 240) >> 4, 96 | v1Bytes[2] & 15, v1Bytes[3], v1Bytes[8], v1Bytes[9], v1Bytes[10], v1Bytes[11], v1Bytes[12], v1Bytes[13], v1Bytes[14], v1Bytes[15]);
   }
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v35.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/v35.js
 var require_v356 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.URL = exports.DNS = undefined;
   exports.default = v352;
-  var _stringify4 = require_stringify6();
+  var _stringify3 = require_stringify6();
   var _parse4 = _interopRequireDefault(require_parse8());
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
@@ -28910,7 +28910,7 @@ var require_v356 = __commonJS((exports) => {
         }
         return buf;
       }
-      return (0, _stringify4.unsafeStringify)(bytes);
+      return (0, _stringify3.unsafeStringify)(bytes);
     }
     try {
       generateUUID.name = name;
@@ -28921,7 +28921,7 @@ var require_v356 = __commonJS((exports) => {
   }
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/md5.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/md5.js
 var require_md56 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -28939,10 +28939,10 @@ var require_md56 = __commonJS((exports) => {
     }
     return _nodeCrypto.default.createHash("md5").update(bytes).digest();
   }
-  var _default8 = exports.default = md5;
+  var _default7 = exports.default = md5;
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v3.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/v3.js
 var require_v38 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -28954,10 +28954,10 @@ var require_v38 = __commonJS((exports) => {
     return e && e.__esModule ? e : { default: e };
   }
   var v36 = (0, _v.default)("v3", 48, _md.default);
-  var _default8 = exports.default = v36;
+  var _default7 = exports.default = v36;
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/native.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/native.js
 var require_native6 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -28967,12 +28967,12 @@ var require_native6 = __commonJS((exports) => {
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
-  var _default8 = exports.default = {
+  var _default7 = exports.default = {
     randomUUID: _nodeCrypto.default.randomUUID
   };
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v4.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/v4.js
 var require_v46 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -28980,7 +28980,7 @@ var require_v46 = __commonJS((exports) => {
   exports.default = undefined;
   var _native = _interopRequireDefault(require_native6());
   var _rng = _interopRequireDefault(require_rng6());
-  var _stringify4 = require_stringify6();
+  var _stringify3 = require_stringify6();
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
@@ -28999,12 +28999,12 @@ var require_v46 = __commonJS((exports) => {
       }
       return buf;
     }
-    return (0, _stringify4.unsafeStringify)(rnds);
+    return (0, _stringify3.unsafeStringify)(rnds);
   }
-  var _default8 = exports.default = v49;
+  var _default7 = exports.default = v49;
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/sha1.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/sha1.js
 var require_sha16 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -29022,10 +29022,10 @@ var require_sha16 = __commonJS((exports) => {
     }
     return _nodeCrypto.default.createHash("sha1").update(bytes).digest();
   }
-  var _default8 = exports.default = sha1;
+  var _default7 = exports.default = sha1;
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v5.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/v5.js
 var require_v56 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -29037,16 +29037,16 @@ var require_v56 = __commonJS((exports) => {
     return e && e.__esModule ? e : { default: e };
   }
   var v56 = (0, _v.default)("v5", 80, _sha.default);
-  var _default8 = exports.default = v56;
+  var _default7 = exports.default = v56;
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v6.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/v6.js
 var require_v66 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.default = v66;
-  var _stringify4 = require_stringify6();
+  var _stringify3 = require_stringify6();
   var _v = _interopRequireDefault(require_v16());
   var _v1ToV = _interopRequireDefault(require_v1ToV66());
   function _interopRequireDefault(e) {
@@ -29064,39 +29064,39 @@ var require_v66 = __commonJS((exports) => {
       }
       return buf;
     }
-    return (0, _stringify4.unsafeStringify)(bytes);
+    return (0, _stringify3.unsafeStringify)(bytes);
   }
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v6ToV1.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/v6ToV1.js
 var require_v6ToV16 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.default = v6ToV16;
   var _parse4 = _interopRequireDefault(require_parse8());
-  var _stringify4 = require_stringify6();
+  var _stringify3 = require_stringify6();
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
   function v6ToV16(uuid9) {
     const v6Bytes = typeof uuid9 === "string" ? (0, _parse4.default)(uuid9) : uuid9;
     const v1Bytes = _v6ToV1(v6Bytes);
-    return typeof uuid9 === "string" ? (0, _stringify4.unsafeStringify)(v1Bytes) : v1Bytes;
+    return typeof uuid9 === "string" ? (0, _stringify3.unsafeStringify)(v1Bytes) : v1Bytes;
   }
   function _v6ToV1(v6Bytes) {
     return Uint8Array.of((v6Bytes[3] & 15) << 4 | v6Bytes[4] >> 4 & 15, (v6Bytes[4] & 15) << 4 | (v6Bytes[5] & 240) >> 4, (v6Bytes[5] & 15) << 4 | v6Bytes[6] & 15, v6Bytes[7], (v6Bytes[1] & 15) << 4 | (v6Bytes[2] & 240) >> 4, (v6Bytes[2] & 15) << 4 | (v6Bytes[3] & 240) >> 4, 16 | (v6Bytes[0] & 240) >> 4, (v6Bytes[0] & 15) << 4 | (v6Bytes[1] & 240) >> 4, v6Bytes[8], v6Bytes[9], v6Bytes[10], v6Bytes[11], v6Bytes[12], v6Bytes[13], v6Bytes[14], v6Bytes[15]);
   }
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v7.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/v7.js
 var require_v76 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.default = undefined;
   var _rng = _interopRequireDefault(require_rng6());
-  var _stringify4 = require_stringify6();
+  var _stringify3 = require_stringify6();
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
@@ -29162,12 +29162,12 @@ var require_v76 = __commonJS((exports) => {
     b[i++] = rnds[13];
     b[i++] = rnds[14];
     b[i++] = rnds[15];
-    return buf || (0, _stringify4.unsafeStringify)(b);
+    return buf || (0, _stringify3.unsafeStringify)(b);
   }
-  var _default8 = exports.default = v79;
+  var _default7 = exports.default = v79;
 });
 
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/version.js
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/version.js
 var require_version6 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -29183,11 +29183,673 @@ var require_version6 = __commonJS((exports) => {
     }
     return parseInt(uuid9.slice(14, 15), 16);
   }
-  var _default8 = exports.default = version9;
+  var _default7 = exports.default = version9;
+});
+
+// node_modules/@langchain/langgraph/node_modules/uuid/dist/index.js
+var require_dist7 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  Object.defineProperty(exports, "MAX", {
+    enumerable: true,
+    get: function() {
+      return _max.default;
+    }
+  });
+  Object.defineProperty(exports, "NIL", {
+    enumerable: true,
+    get: function() {
+      return _nil.default;
+    }
+  });
+  Object.defineProperty(exports, "parse", {
+    enumerable: true,
+    get: function() {
+      return _parse4.default;
+    }
+  });
+  Object.defineProperty(exports, "stringify", {
+    enumerable: true,
+    get: function() {
+      return _stringify3.default;
+    }
+  });
+  Object.defineProperty(exports, "v1", {
+    enumerable: true,
+    get: function() {
+      return _v.default;
+    }
+  });
+  Object.defineProperty(exports, "v1ToV6", {
+    enumerable: true,
+    get: function() {
+      return _v1ToV.default;
+    }
+  });
+  Object.defineProperty(exports, "v3", {
+    enumerable: true,
+    get: function() {
+      return _v2.default;
+    }
+  });
+  Object.defineProperty(exports, "v4", {
+    enumerable: true,
+    get: function() {
+      return _v3.default;
+    }
+  });
+  Object.defineProperty(exports, "v5", {
+    enumerable: true,
+    get: function() {
+      return _v4.default;
+    }
+  });
+  Object.defineProperty(exports, "v6", {
+    enumerable: true,
+    get: function() {
+      return _v5.default;
+    }
+  });
+  Object.defineProperty(exports, "v6ToV1", {
+    enumerable: true,
+    get: function() {
+      return _v6ToV.default;
+    }
+  });
+  Object.defineProperty(exports, "v7", {
+    enumerable: true,
+    get: function() {
+      return _v6.default;
+    }
+  });
+  Object.defineProperty(exports, "validate", {
+    enumerable: true,
+    get: function() {
+      return _validate.default;
+    }
+  });
+  Object.defineProperty(exports, "version", {
+    enumerable: true,
+    get: function() {
+      return _version.default;
+    }
+  });
+  var _max = _interopRequireDefault(require_max6());
+  var _nil = _interopRequireDefault(require_nil6());
+  var _parse4 = _interopRequireDefault(require_parse8());
+  var _stringify3 = _interopRequireDefault(require_stringify6());
+  var _v = _interopRequireDefault(require_v16());
+  var _v1ToV = _interopRequireDefault(require_v1ToV66());
+  var _v2 = _interopRequireDefault(require_v38());
+  var _v3 = _interopRequireDefault(require_v46());
+  var _v4 = _interopRequireDefault(require_v56());
+  var _v5 = _interopRequireDefault(require_v66());
+  var _v6ToV = _interopRequireDefault(require_v6ToV16());
+  var _v6 = _interopRequireDefault(require_v76());
+  var _validate = _interopRequireDefault(require_validate6());
+  var _version = _interopRequireDefault(require_version6());
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/max.js
+var require_max7 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = undefined;
+  var _default8 = exports.default = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/nil.js
+var require_nil7 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = undefined;
+  var _default8 = exports.default = "00000000-0000-0000-0000-000000000000";
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/regex.js
+var require_regex7 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = undefined;
+  var _default8 = exports.default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/i;
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/validate.js
+var require_validate7 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = undefined;
+  var _regex4 = _interopRequireDefault(require_regex7());
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+  function validate14(uuid9) {
+    return typeof uuid9 === "string" && _regex4.default.test(uuid9);
+  }
+  var _default8 = exports.default = validate14;
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/parse.js
+var require_parse9 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = undefined;
+  var _validate = _interopRequireDefault(require_validate7());
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+  function parse22(uuid9) {
+    if (!(0, _validate.default)(uuid9)) {
+      throw TypeError("Invalid UUID");
+    }
+    let v;
+    const arr5 = new Uint8Array(16);
+    arr5[0] = (v = parseInt(uuid9.slice(0, 8), 16)) >>> 24;
+    arr5[1] = v >>> 16 & 255;
+    arr5[2] = v >>> 8 & 255;
+    arr5[3] = v & 255;
+    arr5[4] = (v = parseInt(uuid9.slice(9, 13), 16)) >>> 8;
+    arr5[5] = v & 255;
+    arr5[6] = (v = parseInt(uuid9.slice(14, 18), 16)) >>> 8;
+    arr5[7] = v & 255;
+    arr5[8] = (v = parseInt(uuid9.slice(19, 23), 16)) >>> 8;
+    arr5[9] = v & 255;
+    arr5[10] = (v = parseInt(uuid9.slice(24, 36), 16)) / 1099511627776 & 255;
+    arr5[11] = v / 4294967296 & 255;
+    arr5[12] = v >>> 24 & 255;
+    arr5[13] = v >>> 16 & 255;
+    arr5[14] = v >>> 8 & 255;
+    arr5[15] = v & 255;
+    return arr5;
+  }
+  var _default8 = exports.default = parse22;
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/stringify.js
+var require_stringify7 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = undefined;
+  exports.unsafeStringify = unsafeStringify4;
+  var _validate = _interopRequireDefault(require_validate7());
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+  var byteToHex4 = [];
+  for (let i = 0;i < 256; ++i) {
+    byteToHex4.push((i + 256).toString(16).slice(1));
+  }
+  function unsafeStringify4(arr5, offset = 0) {
+    return (byteToHex4[arr5[offset + 0]] + byteToHex4[arr5[offset + 1]] + byteToHex4[arr5[offset + 2]] + byteToHex4[arr5[offset + 3]] + "-" + byteToHex4[arr5[offset + 4]] + byteToHex4[arr5[offset + 5]] + "-" + byteToHex4[arr5[offset + 6]] + byteToHex4[arr5[offset + 7]] + "-" + byteToHex4[arr5[offset + 8]] + byteToHex4[arr5[offset + 9]] + "-" + byteToHex4[arr5[offset + 10]] + byteToHex4[arr5[offset + 11]] + byteToHex4[arr5[offset + 12]] + byteToHex4[arr5[offset + 13]] + byteToHex4[arr5[offset + 14]] + byteToHex4[arr5[offset + 15]]).toLowerCase();
+  }
+  function stringify9(arr5, offset = 0) {
+    const uuid9 = unsafeStringify4(arr5, offset);
+    if (!(0, _validate.default)(uuid9)) {
+      throw TypeError("Stringified UUID is invalid");
+    }
+    return uuid9;
+  }
+  var _default8 = exports.default = stringify9;
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/rng.js
+var require_rng7 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = rng4;
+  var _nodeCrypto = _interopRequireDefault(__require("node:crypto"));
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+  var rnds8Pool4 = new Uint8Array(256);
+  var poolPtr4 = rnds8Pool4.length;
+  function rng4() {
+    if (poolPtr4 > rnds8Pool4.length - 16) {
+      _nodeCrypto.default.randomFillSync(rnds8Pool4);
+      poolPtr4 = 0;
+    }
+    return rnds8Pool4.slice(poolPtr4, poolPtr4 += 16);
+  }
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v1.js
+var require_v17 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = undefined;
+  var _rng = _interopRequireDefault(require_rng7());
+  var _stringify4 = require_stringify7();
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+  var _nodeId;
+  var _clockseq;
+  var _lastMSecs = 0;
+  var _lastNSecs = 0;
+  function v17(options, buf, offset) {
+    let i = buf && offset || 0;
+    const b = buf || new Array(16);
+    options = options || {};
+    let node = options.node;
+    let clockseq = options.clockseq;
+    if (!options._v6) {
+      if (!node) {
+        node = _nodeId;
+      }
+      if (clockseq == null) {
+        clockseq = _clockseq;
+      }
+    }
+    if (node == null || clockseq == null) {
+      const seedBytes = options.random || (options.rng || _rng.default)();
+      if (node == null) {
+        node = [seedBytes[0], seedBytes[1], seedBytes[2], seedBytes[3], seedBytes[4], seedBytes[5]];
+        if (!_nodeId && !options._v6) {
+          node[0] |= 1;
+          _nodeId = node;
+        }
+      }
+      if (clockseq == null) {
+        clockseq = (seedBytes[6] << 8 | seedBytes[7]) & 16383;
+        if (_clockseq === undefined && !options._v6) {
+          _clockseq = clockseq;
+        }
+      }
+    }
+    let msecs = options.msecs !== undefined ? options.msecs : Date.now();
+    let nsecs = options.nsecs !== undefined ? options.nsecs : _lastNSecs + 1;
+    const dt = msecs - _lastMSecs + (nsecs - _lastNSecs) / 1e4;
+    if (dt < 0 && options.clockseq === undefined) {
+      clockseq = clockseq + 1 & 16383;
+    }
+    if ((dt < 0 || msecs > _lastMSecs) && options.nsecs === undefined) {
+      nsecs = 0;
+    }
+    if (nsecs >= 1e4) {
+      throw new Error("uuid.v1(): Can't create more than 10M uuids/sec");
+    }
+    _lastMSecs = msecs;
+    _lastNSecs = nsecs;
+    _clockseq = clockseq;
+    msecs += 12219292800000;
+    const tl = ((msecs & 268435455) * 1e4 + nsecs) % 4294967296;
+    b[i++] = tl >>> 24 & 255;
+    b[i++] = tl >>> 16 & 255;
+    b[i++] = tl >>> 8 & 255;
+    b[i++] = tl & 255;
+    const tmh = msecs / 4294967296 * 1e4 & 268435455;
+    b[i++] = tmh >>> 8 & 255;
+    b[i++] = tmh & 255;
+    b[i++] = tmh >>> 24 & 15 | 16;
+    b[i++] = tmh >>> 16 & 255;
+    b[i++] = clockseq >>> 8 | 128;
+    b[i++] = clockseq & 255;
+    for (let n4 = 0;n4 < 6; ++n4) {
+      b[i + n4] = node[n4];
+    }
+    return buf || (0, _stringify4.unsafeStringify)(b);
+  }
+  var _default8 = exports.default = v17;
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v1ToV6.js
+var require_v1ToV67 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = v1ToV67;
+  var _parse4 = _interopRequireDefault(require_parse9());
+  var _stringify4 = require_stringify7();
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+  function v1ToV67(uuid9) {
+    const v1Bytes = typeof uuid9 === "string" ? (0, _parse4.default)(uuid9) : uuid9;
+    const v6Bytes = _v1ToV6(v1Bytes);
+    return typeof uuid9 === "string" ? (0, _stringify4.unsafeStringify)(v6Bytes) : v6Bytes;
+  }
+  function _v1ToV6(v1Bytes, randomize = false) {
+    return Uint8Array.of((v1Bytes[6] & 15) << 4 | v1Bytes[7] >> 4 & 15, (v1Bytes[7] & 15) << 4 | (v1Bytes[4] & 240) >> 4, (v1Bytes[4] & 15) << 4 | (v1Bytes[5] & 240) >> 4, (v1Bytes[5] & 15) << 4 | (v1Bytes[0] & 240) >> 4, (v1Bytes[0] & 15) << 4 | (v1Bytes[1] & 240) >> 4, (v1Bytes[1] & 15) << 4 | (v1Bytes[2] & 240) >> 4, 96 | v1Bytes[2] & 15, v1Bytes[3], v1Bytes[8], v1Bytes[9], v1Bytes[10], v1Bytes[11], v1Bytes[12], v1Bytes[13], v1Bytes[14], v1Bytes[15]);
+  }
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v35.js
+var require_v357 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.URL = exports.DNS = undefined;
+  exports.default = v352;
+  var _stringify4 = require_stringify7();
+  var _parse4 = _interopRequireDefault(require_parse9());
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+  function stringToBytes(str2) {
+    str2 = unescape(encodeURIComponent(str2));
+    const bytes = [];
+    for (let i = 0;i < str2.length; ++i) {
+      bytes.push(str2.charCodeAt(i));
+    }
+    return bytes;
+  }
+  var DNS = exports.DNS = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+  var URL2 = exports.URL = "6ba7b811-9dad-11d1-80b4-00c04fd430c8";
+  function v352(name, version10, hashfunc) {
+    function generateUUID(value, namespace, buf, offset) {
+      var _namespace;
+      if (typeof value === "string") {
+        value = stringToBytes(value);
+      }
+      if (typeof namespace === "string") {
+        namespace = (0, _parse4.default)(namespace);
+      }
+      if (((_namespace = namespace) === null || _namespace === undefined ? undefined : _namespace.length) !== 16) {
+        throw TypeError("Namespace must be array-like (16 iterable integer values, 0-255)");
+      }
+      let bytes = new Uint8Array(16 + value.length);
+      bytes.set(namespace);
+      bytes.set(value, namespace.length);
+      bytes = hashfunc(bytes);
+      bytes[6] = bytes[6] & 15 | version10;
+      bytes[8] = bytes[8] & 63 | 128;
+      if (buf) {
+        offset = offset || 0;
+        for (let i = 0;i < 16; ++i) {
+          buf[offset + i] = bytes[i];
+        }
+        return buf;
+      }
+      return (0, _stringify4.unsafeStringify)(bytes);
+    }
+    try {
+      generateUUID.name = name;
+    } catch (err) {}
+    generateUUID.DNS = DNS;
+    generateUUID.URL = URL2;
+    return generateUUID;
+  }
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/md5.js
+var require_md57 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = undefined;
+  var _nodeCrypto = _interopRequireDefault(__require("node:crypto"));
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+  function md5(bytes) {
+    if (Array.isArray(bytes)) {
+      bytes = Buffer.from(bytes);
+    } else if (typeof bytes === "string") {
+      bytes = Buffer.from(bytes, "utf8");
+    }
+    return _nodeCrypto.default.createHash("md5").update(bytes).digest();
+  }
+  var _default8 = exports.default = md5;
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v3.js
+var require_v39 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = undefined;
+  var _v = _interopRequireDefault(require_v357());
+  var _md = _interopRequireDefault(require_md57());
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+  var v37 = (0, _v.default)("v3", 48, _md.default);
+  var _default8 = exports.default = v37;
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/native.js
+var require_native7 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = undefined;
+  var _nodeCrypto = _interopRequireDefault(__require("node:crypto"));
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+  var _default8 = exports.default = {
+    randomUUID: _nodeCrypto.default.randomUUID
+  };
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v4.js
+var require_v47 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = undefined;
+  var _native = _interopRequireDefault(require_native7());
+  var _rng = _interopRequireDefault(require_rng7());
+  var _stringify4 = require_stringify7();
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+  function v410(options, buf, offset) {
+    if (_native.default.randomUUID && !buf && !options) {
+      return _native.default.randomUUID();
+    }
+    options = options || {};
+    const rnds = options.random || (options.rng || _rng.default)();
+    rnds[6] = rnds[6] & 15 | 64;
+    rnds[8] = rnds[8] & 63 | 128;
+    if (buf) {
+      offset = offset || 0;
+      for (let i = 0;i < 16; ++i) {
+        buf[offset + i] = rnds[i];
+      }
+      return buf;
+    }
+    return (0, _stringify4.unsafeStringify)(rnds);
+  }
+  var _default8 = exports.default = v410;
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/sha1.js
+var require_sha17 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = undefined;
+  var _nodeCrypto = _interopRequireDefault(__require("node:crypto"));
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+  function sha1(bytes) {
+    if (Array.isArray(bytes)) {
+      bytes = Buffer.from(bytes);
+    } else if (typeof bytes === "string") {
+      bytes = Buffer.from(bytes, "utf8");
+    }
+    return _nodeCrypto.default.createHash("sha1").update(bytes).digest();
+  }
+  var _default8 = exports.default = sha1;
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v5.js
+var require_v57 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = undefined;
+  var _v = _interopRequireDefault(require_v357());
+  var _sha = _interopRequireDefault(require_sha17());
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+  var v57 = (0, _v.default)("v5", 80, _sha.default);
+  var _default8 = exports.default = v57;
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v6.js
+var require_v67 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = v67;
+  var _stringify4 = require_stringify7();
+  var _v = _interopRequireDefault(require_v17());
+  var _v1ToV = _interopRequireDefault(require_v1ToV67());
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+  function v67(options = {}, buf, offset = 0) {
+    let bytes = (0, _v.default)({
+      ...options,
+      _v6: true
+    }, new Uint8Array(16));
+    bytes = (0, _v1ToV.default)(bytes);
+    if (buf) {
+      for (let i = 0;i < 16; i++) {
+        buf[offset + i] = bytes[i];
+      }
+      return buf;
+    }
+    return (0, _stringify4.unsafeStringify)(bytes);
+  }
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v6ToV1.js
+var require_v6ToV17 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = v6ToV17;
+  var _parse4 = _interopRequireDefault(require_parse9());
+  var _stringify4 = require_stringify7();
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+  function v6ToV17(uuid9) {
+    const v6Bytes = typeof uuid9 === "string" ? (0, _parse4.default)(uuid9) : uuid9;
+    const v1Bytes = _v6ToV1(v6Bytes);
+    return typeof uuid9 === "string" ? (0, _stringify4.unsafeStringify)(v1Bytes) : v1Bytes;
+  }
+  function _v6ToV1(v6Bytes) {
+    return Uint8Array.of((v6Bytes[3] & 15) << 4 | v6Bytes[4] >> 4 & 15, (v6Bytes[4] & 15) << 4 | (v6Bytes[5] & 240) >> 4, (v6Bytes[5] & 15) << 4 | v6Bytes[6] & 15, v6Bytes[7], (v6Bytes[1] & 15) << 4 | (v6Bytes[2] & 240) >> 4, (v6Bytes[2] & 15) << 4 | (v6Bytes[3] & 240) >> 4, 16 | (v6Bytes[0] & 240) >> 4, (v6Bytes[0] & 15) << 4 | (v6Bytes[1] & 240) >> 4, v6Bytes[8], v6Bytes[9], v6Bytes[10], v6Bytes[11], v6Bytes[12], v6Bytes[13], v6Bytes[14], v6Bytes[15]);
+  }
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v7.js
+var require_v77 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = undefined;
+  var _rng = _interopRequireDefault(require_rng7());
+  var _stringify4 = require_stringify7();
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+  var _seqLow = null;
+  var _seqHigh = null;
+  var _msecs = 0;
+  function v710(options, buf, offset) {
+    options = options || {};
+    let i = buf && offset || 0;
+    const b = buf || new Uint8Array(16);
+    const rnds = options.random || (options.rng || _rng.default)();
+    const msecs = options.msecs !== undefined ? options.msecs : Date.now();
+    let seq = options.seq !== undefined ? options.seq : null;
+    let seqHigh = _seqHigh;
+    let seqLow = _seqLow;
+    if (msecs > _msecs && options.msecs === undefined) {
+      _msecs = msecs;
+      if (seq !== null) {
+        seqHigh = null;
+        seqLow = null;
+      }
+    }
+    if (seq !== null) {
+      if (seq > 2147483647) {
+        seq = 2147483647;
+      }
+      seqHigh = seq >>> 19 & 4095;
+      seqLow = seq & 524287;
+    }
+    if (seqHigh === null || seqLow === null) {
+      seqHigh = rnds[6] & 127;
+      seqHigh = seqHigh << 8 | rnds[7];
+      seqLow = rnds[8] & 63;
+      seqLow = seqLow << 8 | rnds[9];
+      seqLow = seqLow << 5 | rnds[10] >>> 3;
+    }
+    if (msecs + 1e4 > _msecs && seq === null) {
+      if (++seqLow > 524287) {
+        seqLow = 0;
+        if (++seqHigh > 4095) {
+          seqHigh = 0;
+          _msecs++;
+        }
+      }
+    } else {
+      _msecs = msecs;
+    }
+    _seqHigh = seqHigh;
+    _seqLow = seqLow;
+    b[i++] = _msecs / 1099511627776 & 255;
+    b[i++] = _msecs / 4294967296 & 255;
+    b[i++] = _msecs / 16777216 & 255;
+    b[i++] = _msecs / 65536 & 255;
+    b[i++] = _msecs / 256 & 255;
+    b[i++] = _msecs & 255;
+    b[i++] = seqHigh >>> 4 & 15 | 112;
+    b[i++] = seqHigh & 255;
+    b[i++] = seqLow >>> 13 & 63 | 128;
+    b[i++] = seqLow >>> 5 & 255;
+    b[i++] = seqLow << 3 & 255 | rnds[10] & 7;
+    b[i++] = rnds[11];
+    b[i++] = rnds[12];
+    b[i++] = rnds[13];
+    b[i++] = rnds[14];
+    b[i++] = rnds[15];
+    return buf || (0, _stringify4.unsafeStringify)(b);
+  }
+  var _default8 = exports.default = v710;
+});
+
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/version.js
+var require_version7 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  exports.default = undefined;
+  var _validate = _interopRequireDefault(require_validate7());
+  function _interopRequireDefault(e) {
+    return e && e.__esModule ? e : { default: e };
+  }
+  function version10(uuid9) {
+    if (!(0, _validate.default)(uuid9)) {
+      throw TypeError("Invalid UUID");
+    }
+    return parseInt(uuid9.slice(14, 15), 16);
+  }
+  var _default8 = exports.default = version10;
 });
 
 // node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/index.js
-var require_dist7 = __commonJS((exports) => {
+var require_dist8 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
@@ -29275,20 +29937,20 @@ var require_dist7 = __commonJS((exports) => {
       return _version.default;
     }
   });
-  var _max = _interopRequireDefault(require_max6());
-  var _nil = _interopRequireDefault(require_nil6());
-  var _parse4 = _interopRequireDefault(require_parse8());
-  var _stringify4 = _interopRequireDefault(require_stringify6());
-  var _v = _interopRequireDefault(require_v16());
-  var _v1ToV = _interopRequireDefault(require_v1ToV66());
-  var _v2 = _interopRequireDefault(require_v38());
-  var _v3 = _interopRequireDefault(require_v46());
-  var _v4 = _interopRequireDefault(require_v56());
-  var _v5 = _interopRequireDefault(require_v66());
-  var _v6ToV = _interopRequireDefault(require_v6ToV16());
-  var _v6 = _interopRequireDefault(require_v76());
-  var _validate = _interopRequireDefault(require_validate6());
-  var _version = _interopRequireDefault(require_version6());
+  var _max = _interopRequireDefault(require_max7());
+  var _nil = _interopRequireDefault(require_nil7());
+  var _parse4 = _interopRequireDefault(require_parse9());
+  var _stringify4 = _interopRequireDefault(require_stringify7());
+  var _v = _interopRequireDefault(require_v17());
+  var _v1ToV = _interopRequireDefault(require_v1ToV67());
+  var _v2 = _interopRequireDefault(require_v39());
+  var _v3 = _interopRequireDefault(require_v47());
+  var _v4 = _interopRequireDefault(require_v57());
+  var _v5 = _interopRequireDefault(require_v67());
+  var _v6ToV = _interopRequireDefault(require_v6ToV17());
+  var _v6 = _interopRequireDefault(require_v77());
+  var _validate = _interopRequireDefault(require_validate7());
+  var _version = _interopRequireDefault(require_version7());
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
@@ -29382,10 +30044,10 @@ var require_utils5 = __commonJS((exports) => {
 });
 
 // node_modules/braces/lib/stringify.js
-var require_stringify7 = __commonJS((exports, module) => {
+var require_stringify8 = __commonJS((exports, module) => {
   var utils = require_utils5();
   module.exports = (ast, options = {}) => {
-    const stringify9 = (node, parent = {}) => {
+    const stringify10 = (node, parent = {}) => {
       const invalidBlock = options.escapeInvalid && utils.isInvalidBrace(parent);
       const invalidNode = node.invalid === true && options.escapeInvalid === true;
       let output = "";
@@ -29400,12 +30062,12 @@ var require_stringify7 = __commonJS((exports, module) => {
       }
       if (node.nodes) {
         for (const child of node.nodes) {
-          output += stringify9(child);
+          output += stringify10(child);
         }
       }
       return output;
     };
-    return stringify9(ast);
+    return stringify10(ast);
   };
 });
 
@@ -29672,7 +30334,7 @@ var require_fill_range = __commonJS((exports, module) => {
       ;
     return index2 > 0;
   };
-  var stringify9 = (start, end, options) => {
+  var stringify10 = (start, end, options) => {
     if (typeof start === "string" || typeof end === "string") {
       return true;
     }
@@ -29774,7 +30436,7 @@ var require_fill_range = __commonJS((exports, module) => {
     step = Math.max(Math.abs(step), 1);
     let padded = zeros(startString) || zeros(endString) || zeros(stepString);
     let maxLen = padded ? Math.max(startString.length, endString.length, stepString.length) : 0;
-    let toNumber = padded === false && stringify9(start, end, options) === false;
+    let toNumber = padded === false && stringify10(start, end, options) === false;
     let format2 = options.transform || transform5(toNumber);
     if (options.toRegex && step === 1) {
       return toRange(toMaxLen(start, maxLen), toMaxLen(end, maxLen), true, options);
@@ -29904,7 +30566,7 @@ var require_compile = __commonJS((exports, module) => {
 // node_modules/braces/lib/expand.js
 var require_expand = __commonJS((exports, module) => {
   var fill = require_fill_range();
-  var stringify9 = require_stringify7();
+  var stringify10 = require_stringify8();
   var utils = require_utils5();
   var append = (queue5 = "", stash = "", enclose = false) => {
     const result = [];
@@ -29941,7 +30603,7 @@ var require_expand = __commonJS((exports, module) => {
         q = p.queue;
       }
       if (node.invalid || node.dollar) {
-        q.push(append(q.pop(), stringify9(node, options)));
+        q.push(append(q.pop(), stringify10(node, options)));
         return;
       }
       if (node.type === "brace" && node.invalid !== true && node.nodes.length === 2) {
@@ -29955,7 +30617,7 @@ var require_expand = __commonJS((exports, module) => {
         }
         let range = fill(...args, options);
         if (range.length === 0) {
-          range = stringify9(node, options);
+          range = stringify10(node, options);
         }
         q.push(append(q.pop(), range));
         node.nodes = [];
@@ -30048,8 +30710,8 @@ var require_constants7 = __commonJS((exports, module) => {
 });
 
 // node_modules/braces/lib/parse.js
-var require_parse9 = __commonJS((exports, module) => {
-  var stringify9 = require_stringify7();
+var require_parse10 = __commonJS((exports, module) => {
+  var stringify10 = require_stringify8();
   var {
     MAX_LENGTH,
     CHAR_BACKSLASH,
@@ -30067,7 +30729,7 @@ var require_parse9 = __commonJS((exports, module) => {
     CHAR_NO_BREAK_SPACE,
     CHAR_ZERO_WIDTH_NOBREAK_SPACE
   } = require_constants7();
-  var parse26 = (input, options = {}) => {
+  var parse27 = (input, options = {}) => {
     if (typeof input !== "string") {
       throw new TypeError("Expected a string");
     }
@@ -30210,7 +30872,7 @@ var require_parse9 = __commonJS((exports, module) => {
         if (block.ranges > 0) {
           block.ranges = 0;
           const open = block.nodes.shift();
-          block.nodes = [open, { type: "text", value: stringify9(block) }];
+          block.nodes = [open, { type: "text", value: stringify10(block) }];
         }
         push2({ type: "comma", value });
         block.commas++;
@@ -30271,15 +30933,15 @@ var require_parse9 = __commonJS((exports, module) => {
     push2({ type: "eos" });
     return ast;
   };
-  module.exports = parse26;
+  module.exports = parse27;
 });
 
 // node_modules/braces/index.js
 var require_braces = __commonJS((exports, module) => {
-  var stringify9 = require_stringify7();
+  var stringify10 = require_stringify8();
   var compile = require_compile();
   var expand2 = require_expand();
-  var parse26 = require_parse9();
+  var parse27 = require_parse10();
   var braces = (input, options = {}) => {
     let output = [];
     if (Array.isArray(input)) {
@@ -30299,12 +30961,12 @@ var require_braces = __commonJS((exports, module) => {
     }
     return output;
   };
-  braces.parse = (input, options = {}) => parse26(input, options);
+  braces.parse = (input, options = {}) => parse27(input, options);
   braces.stringify = (input, options = {}) => {
     if (typeof input === "string") {
-      return stringify9(braces.parse(input, options), options);
+      return stringify10(braces.parse(input, options), options);
     }
-    return stringify9(input, options);
+    return stringify10(input, options);
   };
   braces.compile = (input, options = {}) => {
     if (typeof input === "string") {
@@ -30850,7 +31512,7 @@ var require_scan = __commonJS((exports, module) => {
 });
 
 // node_modules/micromatch/node_modules/picomatch/lib/parse.js
-var require_parse10 = __commonJS((exports, module) => {
+var require_parse11 = __commonJS((exports, module) => {
   var constants = require_constants8();
   var utils = require_utils6();
   var {
@@ -30876,7 +31538,7 @@ var require_parse10 = __commonJS((exports, module) => {
   var syntaxError = (type, char) => {
     return `Missing ${type}: "${char}" - use "\\\\${char}" to match literal characters`;
   };
-  var parse26 = (input, options) => {
+  var parse27 = (input, options) => {
     if (typeof input !== "string") {
       throw new TypeError("Expected a string");
     }
@@ -31026,7 +31688,7 @@ var require_parse10 = __commonJS((exports, module) => {
           output = token.close = `)$))${extglobStar}`;
         }
         if (token.inner.includes("*") && (rest = remaining()) && /^\.[^\\/.]+$/.test(rest)) {
-          const expression = parse26(rest, { ...options, fastpaths: false }).output;
+          const expression = parse27(rest, { ...options, fastpaths: false }).output;
           output = token.close = `)${expression})${extglobStar})`;
         }
         if (token.prev.type === "bos") {
@@ -31555,7 +32217,7 @@ var require_parse10 = __commonJS((exports, module) => {
     }
     return state;
   };
-  parse26.fastpaths = (input, options) => {
+  parse27.fastpaths = (input, options) => {
     const opts = { ...options };
     const max = typeof opts.maxLength === "number" ? Math.min(MAX_LENGTH, opts.maxLength) : MAX_LENGTH;
     const len = input.length;
@@ -31624,14 +32286,14 @@ var require_parse10 = __commonJS((exports, module) => {
     }
     return source;
   };
-  module.exports = parse26;
+  module.exports = parse27;
 });
 
 // node_modules/micromatch/node_modules/picomatch/lib/picomatch.js
 var require_picomatch = __commonJS((exports, module) => {
   var path5 = __require("path");
   var scan2 = require_scan();
-  var parse26 = require_parse10();
+  var parse27 = require_parse11();
   var utils = require_utils6();
   var constants = require_constants8();
   var isObject7 = (val) => val && typeof val === "object" && !Array.isArray(val);
@@ -31721,7 +32383,7 @@ var require_picomatch = __commonJS((exports, module) => {
   picomatch.parse = (pattern, options) => {
     if (Array.isArray(pattern))
       return pattern.map((p) => picomatch.parse(p, options));
-    return parse26(pattern, { ...options, fastpaths: false });
+    return parse27(pattern, { ...options, fastpaths: false });
   };
   picomatch.scan = (input, options) => scan2(input, options);
   picomatch.compileRe = (state, options, returnOutput = false, returnState = false) => {
@@ -31747,10 +32409,10 @@ var require_picomatch = __commonJS((exports, module) => {
     }
     let parsed = { negated: false, fastpaths: true };
     if (options.fastpaths !== false && (input[0] === "." || input[0] === "*")) {
-      parsed.output = parse26.fastpaths(input, options);
+      parsed.output = parse27.fastpaths(input, options);
     }
     if (!parsed.output) {
-      parsed = parse26(input, options);
+      parsed = parse27(input, options);
     }
     return picomatch.compileRe(parsed, options, returnOutput, returnState);
   };
@@ -32209,13 +32871,13 @@ var require_directives = __commonJS((exports) => {
             onError(0, "%YAML directive should contain exactly one part");
             return false;
           }
-          const [version11] = parts;
-          if (version11 === "1.1" || version11 === "1.2") {
-            this.yaml.version = version11;
+          const [version12] = parts;
+          if (version12 === "1.1" || version12 === "1.2") {
+            this.yaml.version = version12;
             return true;
           } else {
-            const isValid5 = /^\d+\.\d+$/.test(version11);
-            onError(6, `Unsupported YAML version ${version11}`, isValid5);
+            const isValid5 = /^\d+\.\d+$/.test(version12);
+            onError(6, `Unsupported YAML version ${version12}`, isValid5);
             return false;
           }
         }
@@ -32362,38 +33024,38 @@ var require_applyReviver = __commonJS((exports) => {
       if (Array.isArray(val)) {
         for (let i = 0, len = val.length;i < len; ++i) {
           const v0 = val[i];
-          const v17 = applyReviver(reviver2, val, String(i), v0);
-          if (v17 === undefined)
+          const v18 = applyReviver(reviver2, val, String(i), v0);
+          if (v18 === undefined)
             delete val[i];
-          else if (v17 !== v0)
-            val[i] = v17;
+          else if (v18 !== v0)
+            val[i] = v18;
         }
       } else if (val instanceof Map) {
         for (const k of Array.from(val.keys())) {
           const v0 = val.get(k);
-          const v17 = applyReviver(reviver2, val, k, v0);
-          if (v17 === undefined)
+          const v18 = applyReviver(reviver2, val, k, v0);
+          if (v18 === undefined)
             val.delete(k);
-          else if (v17 !== v0)
-            val.set(k, v17);
+          else if (v18 !== v0)
+            val.set(k, v18);
         }
       } else if (val instanceof Set) {
         for (const v0 of Array.from(val)) {
-          const v17 = applyReviver(reviver2, val, v0, v0);
-          if (v17 === undefined)
+          const v18 = applyReviver(reviver2, val, v0, v0);
+          if (v18 === undefined)
             val.delete(v0);
-          else if (v17 !== v0) {
+          else if (v18 !== v0) {
             val.delete(v0);
-            val.add(v17);
+            val.add(v18);
           }
         }
       } else {
         for (const [k, v0] of Object.entries(val)) {
-          const v17 = applyReviver(reviver2, val, k, v0);
-          if (v17 === undefined)
+          const v18 = applyReviver(reviver2, val, k, v0);
+          if (v18 === undefined)
             delete val[k];
-          else if (v17 !== v0)
-            val[k] = v17;
+          else if (v18 !== v0)
+            val[k] = v18;
         }
       }
     }
@@ -33242,7 +33904,7 @@ ${indent}`);
 });
 
 // node_modules/yaml/dist/stringify/stringify.js
-var require_stringify8 = __commonJS((exports) => {
+var require_stringify9 = __commonJS((exports) => {
   var anchors = require_anchors();
   var identity = require_identity();
   var stringifyComment = require_stringifyComment();
@@ -33329,7 +33991,7 @@ var require_stringify8 = __commonJS((exports) => {
       props.push(doc5.directives.tagString(tag));
     return props.join(" ");
   }
-  function stringify9(item, ctx, onComment, onChompKeep) {
+  function stringify10(item, ctx, onComment, onChompKeep) {
     if (identity.isPair(item))
       return item.toString(ctx, onComment, onChompKeep);
     if (identity.isAlias(item)) {
@@ -33358,14 +34020,14 @@ var require_stringify8 = __commonJS((exports) => {
 ${ctx.indent}${str2}`;
   }
   exports.createStringifyContext = createStringifyContext;
-  exports.stringify = stringify9;
+  exports.stringify = stringify10;
 });
 
 // node_modules/yaml/dist/stringify/stringifyPair.js
 var require_stringifyPair = __commonJS((exports) => {
   var identity = require_identity();
   var Scalar = require_Scalar();
-  var stringify9 = require_stringify8();
+  var stringify10 = require_stringify9();
   var stringifyComment = require_stringifyComment();
   function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
     const { allNullValues, doc: doc5, indent, indentStep, options: { commentString, indentSeq, simpleKeys } } = ctx;
@@ -33387,7 +34049,7 @@ var require_stringifyPair = __commonJS((exports) => {
     });
     let keyCommentDone = false;
     let chompKeep = false;
-    let str2 = stringify9.stringify(key, ctx, () => keyCommentDone = true, () => chompKeep = true);
+    let str2 = stringify10.stringify(key, ctx, () => keyCommentDone = true, () => chompKeep = true);
     if (!explicitKey && !ctx.inFlow && str2.length > 1024) {
       if (simpleKeys)
         throw new Error("With simple keys, single line scalar must not span more than 1024 characters");
@@ -33439,7 +34101,7 @@ ${indent}:`;
       ctx.indent = ctx.indent.substring(2);
     }
     let valueCommentDone = false;
-    const valueStr = stringify9.stringify(value, ctx, () => valueCommentDone = true, () => chompKeep = true);
+    const valueStr = stringify10.stringify(value, ctx, () => valueCommentDone = true, () => chompKeep = true);
     let ws = " ";
     if (keyComment || vsb || vcb) {
       ws = vsb ? `
@@ -33574,7 +34236,7 @@ var require_merge = __commonJS((exports) => {
 var require_addPairToJSMap = __commonJS((exports) => {
   var log2 = require_log();
   var merge6 = require_merge();
-  var stringify9 = require_stringify8();
+  var stringify10 = require_stringify9();
   var identity = require_identity();
   var toJS = require_toJS();
   function addPairToJSMap(ctx, map6, { key, value }) {
@@ -33610,7 +34272,7 @@ var require_addPairToJSMap = __commonJS((exports) => {
     if (typeof jsKey !== "object")
       return String(jsKey);
     if (identity.isNode(key) && ctx?.doc) {
-      const strCtx = stringify9.createStringifyContext(ctx.doc, {});
+      const strCtx = stringify10.createStringifyContext(ctx.doc, {});
       strCtx.anchors = new Set;
       for (const node of ctx.anchors.keys())
         strCtx.anchors.add(node.anchor);
@@ -33672,12 +34334,12 @@ var require_Pair = __commonJS((exports) => {
 // node_modules/yaml/dist/stringify/stringifyCollection.js
 var require_stringifyCollection = __commonJS((exports) => {
   var identity = require_identity();
-  var stringify9 = require_stringify8();
+  var stringify10 = require_stringify9();
   var stringifyComment = require_stringifyComment();
   function stringifyCollection(collection, ctx, options) {
     const flow = ctx.inFlow ?? collection.flow;
-    const stringify10 = flow ? stringifyFlowCollection : stringifyBlockCollection;
-    return stringify10(collection, ctx, options);
+    const stringify11 = flow ? stringifyFlowCollection : stringifyBlockCollection;
+    return stringify11(collection, ctx, options);
   }
   function stringifyBlockCollection({ comment, items }, ctx, { blockItemPrefix, flowChars, itemIndent, onChompKeep, onComment }) {
     const { indent, options: { commentString } } = ctx;
@@ -33702,7 +34364,7 @@ var require_stringifyCollection = __commonJS((exports) => {
         }
       }
       chompKeep = false;
-      let str3 = stringify9.stringify(item, itemCtx, () => comment2 = null, () => chompKeep = true);
+      let str3 = stringify10.stringify(item, itemCtx, () => comment2 = null, () => chompKeep = true);
       if (comment2)
         str3 += stringifyComment.lineComment(str3, itemIndent, commentString(comment2));
       if (chompKeep && comment2)
@@ -33771,7 +34433,7 @@ ${indent}${line}` : `
       }
       if (comment)
         reqNewline = true;
-      let str2 = stringify9.stringify(item, itemCtx, () => comment = null);
+      let str2 = stringify10.stringify(item, itemCtx, () => comment = null);
       if (i < items.length - 1)
         str2 += ",";
       if (comment)
@@ -35005,7 +35667,7 @@ var require_Schema = __commonJS((exports) => {
 // node_modules/yaml/dist/stringify/stringifyDocument.js
 var require_stringifyDocument = __commonJS((exports) => {
   var identity = require_identity();
-  var stringify9 = require_stringify8();
+  var stringify10 = require_stringify9();
   var stringifyComment = require_stringifyComment();
   function stringifyDocument(doc5, options) {
     const lines = [];
@@ -35020,7 +35682,7 @@ var require_stringifyDocument = __commonJS((exports) => {
     }
     if (hasDirectives)
       lines.push("---");
-    const ctx = stringify9.createStringifyContext(doc5, options);
+    const ctx = stringify10.createStringifyContext(doc5, options);
     const { commentString } = ctx.options;
     if (doc5.commentBefore) {
       if (lines.length !== 1)
@@ -35042,7 +35704,7 @@ var require_stringifyDocument = __commonJS((exports) => {
         contentComment = doc5.contents.comment;
       }
       const onChompKeep = contentComment ? undefined : () => chompKeep = true;
-      let body = stringify9.stringify(doc5.contents, ctx, () => contentComment = null, onChompKeep);
+      let body = stringify10.stringify(doc5.contents, ctx, () => contentComment = null, onChompKeep);
       if (contentComment)
         body += stringifyComment.lineComment(body, "", commentString(contentComment));
       if ((body[0] === "|" || body[0] === ">") && lines[lines.length - 1] === "---") {
@@ -35050,7 +35712,7 @@ var require_stringifyDocument = __commonJS((exports) => {
       } else
         lines.push(body);
     } else {
-      lines.push(stringify9.stringify(doc5.contents, ctx));
+      lines.push(stringify10.stringify(doc5.contents, ctx));
     }
     if (doc5.directives?.docEnd) {
       if (doc5.comment) {
@@ -35121,14 +35783,14 @@ var require_Document = __commonJS((exports) => {
         version: "1.2"
       }, options);
       this.options = opt;
-      let { version: version11 } = opt;
+      let { version: version12 } = opt;
       if (options?._directives) {
         this.directives = options._directives.atDocument();
         if (this.directives.yaml.explicit)
-          version11 = this.directives.yaml.version;
+          version12 = this.directives.yaml.version;
       } else
-        this.directives = new directives.Directives({ version: version11 });
-      this.setSchema(version11, options);
+        this.directives = new directives.Directives({ version: version12 });
+      this.setSchema(version12, options);
       this.contents = value === undefined ? null : this.createNode(value, _replacer, options);
     }
     clone() {
@@ -35244,11 +35906,11 @@ var require_Document = __commonJS((exports) => {
         this.contents.setIn(path5, value);
       }
     }
-    setSchema(version11, options = {}) {
-      if (typeof version11 === "number")
-        version11 = String(version11);
+    setSchema(version12, options = {}) {
+      if (typeof version12 === "number")
+        version12 = String(version12);
       let opt;
-      switch (version11) {
+      switch (version12) {
         case "1.1":
           if (this.directives)
             this.directives.yaml.version = "1.1";
@@ -35259,9 +35921,9 @@ var require_Document = __commonJS((exports) => {
         case "1.2":
         case "next":
           if (this.directives)
-            this.directives.yaml.version = version11;
+            this.directives.yaml.version = version12;
           else
-            this.directives = new directives.Directives({ version: version11 });
+            this.directives = new directives.Directives({ version: version12 });
           opt = { resolveKnownTags: true, schema: "core" };
           break;
         case null:
@@ -35270,7 +35932,7 @@ var require_Document = __commonJS((exports) => {
           opt = null;
           break;
         default: {
-          const sv = JSON.stringify(version11);
+          const sv = JSON.stringify(version12);
           throw new Error(`Expected '1.1', '1.2' or null as first argument, but found: ${sv}`);
         }
       }
@@ -37061,7 +37723,7 @@ var require_cst_scalar = __commonJS((exports) => {
 
 // node_modules/yaml/dist/parse/cst-stringify.js
 var require_cst_stringify = __commonJS((exports) => {
-  var stringify9 = (cst) => ("type" in cst) ? stringifyToken(cst) : stringifyItem(cst);
+  var stringify10 = (cst) => ("type" in cst) ? stringifyToken(cst) : stringifyItem(cst);
   function stringifyToken(token) {
     switch (token.type) {
       case "block-scalar": {
@@ -37114,7 +37776,7 @@ var require_cst_stringify = __commonJS((exports) => {
       res += stringifyToken(value);
     return res;
   }
-  exports.stringify = stringify9;
+  exports.stringify = stringify10;
 });
 
 // node_modules/yaml/dist/parse/cst-visit.js
@@ -38787,7 +39449,7 @@ var require_public_api = __commonJS((exports) => {
     }
     return doc5;
   }
-  function parse26(src, reviver2, options) {
+  function parse27(src, reviver2, options) {
     let _reviver2 = undefined;
     if (typeof reviver2 === "function") {
       _reviver2 = reviver2;
@@ -38806,7 +39468,7 @@ var require_public_api = __commonJS((exports) => {
     }
     return doc5.toJS(Object.assign({ reviver: _reviver2 }, options));
   }
-  function stringify9(value, replacer, options) {
+  function stringify10(value, replacer, options) {
     let _replacer = null;
     if (typeof replacer === "function" || Array.isArray(replacer)) {
       _replacer = replacer;
@@ -38828,14 +39490,14 @@ var require_public_api = __commonJS((exports) => {
       return value.toString(options);
     return new Document3.Document(value, _replacer, options).toString(options);
   }
-  exports.parse = parse26;
+  exports.parse = parse27;
   exports.parseAllDocuments = parseAllDocuments;
   exports.parseDocument = parseDocument;
-  exports.stringify = stringify9;
+  exports.stringify = stringify10;
 });
 
 // node_modules/yaml/dist/index.js
-var require_dist8 = __commonJS((exports) => {
+var require_dist9 = __commonJS((exports) => {
   var composer = require_composer();
   var Document3 = require_Document();
   var Schema = require_Schema();
@@ -45066,7 +45728,22 @@ var Octokit2 = Octokit.plugin(requestLog, legacyRestEndpointMethods, paginateRes
 // app/github.ts
 class GithubPlatform extends Platform {
   async fetchRawPatch(params) {
-    let url = `https://patch-diff.githubusercontent.com/raw/${params.owner}/${params.repo}/pull/${params.pullno}.patch`;
+    const url = `https://patch-diff.githubusercontent.com/raw/${params.owner}/${params.repo}/pull/${params.pullno}.patch`;
+    if (params.token) {
+      const octokit = new Octokit2({ auth: params.token });
+      const res2 = await octokit.request("GET /repos/{owner}/{repo}/pulls/{pull_number}", {
+        owner: params.owner,
+        repo: params.repo,
+        pull_number: params.pullno,
+        headers: {
+          accept: "application/vnd.github.v3.patch"
+        }
+      });
+      if (typeof res2.data !== "string" || !res2.data.trim()) {
+        throw new Error("Error fetching raw patch file from GitHub API.");
+      }
+      return res2.data;
+    }
     const res = await fetch(url);
     if (!res.ok) {
       throw new Error("Error fetching raw patch file.");
@@ -45076,6 +45753,9 @@ class GithubPlatform extends Platform {
   }
   async commentInPr(params) {
     try {
+      if (!params.token) {
+        throw new Error("Missing GitHub token. Provide github_token input or GITHUB_TOKEN env.");
+      }
       const octokit = new Octokit2({ auth: params.token });
       await octokit.rest.issues.createComment({
         owner: params.owner,
@@ -45089,6 +45769,9 @@ class GithubPlatform extends Platform {
   }
   async createReviewComment(params) {
     try {
+      if (!params.token) {
+        throw new Error("Missing GitHub token. Provide github_token input or GITHUB_TOKEN env.");
+      }
       const octokit = new Octokit2({ auth: params.token });
       const hasPosition = typeof params.position === "number";
       const hasLine = typeof params.line === "number";
@@ -170367,6 +171050,23 @@ function date11(params) {
 
 // node_modules/@langchain/langgraph/node_modules/zod/v4/classic/external.js
 config3(en_default5());
+// node_modules/@langchain/langgraph/node_modules/uuid/wrapper.mjs
+var import_dist6 = __toESM(require_dist7(), 1);
+var v16 = import_dist6.default.v1;
+var v1ToV66 = import_dist6.default.v1ToV6;
+var v36 = import_dist6.default.v3;
+var v49 = import_dist6.default.v4;
+var v56 = import_dist6.default.v5;
+var v66 = import_dist6.default.v6;
+var v6ToV16 = import_dist6.default.v6ToV1;
+var v79 = import_dist6.default.v7;
+var NIL6 = import_dist6.default.NIL;
+var MAX6 = import_dist6.default.MAX;
+var version9 = import_dist6.default.version;
+var validate13 = import_dist6.default.validate;
+var stringify8 = import_dist6.default.stringify;
+var parse19 = import_dist6.default.parse;
+
 // node_modules/@langchain/langgraph/dist/graph/graph.js
 var Branch = class {
   path;
@@ -170661,7 +171361,7 @@ var CompiledGraph = class extends Pregel {
           let _isRunnableInterface = function(thing) {
             return thing ? thing.lc_runnable : false;
           }, _nodeDataStr = function(id, data) {
-            if (id !== undefined && !validate_default(id))
+            if (id !== undefined && !validate13(id))
               return id;
             else if (_isRunnableInterface(data))
               try {
@@ -170763,7 +171463,7 @@ var CompiledGraph = class extends Pregel {
           let _isRunnableInterface = function(thing) {
             return thing ? thing.lc_runnable : false;
           }, _nodeDataStr = function(id, data) {
-            if (id !== undefined && !validate_default(id))
+            if (id !== undefined && !validate13(id))
               return id;
             else if (_isRunnableInterface(data))
               try {
@@ -171173,14 +171873,14 @@ function messagesStateReducer(left, right) {
   const rightMessages = rightArray.map(coerceMessageLikeToMessage3);
   for (const m of leftMessages)
     if (m.id === null || m.id === undefined) {
-      m.id = v4_default();
+      m.id = v49();
       m.lc_kwargs.id = m.id;
     }
   let removeAllIdx;
   for (let i = 0;i < rightMessages.length; i += 1) {
     const m = rightMessages[i];
     if (m.id === null || m.id === undefined) {
-      m.id = v4_default();
+      m.id = v49();
       m.lc_kwargs.id = m.id;
     }
     if (RemoveMessage3.isInstance(m) && m.id === REMOVE_ALL_MESSAGES)
@@ -172147,7 +172847,7 @@ __export(exports_external6, {
   uuidv7: () => uuidv73,
   uuidv6: () => uuidv63,
   uuidv4: () => uuidv43,
-  uuid: () => uuid16,
+  uuid: () => uuid17,
   util: () => exports_util2,
   url: () => url3,
   uppercase: () => _uppercase2,
@@ -172198,7 +172898,7 @@ __export(exports_external6, {
   pipe: () => pipe3,
   partialRecord: () => partialRecord3,
   parseAsync: () => parseAsync6,
-  parse: () => parse19,
+  parse: () => parse20,
   overwrite: () => _overwrite2,
   optional: () => optional4,
   object: () => object4,
@@ -172388,7 +173088,7 @@ __export(exports_schemas6, {
   uuidv7: () => uuidv73,
   uuidv6: () => uuidv63,
   uuidv4: () => uuidv43,
-  uuid: () => uuid16,
+  uuid: () => uuid17,
   url: () => url3,
   unknown: () => unknown4,
   union: () => union4,
@@ -172659,7 +173359,7 @@ var ZodRealError3 = $constructor2("ZodError", initializer6, {
 });
 
 // node_modules/langchain/node_modules/zod/v4/classic/parse.js
-var parse19 = /* @__PURE__ */ _parse2(ZodRealError3);
+var parse20 = /* @__PURE__ */ _parse2(ZodRealError3);
 var parseAsync6 = /* @__PURE__ */ _parseAsync2(ZodRealError3);
 var safeParse7 = /* @__PURE__ */ _safeParse2(ZodRealError3);
 var safeParseAsync6 = /* @__PURE__ */ _safeParseAsync2(ZodRealError3);
@@ -172702,7 +173402,7 @@ var ZodType6 = /* @__PURE__ */ $constructor2("ZodType", (inst, def) => {
     reg.add(inst, meta6);
     return inst;
   };
-  inst.parse = (data, params) => parse19(inst, data, params, { callee: inst.parse });
+  inst.parse = (data, params) => parse20(inst, data, params, { callee: inst.parse });
   inst.safeParse = (data, params) => safeParse7(inst, data, params);
   inst.parseAsync = async (data, params) => parseAsync6(inst, data, params, { callee: inst.parseAsync });
   inst.safeParseAsync = async (data, params) => safeParseAsync6(inst, data, params);
@@ -172836,7 +173536,7 @@ var ZodUUID3 = /* @__PURE__ */ $constructor2("ZodUUID", (inst, def) => {
   $ZodUUID2.init(inst, def);
   ZodStringFormat3.init(inst, def);
 });
-function uuid16(params) {
+function uuid17(params) {
   return _uuid2(ZodUUID3, params);
 }
 function uuidv43(params) {
@@ -174221,10 +174921,10 @@ function fromJSONSchema2(schema, params) {
   if (typeof schema === "boolean") {
     return schema ? z2.any() : z2.never();
   }
-  const version9 = detectVersion2(schema, params?.defaultTarget);
+  const version10 = detectVersion2(schema, params?.defaultTarget);
   const defs = schema.$defs || schema.definitions || {};
   const ctx = {
-    version: version9,
+    version: version10,
     defs,
     refs: new Map,
     processing: new Set,
@@ -179893,21 +180593,21 @@ var isBaseCallbackHandler4 = (x) => {
 };
 
 // node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/wrapper.mjs
-var import_dist6 = __toESM(require_dist7(), 1);
-var v16 = import_dist6.default.v1;
-var v1ToV66 = import_dist6.default.v1ToV6;
-var v36 = import_dist6.default.v3;
-var v49 = import_dist6.default.v4;
-var v56 = import_dist6.default.v5;
-var v66 = import_dist6.default.v6;
-var v6ToV16 = import_dist6.default.v6ToV1;
-var v79 = import_dist6.default.v7;
-var NIL6 = import_dist6.default.NIL;
-var MAX6 = import_dist6.default.MAX;
-var version9 = import_dist6.default.version;
-var validate13 = import_dist6.default.validate;
-var stringify8 = import_dist6.default.stringify;
-var parse21 = import_dist6.default.parse;
+var import_dist7 = __toESM(require_dist8(), 1);
+var v17 = import_dist7.default.v1;
+var v1ToV67 = import_dist7.default.v1ToV6;
+var v37 = import_dist7.default.v3;
+var v410 = import_dist7.default.v4;
+var v57 = import_dist7.default.v5;
+var v67 = import_dist7.default.v6;
+var v6ToV17 = import_dist7.default.v6ToV1;
+var v710 = import_dist7.default.v7;
+var NIL7 = import_dist7.default.NIL;
+var MAX7 = import_dist7.default.MAX;
+var version10 = import_dist7.default.version;
+var validate14 = import_dist7.default.validate;
+var stringify9 = import_dist7.default.stringify;
+var parse22 = import_dist7.default.parse;
 
 // node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/dist/experimental/otel/constants.js
 var GEN_AI_OPERATION_NAME4 = "gen_ai.operation.name";
@@ -180271,7 +180971,7 @@ function assertUuid4(str2, which) {
 }
 function uuid7FromTime4(timestamp) {
   const msecs = typeof timestamp === "string" ? Date.parse(timestamp) : timestamp;
-  return v79({ msecs, seq: 0 });
+  return v710({ msecs, seq: 0 });
 }
 function getUuidVersion3(uuidStr) {
   if (!UUID_REGEX4.test(uuidStr)) {
@@ -180302,8 +181002,8 @@ function nonCryptographicUuid7Deterministic3(originalId, key) {
   const hashInput = `${originalId}:${key}`;
   const h = _fastHash1283(hashInput);
   const b = new Uint8Array(16);
-  const version10 = getUuidVersion3(originalId);
-  if (version10 === 7) {
+  const version11 = getUuidVersion3(originalId);
+  if (version11 === 7) {
     const originalBytes = uuidToBytes3(originalId);
     b.set(originalBytes.slice(0, 6), 0);
   } else {
@@ -182499,7 +183199,7 @@ class Client4 {
         headers: replayHeaders,
         body_base64: bodyBuffer.toString("base64")
       });
-      const filename = `trace_${Date.now()}_${v49().slice(0, 8)}.json`;
+      const filename = `trace_${Date.now()}_${v410().slice(0, 8)}.json`;
       const filepath = path4.join(directory, filename);
       if (!Client4._fallbackDirsCreated.has(directory)) {
         await mkdir6(directory);
@@ -183454,7 +184154,7 @@ Context: ${context2}`);
   async shareRun(runId, { shareId } = {}) {
     const data = {
       run_id: runId,
-      share_token: shareId || v49()
+      share_token: shareId || v410()
     };
     assertUuid4(runId);
     const body = JSON.stringify(data);
@@ -184164,7 +184864,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
       data = inputsOrUpdate;
     }
     const response = await this._uploadExamplesMultipart(datasetId_, [data]);
-    const example = await this.readExample(response.example_ids?.[0] ?? v49());
+    const example = await this.readExample(response.example_ids?.[0] ?? v410());
     return example;
   }
   async createExamples(propsOrUploads) {
@@ -184500,7 +185200,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
       assertUuid4(feedback_source.metadata["__run"].run_id);
     }
     const feedback = {
-      id: feedbackId ?? v49(),
+      id: feedbackId ?? v410(),
       run_id: runId,
       key,
       score: _formatFeedbackScore4(score),
@@ -184818,7 +185518,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
     const body = {
       name,
       description,
-      id: queueId || v49(),
+      id: queueId || v410(),
       rubric_instructions: rubricInstructions,
       rubric_items: rubricItems
     };
@@ -185194,7 +185894,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
     }
     const formData = new FormData;
     for (const example of uploads) {
-      const exampleId = (example.id ?? v49()).toString();
+      const exampleId = (example.id ?? v410()).toString();
       const exampleBody = {
         created_at: example.created_at,
         ...example.metadata && { metadata: example.metadata },
@@ -185503,7 +186203,7 @@ var UUID_NAMESPACE_DNS4 = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
 function getReplicaKey4(replica) {
   const sortedKeys = Object.keys(replica).sort();
   const keyData = sortedKeys.map((key) => `${key}:${replica[key] ?? ""}`).join("|");
-  return v56(keyData, UUID_NAMESPACE_DNS4);
+  return v57(keyData, UUID_NAMESPACE_DNS4);
 }
 function stripNonAlphanumeric4(input) {
   return input.replace(/[-:.]/g, "");
@@ -188195,7 +188895,7 @@ var core_exports4 = /* @__PURE__ */ __exportAll4({
   applyReducer: () => applyReducer4,
   deepClone: () => deepClone4,
   getValueByPointer: () => getValueByPointer4,
-  validate: () => validate14,
+  validate: () => validate15,
   validator: () => validator4
 });
 var JsonPatchError4 = PatchError4;
@@ -188446,7 +189146,7 @@ function validator4(operation, index2, document, existingPathFragment) {
       if (operation.path !== existingPathFragment)
         throw new JsonPatchError4("Cannot perform the operation at a path that does not exist", "OPERATION_PATH_UNRESOLVABLE", index2, operation, document);
     } else if (operation.op === "move" || operation.op === "copy") {
-      var error141 = validate14([{
+      var error141 = validate15([{
         op: "_get",
         path: operation.from,
         value: undefined
@@ -188456,7 +189156,7 @@ function validator4(operation, index2, document, existingPathFragment) {
     }
   }
 }
-function validate14(sequence, document, externalValidator) {
+function validate15(sequence, document, externalValidator) {
   try {
     if (!Array.isArray(sequence))
       throw new JsonPatchError4("Patch sequence must be an array", "SEQUENCE_NOT_AN_ARRAY");
@@ -189524,7 +190224,7 @@ var toBase64Url3 = (str2) => {
 // node_modules/deepagents/node_modules/zod/v4/core/index.js
 var exports_core8 = {};
 __export(exports_core8, {
-  version: () => version10,
+  version: () => version11,
   util: () => exports_util4,
   treeifyError: () => treeifyError4,
   toJSONSchema: () => toJSONSchema4,
@@ -189540,7 +190240,7 @@ __export(exports_core8, {
   process: () => process4,
   prettifyError: () => prettifyError4,
   parseAsync: () => parseAsync7,
-  parse: () => parse22,
+  parse: () => parse23,
   meta: () => meta7,
   locales: () => exports_locales4,
   isValidJWT: () => isValidJWT7,
@@ -190700,7 +191400,7 @@ var _parse4 = (_Err) => (schema, value, _ctx, _params) => {
   }
   return result.value;
 };
-var parse22 = /* @__PURE__ */ _parse4($ZodRealError4);
+var parse23 = /* @__PURE__ */ _parse4($ZodRealError4);
 var _parseAsync4 = (_Err) => async (schema, value, _ctx, params) => {
   const ctx = _ctx ? Object.assign(_ctx, { async: true }) : { async: true };
   let result = schema._zod.run({ value, issues: [] }, ctx);
@@ -190780,7 +191480,7 @@ __export(exports_regexes4, {
   uuid7: () => uuid78,
   uuid6: () => uuid65,
   uuid4: () => uuid45,
-  uuid: () => uuid18,
+  uuid: () => uuid19,
   uppercase: () => uppercase4,
   unicodeEmail: () => unicodeEmail4,
   undefined: () => _undefined10,
@@ -190844,14 +191544,14 @@ var nanoid7 = /^[a-zA-Z0-9_-]{21}$/;
 var duration7 = /^P(?:(\d+W)|(?!.*W)(?=\d|T\d)(\d+Y)?(\d+M)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+([.,]\d+)?S)?)?)$/;
 var extendedDuration4 = /^[-+]?P(?!$)(?:(?:[-+]?\d+Y)|(?:[-+]?\d+[.,]\d+Y$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:(?:[-+]?\d+W)|(?:[-+]?\d+[.,]\d+W$))?(?:(?:[-+]?\d+D)|(?:[-+]?\d+[.,]\d+D$))?(?:T(?=[\d+-])(?:(?:[-+]?\d+H)|(?:[-+]?\d+[.,]\d+H$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:[-+]?\d+(?:[.,]\d+)?S)?)??$/;
 var guid7 = /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/;
-var uuid18 = (version10) => {
-  if (!version10)
+var uuid19 = (version11) => {
+  if (!version11)
     return /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/;
-  return new RegExp(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-${version10}[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$`);
+  return new RegExp(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-${version11}[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$`);
 };
-var uuid45 = /* @__PURE__ */ uuid18(4);
-var uuid65 = /* @__PURE__ */ uuid18(6);
-var uuid78 = /* @__PURE__ */ uuid18(7);
+var uuid45 = /* @__PURE__ */ uuid19(4);
+var uuid65 = /* @__PURE__ */ uuid19(6);
+var uuid78 = /* @__PURE__ */ uuid19(7);
 var email7 = /^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$/;
 var html5Email4 = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 var rfc5322Email4 = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -191516,7 +192216,7 @@ class Doc4 {
 }
 
 // node_modules/deepagents/node_modules/zod/v4/core/versions.js
-var version10 = {
+var version11 = {
   major: 4,
   minor: 3,
   patch: 6
@@ -191528,7 +192228,7 @@ var $ZodType4 = /* @__PURE__ */ $constructor4("$ZodType", (inst, def) => {
   inst ?? (inst = {});
   inst._zod.def = def;
   inst._zod.bag = inst._zod.bag || {};
-  inst._zod.version = version10;
+  inst._zod.version = version11;
   const checks7 = [...inst._zod.def.checks ?? []];
   if (inst._zod.traits.has("$ZodCheck")) {
     checks7.unshift(inst);
@@ -191674,9 +192374,9 @@ var $ZodUUID4 = /* @__PURE__ */ $constructor4("$ZodUUID", (inst, def) => {
     const v = versionMap[def.version];
     if (v === undefined)
       throw new Error(`Invalid UUID version: "${def.version}"`);
-    def.pattern ?? (def.pattern = uuid18(v));
+    def.pattern ?? (def.pattern = uuid19(v));
   } else
-    def.pattern ?? (def.pattern = uuid18());
+    def.pattern ?? (def.pattern = uuid19());
   $ZodStringFormat4.init(inst, def);
 });
 var $ZodEmail4 = /* @__PURE__ */ $constructor4("$ZodEmail", (inst, def) => {
@@ -193368,10 +194068,10 @@ var $ZodFunction4 = /* @__PURE__ */ $constructor4("$ZodFunction", (inst, def) =>
       throw new Error("implement() must be called with a function");
     }
     return function(...args) {
-      const parsedArgs = inst._def.input ? parse22(inst._def.input, args) : args;
+      const parsedArgs = inst._def.input ? parse23(inst._def.input, args) : args;
       const result = Reflect.apply(func, this, parsedArgs);
       if (inst._def.output) {
-        return parse22(inst._def.output, result);
+        return parse23(inst._def.output, result);
       }
       return result;
     };
@@ -202290,11 +202990,11 @@ function datetimeRegex4(args) {
   regex2 = `${regex2}(${opts.join("|")})`;
   return new RegExp(`^${regex2}$`);
 }
-function isValidIP4(ip, version11) {
-  if ((version11 === "v4" || !version11) && ipv4Regex4.test(ip)) {
+function isValidIP4(ip, version12) {
+  if ((version12 === "v4" || !version12) && ipv4Regex4.test(ip)) {
     return true;
   }
-  if ((version11 === "v6" || !version11) && ipv6Regex4.test(ip)) {
+  if ((version12 === "v6" || !version12) && ipv6Regex4.test(ip)) {
     return true;
   }
   return false;
@@ -202321,11 +203021,11 @@ function isValidJWT8(jwt4, alg) {
     return false;
   }
 }
-function isValidCidr4(ip, version11) {
-  if ((version11 === "v4" || !version11) && ipv4CidrRegex4.test(ip)) {
+function isValidCidr4(ip, version12) {
+  if ((version12 === "v4" || !version12) && ipv4CidrRegex4.test(ip)) {
     return true;
   }
-  if ((version11 === "v6" || !version11) && ipv6CidrRegex4.test(ip)) {
+  if ((version12 === "v6" || !version12) && ipv6CidrRegex4.test(ip)) {
     return true;
   }
   return false;
@@ -208026,7 +208726,7 @@ __export(exports_external8, {
   uuidv7: () => uuidv74,
   uuidv6: () => uuidv64,
   uuidv4: () => uuidv44,
-  uuid: () => uuid19,
+  uuid: () => uuid20,
   util: () => exports_util4,
   url: () => url4,
   uppercase: () => _uppercase4,
@@ -208077,7 +208777,7 @@ __export(exports_external8, {
   pipe: () => pipe4,
   partialRecord: () => partialRecord4,
   parseAsync: () => parseAsync8,
-  parse: () => parse24,
+  parse: () => parse25,
   overwrite: () => _overwrite4,
   optional: () => optional5,
   object: () => object5,
@@ -208267,7 +208967,7 @@ __export(exports_schemas8, {
   uuidv7: () => uuidv74,
   uuidv6: () => uuidv64,
   uuidv4: () => uuidv44,
-  uuid: () => uuid19,
+  uuid: () => uuid20,
   url: () => url4,
   unknown: () => unknown5,
   union: () => union5,
@@ -208538,7 +209238,7 @@ var ZodRealError4 = $constructor4("ZodError", initializer8, {
 });
 
 // node_modules/deepagents/node_modules/zod/v4/classic/parse.js
-var parse24 = /* @__PURE__ */ _parse4(ZodRealError4);
+var parse25 = /* @__PURE__ */ _parse4(ZodRealError4);
 var parseAsync8 = /* @__PURE__ */ _parseAsync4(ZodRealError4);
 var safeParse9 = /* @__PURE__ */ _safeParse4(ZodRealError4);
 var safeParseAsync8 = /* @__PURE__ */ _safeParseAsync4(ZodRealError4);
@@ -208581,7 +209281,7 @@ var ZodType8 = /* @__PURE__ */ $constructor4("ZodType", (inst, def) => {
     reg.add(inst, meta8);
     return inst;
   };
-  inst.parse = (data, params) => parse24(inst, data, params, { callee: inst.parse });
+  inst.parse = (data, params) => parse25(inst, data, params, { callee: inst.parse });
   inst.safeParse = (data, params) => safeParse9(inst, data, params);
   inst.parseAsync = async (data, params) => parseAsync8(inst, data, params, { callee: inst.parseAsync });
   inst.safeParseAsync = async (data, params) => safeParseAsync8(inst, data, params);
@@ -208715,7 +209415,7 @@ var ZodUUID4 = /* @__PURE__ */ $constructor4("ZodUUID", (inst, def) => {
   $ZodUUID4.init(inst, def);
   ZodStringFormat4.init(inst, def);
 });
-function uuid19(params) {
+function uuid20(params) {
   return _uuid4(ZodUUID4, params);
 }
 function uuidv44(params) {
@@ -210100,10 +210800,10 @@ function fromJSONSchema3(schema, params) {
   if (typeof schema === "boolean") {
     return schema ? z3.any() : z3.never();
   }
-  const version11 = detectVersion3(schema, params?.defaultTarget);
+  const version12 = detectVersion3(schema, params?.defaultTarget);
   const defs = schema.$defs || schema.definitions || {};
   const ctx = {
-    version: version11,
+    version: version12,
     defs,
     refs: new Map,
     processing: new Set,
@@ -210142,7 +210842,7 @@ config4(en_default7());
 // node_modules/deepagents/dist/index.js
 var import_micromatch = __toESM(require_micromatch(), 1);
 import { basename } from "path";
-var import_yaml = __toESM(require_dist8(), 1);
+var import_yaml = __toESM(require_dist9(), 1);
 var import_fast_glob = __toESM(require_out4(), 1);
 import fs from "node:fs/promises";
 import fs$1 from "node:fs";
@@ -213081,7 +213781,8 @@ class Agent {
     const patch = await this.platform.fetchRawPatch({
       owner: params.owner,
       repo: params.repo,
-      pullno: params.pullNo
+      pullno: params.pullNo,
+      token: params.token
     });
     const fallbackLocation = this.pickReviewLocation(patch);
     const response = await this.agent.invoke({
@@ -213308,6 +214009,7 @@ function getInputs() {
   let provider = core5.getInput("provider");
   let apiKey = core5.getInput("api_key");
   let model = core5.getInput("model");
+  let githubToken = core5.getInput("github_token") || process.env.GITHUB_TOKEN;
   return {
     owner,
     repo,
@@ -213315,7 +214017,8 @@ function getInputs() {
     commitId,
     provider,
     apiKey,
-    model
+    model,
+    githubToken
   };
 }
 var getProvider = (provider, params) => {
@@ -213350,18 +214053,6 @@ var main = async () => {
     apikey: inputs.apiKey,
     model: inputs.model
   }), new GithubPlatform);
-  let { makeComment, summary } = await kitsu.generatePatchSummary({
-    owner: inputs.owner,
-    pullno: inputs.prNumber,
-    repo: inputs.repo
-  });
-  makeComment({
-    owner: inputs.owner,
-    pullNo: inputs.prNumber,
-    repo: inputs.repo,
-    token: process.env.GITHUB_TOKEN || "",
-    summary
-  });
   const agent = new Agent(getAgentModel(inputs.provider, {
     apikey: inputs.apiKey,
     model: inputs.model
@@ -213370,7 +214061,7 @@ var main = async () => {
     owner: inputs.owner,
     repo: inputs.repo,
     pullNo: inputs.prNumber,
-    token: process.env.GITHUB_TOKEN || "",
+    token: inputs.githubToken || "",
     commitId: inputs.commitId
   });
 };
