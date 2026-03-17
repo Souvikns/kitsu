@@ -3,7 +3,7 @@
 <img src="./assets/kitsu.svg" height=200 width=200 align=center />
 </p>
 <p align="center">
-Kitsu is your friendly open-source co-maintainer — reviewing PRs, summarizing changes, and auto-triaging issues to keep your projects healthy and organized.
+Kitsu is your open-source AI PR reviewer for GitHub. It reads a pull request patch, posts inline review comments for actionable findings, and falls back to a general PR comment when a finding cannot be placed safely in the diff.
 </p>
 
 ## Table of Contents
@@ -54,13 +54,14 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-3. Commit the workflow to the branch where you want Kitsu to run. The action currently triggers on `pull_request` events and will execute with the inputs you provide.
+3. Commit the workflow to the branch where you want Kitsu to run. The action currently triggers on `pull_request` events and posts review feedback against the PR head commit.
 
 Notes:
 
 - Set `provider` to either `openai` or `gemini` depending on which key you have available.
-- `model` defaults to `gpt-4o-mini` for OpenAI; choose a compatible model name for the provider you select.
-- `github_token` is required to post PR comments. Use `${{ secrets.GITHUB_TOKEN }}` or a PAT.
+- `model` defaults to `gpt-4o-mini` for OpenAI. Choose a compatible model name for the provider you select.
+- `github_token` is required to post inline review comments and fallback PR comments. Use `${{ secrets.GITHUB_TOKEN }}` or a PAT with `pull-requests: write`.
+- Large lockfiles, binaries, and oversized generated diffs are omitted from the model prompt so review context is spent on code changes.
 
 ### Adding `env` variables
 
@@ -75,7 +76,7 @@ You need to setup some `env` variables for the workflow to run.
 
 ## Reporting Issues
 
-Currently `Kitsu` is under development and it will have a lot of bugs, that we will be fixing as they come up. Feel free to let us know if you encounter any bug, it would help get the tool better. To report a bug just open an [issue](https://github.com/Souvikns/kitsu/issues) describing the bug.
+Currently `Kitsu` is under development and it will have bugs. To report one, open an [issue](https://github.com/Souvikns/kitsu/issues) with the workflow configuration, provider, model, and a minimal PR example if possible.
 
 ## Contributing
 

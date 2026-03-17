@@ -1,56 +1,59 @@
-import * as github from "@actions/github";
 import * as core from "@actions/core";
-import { Kitsu } from "./kitsu";
-import { GithubPlatform } from "./github";
-import { GeminiProvider, OpenAIProvider } from "./providers";
-import { type ProviderParams } from "./models/provider";
-import { Agent } from "./agent";
-import { ChatOpenAI } from "@langchain/openai";
+import * as github from "@actions/github";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { ChatOpenAI } from "@langchain/openai";
+import { Agent } from "./agent";
+import { GithubPlatform } from "./github";
+import type { Platform } from "./models/platform";
+import { type ProviderParams } from "./models/provider";
 
-function getInputs() {
-  const { owner, repo } = github.context.repo;
-  const prNumber = github.context.payload.pull_request?.number;
-  const commitId = github.context.payload.pull_request?.head?.sha;
+type ActionInputs = {
+  owner: string;
+  repo: string;
+  prNumber: number;
+  commitId: string;
+  provider: string;
+  apiKey: string;
+  model: string;
+  githubToken: string;
+};
+
+type InputDeps = {
+  context?: typeof github.context;
+  coreModule?: Pick<typeof core, "getInput">;
+  env?: NodeJS.ProcessEnv;
+};
+
+export function getInputs(deps: InputDeps = {}): ActionInputs {
+  const context = deps.context ?? github.context;
+  const coreModule = deps.coreModule ?? core;
+  const env = deps.env ?? process.env;
+  const { owner, repo } = context.repo;
+  const prNumber = context.payload.pull_request?.number;
+  const commitId = context.payload.pull_request?.head?.sha;
 
   if (!prNumber) {
     throw new Error(
-      "No pull request context found. This action must be run on pull_request events"
+      "No pull request context found. This action must be run on pull_request events",
     );
   }
   if (!commitId) {
     throw new Error("No pull request commit SHA found in event payload");
   }
 
-  let provider = core.getInput("provider");
-  let apiKey = core.getInput("api_key");
-  let model = core.getInput("model");
-  let githubToken = core.getInput("github_token") || process.env.GITHUB_TOKEN;
-
   return {
     owner,
     repo,
     prNumber,
     commitId,
-    provider,
-    apiKey,
-    model,
-    githubToken,
+    provider: coreModule.getInput("provider"),
+    apiKey: coreModule.getInput("api_key"),
+    model: coreModule.getInput("model"),
+    githubToken: coreModule.getInput("github_token") || env.GITHUB_TOKEN || "",
   };
 }
 
-const getProvider = (provider: string, params: ProviderParams) => {
-  switch (provider) {
-    case "openai":
-      return new OpenAIProvider(params);
-    case "gemini":
-      return new GeminiProvider(params);
-    default:
-      throw new Error("Invalid LLM Provider unable to initialize application");
-  }
-};
-
-const getAgentModel = (provider: string, params: ProviderParams) => {
+export const getAgentModel = (provider: string, params: ProviderParams) => {
   switch (provider) {
     case "openai":
       return new ChatOpenAI({
@@ -67,31 +70,33 @@ const getAgentModel = (provider: string, params: ProviderParams) => {
   }
 };
 
-const main = async () => {
-  const inputs = getInputs();
-  let kitsu = new Kitsu(
-    getProvider(inputs.provider, {
-      apikey: inputs.apiKey,
-      model: inputs.model,
-    }),
-    new GithubPlatform()
-  );
+type MainDeps = InputDeps & {
+  platform?: Platform;
+  agentFactory?: (inputs: ActionInputs, platform: Platform) => Agent;
+};
 
-  const agent = new Agent(
-    getAgentModel(inputs.provider, {
-      apikey: inputs.apiKey,
-      model: inputs.model,
-    }),
-    new GithubPlatform(),
-  );
+export async function main(deps: MainDeps = {}) {
+  const inputs = getInputs(deps);
+  const platform = deps.platform ?? new GithubPlatform();
+  const agent =
+    deps.agentFactory?.(inputs, platform) ??
+    new Agent(
+      getAgentModel(inputs.provider, {
+        apikey: inputs.apiKey,
+        model: inputs.model,
+      }),
+      platform,
+    );
 
   await agent.run({
     owner: inputs.owner,
     repo: inputs.repo,
     pullNo: inputs.prNumber,
-    token: inputs.githubToken || "",
+    token: inputs.githubToken,
     commitId: inputs.commitId,
   });
-};
+}
 
-main().catch((e) => console.error(e));
+if (!process.env.JEST_WORKER_ID) {
+  main().catch((error) => console.error(error));
+}

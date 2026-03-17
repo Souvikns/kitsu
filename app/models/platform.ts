@@ -9,34 +9,38 @@ export interface CommentInPrParams {
 export interface FetchRawPatchParams {
   owner: string;
   repo: string;
-  pullno: number;
+  pullNo: number;
   token?: string;
 }
 
-export interface CreateReviewCommentParams {
+export type ReviewSide = "RIGHT" | "LEFT";
+
+export interface ReviewFinding {
+  body: string;
+  commitId: string;
+  path: string;
+  position?: number;
+  line?: number;
+  side?: ReviewSide;
+  startLine?: number;
+  startSide?: ReviewSide;
+}
+
+export interface ReviewResult {
+  findings: ReviewFinding[];
+  summary?: string;
+  generalComments?: string[];
+}
+
+export interface CreateReviewCommentParams extends ReviewFinding {
   token: string;
   owner: string;
   repo: string;
   pullNo: number;
-  body: string;
-  commitId: string;
-  path: string;
-  // Use either position OR line+side (and optional startLine/startSide) per GitHub API.
-  position?: number;
-  line?: number;
-  side?: "RIGHT" | "LEFT";
-  startLine?: number;
-  startSide?: "RIGHT" | "LEFT";
 }
 
-export class Platform {
-  fetchRawPatch(params: FetchRawPatchParams): Promise<string> {
-    throw new Error("Method not implemented");
-  }
-  commentInPr(params: CommentInPrParams) {
-    throw new Error('Method not implemented');
-  }
-  async createReviewComment(params: CreateReviewCommentParams) {
-    throw new Error("Method not implemented");
-  }
+export abstract class Platform {
+  abstract fetchRawPatch(params: FetchRawPatchParams): Promise<string>;
+  abstract commentInPr(params: CommentInPrParams): Promise<void>;
+  abstract createReviewComment(params: CreateReviewCommentParams): Promise<void>;
 }

@@ -1,3 +1,9 @@
+jest.mock("@langchain/openai", () => ({
+  ChatOpenAI: jest.fn().mockImplementation(() => ({
+    invoke: jest.fn(),
+  })),
+}));
+
 import { OpenAIProvider } from "kitsu/providers/openai";
 
 describe("OpenAI Provider", () => {

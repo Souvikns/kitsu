@@ -17,11 +17,6 @@ inputs:
     description: GitHub token with permission to comment on PRs (e.g. secrets.GITHUB_TOKEN)
     required: true
 
-outputs:
-  time:
-    description: The time we greeted you
-    value: something...
-
 runs:
   using: node20
   main: dist/index.js

@@ -6,6 +6,12 @@ export class GeminiProvider extends Provider {
 
   constructor(params: ProviderParams) {
     super();
+    if (!params.apikey) {
+      throw new Error("Gemini API key is required.");
+    }
+    if (!params.model) {
+      throw new Error("Gemini model is required.");
+    }
     this.gemini = new ChatGoogleGenerativeAI({
       apiKey: params.apikey,
       model: params.model,

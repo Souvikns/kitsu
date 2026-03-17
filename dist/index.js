@@ -27,58 +27,189 @@ var __export = (target, all) => {
 };
 var __require = /* @__PURE__ */ createRequire(import.meta.url);
 
-// node_modules/@actions/github/lib/context.js
-var require_context = __commonJS((exports) => {
+// node_modules/@actions/core/lib/utils.js
+var require_utils = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
-  exports.Context = undefined;
-  var fs_1 = __require("fs");
-  var os_1 = __require("os");
+  exports.toCommandProperties = exports.toCommandValue = undefined;
+  function toCommandValue(input) {
+    if (input === null || input === undefined) {
+      return "";
+    } else if (typeof input === "string" || input instanceof String) {
+      return input;
+    }
+    return JSON.stringify(input);
+  }
+  exports.toCommandValue = toCommandValue;
+  function toCommandProperties(annotationProperties) {
+    if (!Object.keys(annotationProperties).length) {
+      return {};
+    }
+    return {
+      title: annotationProperties.title,
+      file: annotationProperties.file,
+      line: annotationProperties.startLine,
+      endLine: annotationProperties.endLine,
+      col: annotationProperties.startColumn,
+      endColumn: annotationProperties.endColumn
+    };
+  }
+  exports.toCommandProperties = toCommandProperties;
+});
 
-  class Context {
-    constructor() {
-      var _a, _b, _c;
-      this.payload = {};
-      if (process.env.GITHUB_EVENT_PATH) {
-        if ((0, fs_1.existsSync)(process.env.GITHUB_EVENT_PATH)) {
-          this.payload = JSON.parse((0, fs_1.readFileSync)(process.env.GITHUB_EVENT_PATH, { encoding: "utf8" }));
-        } else {
-          const path = process.env.GITHUB_EVENT_PATH;
-          process.stdout.write(`GITHUB_EVENT_PATH ${path} does not exist${os_1.EOL}`);
+// node_modules/@actions/core/lib/command.js
+var require_command = __commonJS((exports) => {
+  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() {
+        return m[k];
+      } };
+    }
+    Object.defineProperty(o, k2, desc);
+  } : function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    o[k2] = m[k];
+  });
+  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+  } : function(o, v) {
+    o["default"] = v;
+  });
+  var __importStar = exports && exports.__importStar || function(mod) {
+    if (mod && mod.__esModule)
+      return mod;
+    var result = {};
+    if (mod != null) {
+      for (var k in mod)
+        if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
+          __createBinding(result, mod, k);
+    }
+    __setModuleDefault(result, mod);
+    return result;
+  };
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.issue = exports.issueCommand = undefined;
+  var os = __importStar(__require("os"));
+  var utils_1 = require_utils();
+  function issueCommand(command, properties, message) {
+    const cmd = new Command(command, properties, message);
+    process.stdout.write(cmd.toString() + os.EOL);
+  }
+  exports.issueCommand = issueCommand;
+  function issue(name, message = "") {
+    issueCommand(name, {}, message);
+  }
+  exports.issue = issue;
+  var CMD_STRING = "::";
+
+  class Command {
+    constructor(command, properties, message) {
+      if (!command) {
+        command = "missing.command";
+      }
+      this.command = command;
+      this.properties = properties;
+      this.message = message;
+    }
+    toString() {
+      let cmdStr = CMD_STRING + this.command;
+      if (this.properties && Object.keys(this.properties).length > 0) {
+        cmdStr += " ";
+        let first = true;
+        for (const key in this.properties) {
+          if (this.properties.hasOwnProperty(key)) {
+            const val = this.properties[key];
+            if (val) {
+              if (first) {
+                first = false;
+              } else {
+                cmdStr += ",";
+              }
+              cmdStr += `${key}=${escapeProperty(val)}`;
+            }
+          }
         }
       }
-      this.eventName = process.env.GITHUB_EVENT_NAME;
-      this.sha = process.env.GITHUB_SHA;
-      this.ref = process.env.GITHUB_REF;
-      this.workflow = process.env.GITHUB_WORKFLOW;
-      this.action = process.env.GITHUB_ACTION;
-      this.actor = process.env.GITHUB_ACTOR;
-      this.job = process.env.GITHUB_JOB;
-      this.runAttempt = parseInt(process.env.GITHUB_RUN_ATTEMPT, 10);
-      this.runNumber = parseInt(process.env.GITHUB_RUN_NUMBER, 10);
-      this.runId = parseInt(process.env.GITHUB_RUN_ID, 10);
-      this.apiUrl = (_a = process.env.GITHUB_API_URL) !== null && _a !== undefined ? _a : `https://api.github.com`;
-      this.serverUrl = (_b = process.env.GITHUB_SERVER_URL) !== null && _b !== undefined ? _b : `https://github.com`;
-      this.graphqlUrl = (_c = process.env.GITHUB_GRAPHQL_URL) !== null && _c !== undefined ? _c : `https://api.github.com/graphql`;
-    }
-    get issue() {
-      const payload = this.payload;
-      return Object.assign(Object.assign({}, this.repo), { number: (payload.issue || payload.pull_request || payload).number });
-    }
-    get repo() {
-      if (process.env.GITHUB_REPOSITORY) {
-        const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
-        return { owner, repo };
-      }
-      if (this.payload.repository) {
-        return {
-          owner: this.payload.repository.owner.login,
-          repo: this.payload.repository.name
-        };
-      }
-      throw new Error("context.repo requires a GITHUB_REPOSITORY environment variable like 'owner/repo'");
+      cmdStr += `${CMD_STRING}${escapeData(this.message)}`;
+      return cmdStr;
     }
   }
-  exports.Context = Context;
+  function escapeData(s) {
+    return (0, utils_1.toCommandValue)(s).replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+  }
+  function escapeProperty(s) {
+    return (0, utils_1.toCommandValue)(s).replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A").replace(/:/g, "%3A").replace(/,/g, "%2C");
+  }
+});
+
+// node_modules/@actions/core/lib/file-command.js
+var require_file_command = __commonJS((exports) => {
+  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() {
+        return m[k];
+      } };
+    }
+    Object.defineProperty(o, k2, desc);
+  } : function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    o[k2] = m[k];
+  });
+  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+  } : function(o, v) {
+    o["default"] = v;
+  });
+  var __importStar = exports && exports.__importStar || function(mod) {
+    if (mod && mod.__esModule)
+      return mod;
+    var result = {};
+    if (mod != null) {
+      for (var k in mod)
+        if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
+          __createBinding(result, mod, k);
+    }
+    __setModuleDefault(result, mod);
+    return result;
+  };
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.prepareKeyValueMessage = exports.issueFileCommand = undefined;
+  var crypto2 = __importStar(__require("crypto"));
+  var fs = __importStar(__require("fs"));
+  var os = __importStar(__require("os"));
+  var utils_1 = require_utils();
+  function issueFileCommand(command, message) {
+    const filePath = process.env[`GITHUB_${command}`];
+    if (!filePath) {
+      throw new Error(`Unable to find environment variable for file command ${command}`);
+    }
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Missing file at path: ${filePath}`);
+    }
+    fs.appendFileSync(filePath, `${(0, utils_1.toCommandValue)(message)}${os.EOL}`, {
+      encoding: "utf8"
+    });
+  }
+  exports.issueFileCommand = issueFileCommand;
+  function prepareKeyValueMessage(key, value) {
+    const delimiter = `ghadelimiter_${crypto2.randomUUID()}`;
+    const convertedValue = (0, utils_1.toCommandValue)(value);
+    if (key.includes(delimiter)) {
+      throw new Error(`Unexpected input: name should not contain the delimiter "${delimiter}"`);
+    }
+    if (convertedValue.includes(delimiter)) {
+      throw new Error(`Unexpected input: value should not contain the delimiter "${delimiter}"`);
+    }
+    return `${key}<<${delimiter}${os.EOL}${convertedValue}${os.EOL}${delimiter}`;
+  }
+  exports.prepareKeyValueMessage = prepareKeyValueMessage;
 });
 
 // node_modules/@actions/http-client/lib/proxy.js
@@ -5994,7 +6125,7 @@ var require_connect = __commonJS((exports, module) => {
 });
 
 // node_modules/undici/lib/llhttp/utils.js
-var require_utils = __commonJS((exports) => {
+var require_utils2 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.enumToMap = undefined;
   function enumToMap(obj) {
@@ -6014,7 +6145,7 @@ var require_utils = __commonJS((exports) => {
 var require_constants3 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.SPECIAL_HEADERS = exports.HEADER_STATE = exports.MINOR = exports.MAJOR = exports.CONNECTION_TOKEN_CHARS = exports.HEADER_CHARS = exports.TOKEN = exports.STRICT_TOKEN = exports.HEX = exports.URL_CHAR = exports.STRICT_URL_CHAR = exports.USERINFO_CHARS = exports.MARK = exports.ALPHANUM = exports.NUM = exports.HEX_MAP = exports.NUM_MAP = exports.ALPHA = exports.FINISH = exports.H_METHOD_MAP = exports.METHOD_MAP = exports.METHODS_RTSP = exports.METHODS_ICE = exports.METHODS_HTTP = exports.METHODS = exports.LENIENT_FLAGS = exports.FLAGS = exports.TYPE = exports.ERROR = undefined;
-  var utils_1 = require_utils();
+  var utils_1 = require_utils2();
   var ERROR2;
   (function(ERROR3) {
     ERROR3[ERROR3["OK"] = 0] = "OK";
@@ -16884,8 +17015,1836 @@ var require_lib = __commonJS((exports) => {
   var lowercaseKeys = (obj) => Object.keys(obj).reduce((c, k) => (c[k.toLowerCase()] = obj[k], c), {});
 });
 
+// node_modules/@actions/http-client/lib/auth.js
+var require_auth = __commonJS((exports) => {
+  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
+    function adopt(value) {
+      return value instanceof P ? value : new P(function(resolve) {
+        resolve(value);
+      });
+    }
+    return new (P || (P = Promise))(function(resolve, reject) {
+      function fulfilled(value) {
+        try {
+          step(generator.next(value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function rejected(value) {
+        try {
+          step(generator["throw"](value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function step(result) {
+        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+      }
+      step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+  };
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.PersonalAccessTokenCredentialHandler = exports.BearerCredentialHandler = exports.BasicCredentialHandler = undefined;
+
+  class BasicCredentialHandler {
+    constructor(username, password) {
+      this.username = username;
+      this.password = password;
+    }
+    prepareRequest(options) {
+      if (!options.headers) {
+        throw Error("The request has no headers");
+      }
+      options.headers["Authorization"] = `Basic ${Buffer.from(`${this.username}:${this.password}`).toString("base64")}`;
+    }
+    canHandleAuthentication() {
+      return false;
+    }
+    handleAuthentication() {
+      return __awaiter(this, undefined, undefined, function* () {
+        throw new Error("not implemented");
+      });
+    }
+  }
+  exports.BasicCredentialHandler = BasicCredentialHandler;
+
+  class BearerCredentialHandler {
+    constructor(token) {
+      this.token = token;
+    }
+    prepareRequest(options) {
+      if (!options.headers) {
+        throw Error("The request has no headers");
+      }
+      options.headers["Authorization"] = `Bearer ${this.token}`;
+    }
+    canHandleAuthentication() {
+      return false;
+    }
+    handleAuthentication() {
+      return __awaiter(this, undefined, undefined, function* () {
+        throw new Error("not implemented");
+      });
+    }
+  }
+  exports.BearerCredentialHandler = BearerCredentialHandler;
+
+  class PersonalAccessTokenCredentialHandler {
+    constructor(token) {
+      this.token = token;
+    }
+    prepareRequest(options) {
+      if (!options.headers) {
+        throw Error("The request has no headers");
+      }
+      options.headers["Authorization"] = `Basic ${Buffer.from(`PAT:${this.token}`).toString("base64")}`;
+    }
+    canHandleAuthentication() {
+      return false;
+    }
+    handleAuthentication() {
+      return __awaiter(this, undefined, undefined, function* () {
+        throw new Error("not implemented");
+      });
+    }
+  }
+  exports.PersonalAccessTokenCredentialHandler = PersonalAccessTokenCredentialHandler;
+});
+
+// node_modules/@actions/core/lib/oidc-utils.js
+var require_oidc_utils = __commonJS((exports) => {
+  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
+    function adopt(value) {
+      return value instanceof P ? value : new P(function(resolve) {
+        resolve(value);
+      });
+    }
+    return new (P || (P = Promise))(function(resolve, reject) {
+      function fulfilled(value) {
+        try {
+          step(generator.next(value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function rejected(value) {
+        try {
+          step(generator["throw"](value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function step(result) {
+        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+      }
+      step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+  };
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.OidcClient = undefined;
+  var http_client_1 = require_lib();
+  var auth_1 = require_auth();
+  var core_1 = require_core();
+
+  class OidcClient {
+    static createHttpClient(allowRetry = true, maxRetry = 10) {
+      const requestOptions = {
+        allowRetries: allowRetry,
+        maxRetries: maxRetry
+      };
+      return new http_client_1.HttpClient("actions/oidc-client", [new auth_1.BearerCredentialHandler(OidcClient.getRequestToken())], requestOptions);
+    }
+    static getRequestToken() {
+      const token = process.env["ACTIONS_ID_TOKEN_REQUEST_TOKEN"];
+      if (!token) {
+        throw new Error("Unable to get ACTIONS_ID_TOKEN_REQUEST_TOKEN env variable");
+      }
+      return token;
+    }
+    static getIDTokenUrl() {
+      const runtimeUrl = process.env["ACTIONS_ID_TOKEN_REQUEST_URL"];
+      if (!runtimeUrl) {
+        throw new Error("Unable to get ACTIONS_ID_TOKEN_REQUEST_URL env variable");
+      }
+      return runtimeUrl;
+    }
+    static getCall(id_token_url) {
+      var _a;
+      return __awaiter(this, undefined, undefined, function* () {
+        const httpclient = OidcClient.createHttpClient();
+        const res = yield httpclient.getJson(id_token_url).catch((error) => {
+          throw new Error(`Failed to get ID Token. 
+ 
+        Error Code : ${error.statusCode}
+ 
+        Error Message: ${error.message}`);
+        });
+        const id_token = (_a = res.result) === null || _a === undefined ? undefined : _a.value;
+        if (!id_token) {
+          throw new Error("Response json body do not have ID Token field");
+        }
+        return id_token;
+      });
+    }
+    static getIDToken(audience) {
+      return __awaiter(this, undefined, undefined, function* () {
+        try {
+          let id_token_url = OidcClient.getIDTokenUrl();
+          if (audience) {
+            const encodedAudience = encodeURIComponent(audience);
+            id_token_url = `${id_token_url}&audience=${encodedAudience}`;
+          }
+          (0, core_1.debug)(`ID token url is ${id_token_url}`);
+          const id_token = yield OidcClient.getCall(id_token_url);
+          (0, core_1.setSecret)(id_token);
+          return id_token;
+        } catch (error) {
+          throw new Error(`Error message: ${error.message}`);
+        }
+      });
+    }
+  }
+  exports.OidcClient = OidcClient;
+});
+
+// node_modules/@actions/core/lib/summary.js
+var require_summary = __commonJS((exports) => {
+  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
+    function adopt(value) {
+      return value instanceof P ? value : new P(function(resolve) {
+        resolve(value);
+      });
+    }
+    return new (P || (P = Promise))(function(resolve, reject) {
+      function fulfilled(value) {
+        try {
+          step(generator.next(value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function rejected(value) {
+        try {
+          step(generator["throw"](value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function step(result) {
+        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+      }
+      step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+  };
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.summary = exports.markdownSummary = exports.SUMMARY_DOCS_URL = exports.SUMMARY_ENV_VAR = undefined;
+  var os_1 = __require("os");
+  var fs_1 = __require("fs");
+  var { access, appendFile, writeFile } = fs_1.promises;
+  exports.SUMMARY_ENV_VAR = "GITHUB_STEP_SUMMARY";
+  exports.SUMMARY_DOCS_URL = "https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary";
+
+  class Summary {
+    constructor() {
+      this._buffer = "";
+    }
+    filePath() {
+      return __awaiter(this, undefined, undefined, function* () {
+        if (this._filePath) {
+          return this._filePath;
+        }
+        const pathFromEnv = process.env[exports.SUMMARY_ENV_VAR];
+        if (!pathFromEnv) {
+          throw new Error(`Unable to find environment variable for $${exports.SUMMARY_ENV_VAR}. Check if your runtime environment supports job summaries.`);
+        }
+        try {
+          yield access(pathFromEnv, fs_1.constants.R_OK | fs_1.constants.W_OK);
+        } catch (_a) {
+          throw new Error(`Unable to access summary file: '${pathFromEnv}'. Check if the file has correct read/write permissions.`);
+        }
+        this._filePath = pathFromEnv;
+        return this._filePath;
+      });
+    }
+    wrap(tag, content, attrs = {}) {
+      const htmlAttrs = Object.entries(attrs).map(([key, value]) => ` ${key}="${value}"`).join("");
+      if (!content) {
+        return `<${tag}${htmlAttrs}>`;
+      }
+      return `<${tag}${htmlAttrs}>${content}</${tag}>`;
+    }
+    write(options) {
+      return __awaiter(this, undefined, undefined, function* () {
+        const overwrite = !!(options === null || options === undefined ? undefined : options.overwrite);
+        const filePath = yield this.filePath();
+        const writeFunc = overwrite ? writeFile : appendFile;
+        yield writeFunc(filePath, this._buffer, { encoding: "utf8" });
+        return this.emptyBuffer();
+      });
+    }
+    clear() {
+      return __awaiter(this, undefined, undefined, function* () {
+        return this.emptyBuffer().write({ overwrite: true });
+      });
+    }
+    stringify() {
+      return this._buffer;
+    }
+    isEmptyBuffer() {
+      return this._buffer.length === 0;
+    }
+    emptyBuffer() {
+      this._buffer = "";
+      return this;
+    }
+    addRaw(text, addEOL = false) {
+      this._buffer += text;
+      return addEOL ? this.addEOL() : this;
+    }
+    addEOL() {
+      return this.addRaw(os_1.EOL);
+    }
+    addCodeBlock(code, lang) {
+      const attrs = Object.assign({}, lang && { lang });
+      const element = this.wrap("pre", this.wrap("code", code), attrs);
+      return this.addRaw(element).addEOL();
+    }
+    addList(items, ordered = false) {
+      const tag = ordered ? "ol" : "ul";
+      const listItems = items.map((item) => this.wrap("li", item)).join("");
+      const element = this.wrap(tag, listItems);
+      return this.addRaw(element).addEOL();
+    }
+    addTable(rows) {
+      const tableBody = rows.map((row) => {
+        const cells = row.map((cell) => {
+          if (typeof cell === "string") {
+            return this.wrap("td", cell);
+          }
+          const { header, data, colspan, rowspan } = cell;
+          const tag = header ? "th" : "td";
+          const attrs = Object.assign(Object.assign({}, colspan && { colspan }), rowspan && { rowspan });
+          return this.wrap(tag, data, attrs);
+        }).join("");
+        return this.wrap("tr", cells);
+      }).join("");
+      const element = this.wrap("table", tableBody);
+      return this.addRaw(element).addEOL();
+    }
+    addDetails(label, content) {
+      const element = this.wrap("details", this.wrap("summary", label) + content);
+      return this.addRaw(element).addEOL();
+    }
+    addImage(src, alt, options) {
+      const { width, height } = options || {};
+      const attrs = Object.assign(Object.assign({}, width && { width }), height && { height });
+      const element = this.wrap("img", null, Object.assign({ src, alt }, attrs));
+      return this.addRaw(element).addEOL();
+    }
+    addHeading(text, level) {
+      const tag = `h${level}`;
+      const allowedTag = ["h1", "h2", "h3", "h4", "h5", "h6"].includes(tag) ? tag : "h1";
+      const element = this.wrap(allowedTag, text);
+      return this.addRaw(element).addEOL();
+    }
+    addSeparator() {
+      const element = this.wrap("hr", null);
+      return this.addRaw(element).addEOL();
+    }
+    addBreak() {
+      const element = this.wrap("br", null);
+      return this.addRaw(element).addEOL();
+    }
+    addQuote(text, cite) {
+      const attrs = Object.assign({}, cite && { cite });
+      const element = this.wrap("blockquote", text, attrs);
+      return this.addRaw(element).addEOL();
+    }
+    addLink(text, href) {
+      const element = this.wrap("a", text, { href });
+      return this.addRaw(element).addEOL();
+    }
+  }
+  var _summary = new Summary;
+  exports.markdownSummary = _summary;
+  exports.summary = _summary;
+});
+
+// node_modules/@actions/core/lib/path-utils.js
+var require_path_utils = __commonJS((exports) => {
+  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() {
+        return m[k];
+      } };
+    }
+    Object.defineProperty(o, k2, desc);
+  } : function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    o[k2] = m[k];
+  });
+  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+  } : function(o, v) {
+    o["default"] = v;
+  });
+  var __importStar = exports && exports.__importStar || function(mod) {
+    if (mod && mod.__esModule)
+      return mod;
+    var result = {};
+    if (mod != null) {
+      for (var k in mod)
+        if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
+          __createBinding(result, mod, k);
+    }
+    __setModuleDefault(result, mod);
+    return result;
+  };
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.toPlatformPath = exports.toWin32Path = exports.toPosixPath = undefined;
+  var path = __importStar(__require("path"));
+  function toPosixPath(pth) {
+    return pth.replace(/[\\]/g, "/");
+  }
+  exports.toPosixPath = toPosixPath;
+  function toWin32Path(pth) {
+    return pth.replace(/[/]/g, "\\");
+  }
+  exports.toWin32Path = toWin32Path;
+  function toPlatformPath(pth) {
+    return pth.replace(/[/\\]/g, path.sep);
+  }
+  exports.toPlatformPath = toPlatformPath;
+});
+
+// node_modules/@actions/io/lib/io-util.js
+var require_io_util = __commonJS((exports) => {
+  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() {
+      return m[k];
+    } });
+  } : function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    o[k2] = m[k];
+  });
+  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+  } : function(o, v) {
+    o["default"] = v;
+  });
+  var __importStar = exports && exports.__importStar || function(mod) {
+    if (mod && mod.__esModule)
+      return mod;
+    var result = {};
+    if (mod != null) {
+      for (var k in mod)
+        if (k !== "default" && Object.hasOwnProperty.call(mod, k))
+          __createBinding(result, mod, k);
+    }
+    __setModuleDefault(result, mod);
+    return result;
+  };
+  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
+    function adopt(value) {
+      return value instanceof P ? value : new P(function(resolve) {
+        resolve(value);
+      });
+    }
+    return new (P || (P = Promise))(function(resolve, reject) {
+      function fulfilled(value) {
+        try {
+          step(generator.next(value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function rejected(value) {
+        try {
+          step(generator["throw"](value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function step(result) {
+        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+      }
+      step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+  };
+  var _a;
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.getCmdPath = exports.tryGetExecutablePath = exports.isRooted = exports.isDirectory = exports.exists = exports.READONLY = exports.UV_FS_O_EXLOCK = exports.IS_WINDOWS = exports.unlink = exports.symlink = exports.stat = exports.rmdir = exports.rm = exports.rename = exports.readlink = exports.readdir = exports.open = exports.mkdir = exports.lstat = exports.copyFile = exports.chmod = undefined;
+  var fs = __importStar(__require("fs"));
+  var path = __importStar(__require("path"));
+  _a = fs.promises, exports.chmod = _a.chmod, exports.copyFile = _a.copyFile, exports.lstat = _a.lstat, exports.mkdir = _a.mkdir, exports.open = _a.open, exports.readdir = _a.readdir, exports.readlink = _a.readlink, exports.rename = _a.rename, exports.rm = _a.rm, exports.rmdir = _a.rmdir, exports.stat = _a.stat, exports.symlink = _a.symlink, exports.unlink = _a.unlink;
+  exports.IS_WINDOWS = process.platform === "win32";
+  exports.UV_FS_O_EXLOCK = 268435456;
+  exports.READONLY = fs.constants.O_RDONLY;
+  function exists(fsPath) {
+    return __awaiter(this, undefined, undefined, function* () {
+      try {
+        yield exports.stat(fsPath);
+      } catch (err) {
+        if (err.code === "ENOENT") {
+          return false;
+        }
+        throw err;
+      }
+      return true;
+    });
+  }
+  exports.exists = exists;
+  function isDirectory(fsPath, useStat = false) {
+    return __awaiter(this, undefined, undefined, function* () {
+      const stats = useStat ? yield exports.stat(fsPath) : yield exports.lstat(fsPath);
+      return stats.isDirectory();
+    });
+  }
+  exports.isDirectory = isDirectory;
+  function isRooted(p) {
+    p = normalizeSeparators(p);
+    if (!p) {
+      throw new Error('isRooted() parameter "p" cannot be empty');
+    }
+    if (exports.IS_WINDOWS) {
+      return p.startsWith("\\") || /^[A-Z]:/i.test(p);
+    }
+    return p.startsWith("/");
+  }
+  exports.isRooted = isRooted;
+  function tryGetExecutablePath(filePath, extensions) {
+    return __awaiter(this, undefined, undefined, function* () {
+      let stats = undefined;
+      try {
+        stats = yield exports.stat(filePath);
+      } catch (err) {
+        if (err.code !== "ENOENT") {
+          console.log(`Unexpected error attempting to determine if executable file exists '${filePath}': ${err}`);
+        }
+      }
+      if (stats && stats.isFile()) {
+        if (exports.IS_WINDOWS) {
+          const upperExt = path.extname(filePath).toUpperCase();
+          if (extensions.some((validExt) => validExt.toUpperCase() === upperExt)) {
+            return filePath;
+          }
+        } else {
+          if (isUnixExecutable(stats)) {
+            return filePath;
+          }
+        }
+      }
+      const originalFilePath = filePath;
+      for (const extension of extensions) {
+        filePath = originalFilePath + extension;
+        stats = undefined;
+        try {
+          stats = yield exports.stat(filePath);
+        } catch (err) {
+          if (err.code !== "ENOENT") {
+            console.log(`Unexpected error attempting to determine if executable file exists '${filePath}': ${err}`);
+          }
+        }
+        if (stats && stats.isFile()) {
+          if (exports.IS_WINDOWS) {
+            try {
+              const directory = path.dirname(filePath);
+              const upperName = path.basename(filePath).toUpperCase();
+              for (const actualName of yield exports.readdir(directory)) {
+                if (upperName === actualName.toUpperCase()) {
+                  filePath = path.join(directory, actualName);
+                  break;
+                }
+              }
+            } catch (err) {
+              console.log(`Unexpected error attempting to determine the actual case of the file '${filePath}': ${err}`);
+            }
+            return filePath;
+          } else {
+            if (isUnixExecutable(stats)) {
+              return filePath;
+            }
+          }
+        }
+      }
+      return "";
+    });
+  }
+  exports.tryGetExecutablePath = tryGetExecutablePath;
+  function normalizeSeparators(p) {
+    p = p || "";
+    if (exports.IS_WINDOWS) {
+      p = p.replace(/\//g, "\\");
+      return p.replace(/\\\\+/g, "\\");
+    }
+    return p.replace(/\/\/+/g, "/");
+  }
+  function isUnixExecutable(stats) {
+    return (stats.mode & 1) > 0 || (stats.mode & 8) > 0 && stats.gid === process.getgid() || (stats.mode & 64) > 0 && stats.uid === process.getuid();
+  }
+  function getCmdPath() {
+    var _a2;
+    return (_a2 = process.env["COMSPEC"]) !== null && _a2 !== undefined ? _a2 : `cmd.exe`;
+  }
+  exports.getCmdPath = getCmdPath;
+});
+
+// node_modules/@actions/io/lib/io.js
+var require_io = __commonJS((exports) => {
+  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() {
+      return m[k];
+    } });
+  } : function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    o[k2] = m[k];
+  });
+  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+  } : function(o, v) {
+    o["default"] = v;
+  });
+  var __importStar = exports && exports.__importStar || function(mod) {
+    if (mod && mod.__esModule)
+      return mod;
+    var result = {};
+    if (mod != null) {
+      for (var k in mod)
+        if (k !== "default" && Object.hasOwnProperty.call(mod, k))
+          __createBinding(result, mod, k);
+    }
+    __setModuleDefault(result, mod);
+    return result;
+  };
+  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
+    function adopt(value) {
+      return value instanceof P ? value : new P(function(resolve) {
+        resolve(value);
+      });
+    }
+    return new (P || (P = Promise))(function(resolve, reject) {
+      function fulfilled(value) {
+        try {
+          step(generator.next(value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function rejected(value) {
+        try {
+          step(generator["throw"](value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function step(result) {
+        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+      }
+      step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+  };
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.findInPath = exports.which = exports.mkdirP = exports.rmRF = exports.mv = exports.cp = undefined;
+  var assert_1 = __require("assert");
+  var path = __importStar(__require("path"));
+  var ioUtil = __importStar(require_io_util());
+  function cp(source, dest, options = {}) {
+    return __awaiter(this, undefined, undefined, function* () {
+      const { force, recursive, copySourceDirectory } = readCopyOptions(options);
+      const destStat = (yield ioUtil.exists(dest)) ? yield ioUtil.stat(dest) : null;
+      if (destStat && destStat.isFile() && !force) {
+        return;
+      }
+      const newDest = destStat && destStat.isDirectory() && copySourceDirectory ? path.join(dest, path.basename(source)) : dest;
+      if (!(yield ioUtil.exists(source))) {
+        throw new Error(`no such file or directory: ${source}`);
+      }
+      const sourceStat = yield ioUtil.stat(source);
+      if (sourceStat.isDirectory()) {
+        if (!recursive) {
+          throw new Error(`Failed to copy. ${source} is a directory, but tried to copy without recursive flag.`);
+        } else {
+          yield cpDirRecursive(source, newDest, 0, force);
+        }
+      } else {
+        if (path.relative(source, newDest) === "") {
+          throw new Error(`'${newDest}' and '${source}' are the same file`);
+        }
+        yield copyFile(source, newDest, force);
+      }
+    });
+  }
+  exports.cp = cp;
+  function mv(source, dest, options = {}) {
+    return __awaiter(this, undefined, undefined, function* () {
+      if (yield ioUtil.exists(dest)) {
+        let destExists = true;
+        if (yield ioUtil.isDirectory(dest)) {
+          dest = path.join(dest, path.basename(source));
+          destExists = yield ioUtil.exists(dest);
+        }
+        if (destExists) {
+          if (options.force == null || options.force) {
+            yield rmRF(dest);
+          } else {
+            throw new Error("Destination already exists");
+          }
+        }
+      }
+      yield mkdirP(path.dirname(dest));
+      yield ioUtil.rename(source, dest);
+    });
+  }
+  exports.mv = mv;
+  function rmRF(inputPath) {
+    return __awaiter(this, undefined, undefined, function* () {
+      if (ioUtil.IS_WINDOWS) {
+        if (/[*"<>|]/.test(inputPath)) {
+          throw new Error('File path must not contain `*`, `"`, `<`, `>` or `|` on Windows');
+        }
+      }
+      try {
+        yield ioUtil.rm(inputPath, {
+          force: true,
+          maxRetries: 3,
+          recursive: true,
+          retryDelay: 300
+        });
+      } catch (err) {
+        throw new Error(`File was unable to be removed ${err}`);
+      }
+    });
+  }
+  exports.rmRF = rmRF;
+  function mkdirP(fsPath) {
+    return __awaiter(this, undefined, undefined, function* () {
+      assert_1.ok(fsPath, "a path argument must be provided");
+      yield ioUtil.mkdir(fsPath, { recursive: true });
+    });
+  }
+  exports.mkdirP = mkdirP;
+  function which(tool, check) {
+    return __awaiter(this, undefined, undefined, function* () {
+      if (!tool) {
+        throw new Error("parameter 'tool' is required");
+      }
+      if (check) {
+        const result = yield which(tool, false);
+        if (!result) {
+          if (ioUtil.IS_WINDOWS) {
+            throw new Error(`Unable to locate executable file: ${tool}. Please verify either the file path exists or the file can be found within a directory specified by the PATH environment variable. Also verify the file has a valid extension for an executable file.`);
+          } else {
+            throw new Error(`Unable to locate executable file: ${tool}. Please verify either the file path exists or the file can be found within a directory specified by the PATH environment variable. Also check the file mode to verify the file is executable.`);
+          }
+        }
+        return result;
+      }
+      const matches = yield findInPath(tool);
+      if (matches && matches.length > 0) {
+        return matches[0];
+      }
+      return "";
+    });
+  }
+  exports.which = which;
+  function findInPath(tool) {
+    return __awaiter(this, undefined, undefined, function* () {
+      if (!tool) {
+        throw new Error("parameter 'tool' is required");
+      }
+      const extensions = [];
+      if (ioUtil.IS_WINDOWS && process.env["PATHEXT"]) {
+        for (const extension of process.env["PATHEXT"].split(path.delimiter)) {
+          if (extension) {
+            extensions.push(extension);
+          }
+        }
+      }
+      if (ioUtil.isRooted(tool)) {
+        const filePath = yield ioUtil.tryGetExecutablePath(tool, extensions);
+        if (filePath) {
+          return [filePath];
+        }
+        return [];
+      }
+      if (tool.includes(path.sep)) {
+        return [];
+      }
+      const directories = [];
+      if (process.env.PATH) {
+        for (const p of process.env.PATH.split(path.delimiter)) {
+          if (p) {
+            directories.push(p);
+          }
+        }
+      }
+      const matches = [];
+      for (const directory of directories) {
+        const filePath = yield ioUtil.tryGetExecutablePath(path.join(directory, tool), extensions);
+        if (filePath) {
+          matches.push(filePath);
+        }
+      }
+      return matches;
+    });
+  }
+  exports.findInPath = findInPath;
+  function readCopyOptions(options) {
+    const force = options.force == null ? true : options.force;
+    const recursive = Boolean(options.recursive);
+    const copySourceDirectory = options.copySourceDirectory == null ? true : Boolean(options.copySourceDirectory);
+    return { force, recursive, copySourceDirectory };
+  }
+  function cpDirRecursive(sourceDir, destDir, currentDepth, force) {
+    return __awaiter(this, undefined, undefined, function* () {
+      if (currentDepth >= 255)
+        return;
+      currentDepth++;
+      yield mkdirP(destDir);
+      const files = yield ioUtil.readdir(sourceDir);
+      for (const fileName of files) {
+        const srcFile = `${sourceDir}/${fileName}`;
+        const destFile = `${destDir}/${fileName}`;
+        const srcFileStat = yield ioUtil.lstat(srcFile);
+        if (srcFileStat.isDirectory()) {
+          yield cpDirRecursive(srcFile, destFile, currentDepth, force);
+        } else {
+          yield copyFile(srcFile, destFile, force);
+        }
+      }
+      yield ioUtil.chmod(destDir, (yield ioUtil.stat(sourceDir)).mode);
+    });
+  }
+  function copyFile(srcFile, destFile, force) {
+    return __awaiter(this, undefined, undefined, function* () {
+      if ((yield ioUtil.lstat(srcFile)).isSymbolicLink()) {
+        try {
+          yield ioUtil.lstat(destFile);
+          yield ioUtil.unlink(destFile);
+        } catch (e) {
+          if (e.code === "EPERM") {
+            yield ioUtil.chmod(destFile, "0666");
+            yield ioUtil.unlink(destFile);
+          }
+        }
+        const symlinkFull = yield ioUtil.readlink(srcFile);
+        yield ioUtil.symlink(symlinkFull, destFile, ioUtil.IS_WINDOWS ? "junction" : null);
+      } else if (!(yield ioUtil.exists(destFile)) || force) {
+        yield ioUtil.copyFile(srcFile, destFile);
+      }
+    });
+  }
+});
+
+// node_modules/@actions/exec/lib/toolrunner.js
+var require_toolrunner = __commonJS((exports) => {
+  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() {
+      return m[k];
+    } });
+  } : function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    o[k2] = m[k];
+  });
+  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+  } : function(o, v) {
+    o["default"] = v;
+  });
+  var __importStar = exports && exports.__importStar || function(mod) {
+    if (mod && mod.__esModule)
+      return mod;
+    var result = {};
+    if (mod != null) {
+      for (var k in mod)
+        if (k !== "default" && Object.hasOwnProperty.call(mod, k))
+          __createBinding(result, mod, k);
+    }
+    __setModuleDefault(result, mod);
+    return result;
+  };
+  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
+    function adopt(value) {
+      return value instanceof P ? value : new P(function(resolve) {
+        resolve(value);
+      });
+    }
+    return new (P || (P = Promise))(function(resolve, reject) {
+      function fulfilled(value) {
+        try {
+          step(generator.next(value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function rejected(value) {
+        try {
+          step(generator["throw"](value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function step(result) {
+        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+      }
+      step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+  };
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.argStringToArray = exports.ToolRunner = undefined;
+  var os = __importStar(__require("os"));
+  var events = __importStar(__require("events"));
+  var child = __importStar(__require("child_process"));
+  var path = __importStar(__require("path"));
+  var io = __importStar(require_io());
+  var ioUtil = __importStar(require_io_util());
+  var timers_1 = __require("timers");
+  var IS_WINDOWS = process.platform === "win32";
+
+  class ToolRunner extends events.EventEmitter {
+    constructor(toolPath, args, options) {
+      super();
+      if (!toolPath) {
+        throw new Error("Parameter 'toolPath' cannot be null or empty.");
+      }
+      this.toolPath = toolPath;
+      this.args = args || [];
+      this.options = options || {};
+    }
+    _debug(message) {
+      if (this.options.listeners && this.options.listeners.debug) {
+        this.options.listeners.debug(message);
+      }
+    }
+    _getCommandString(options, noPrefix) {
+      const toolPath = this._getSpawnFileName();
+      const args = this._getSpawnArgs(options);
+      let cmd = noPrefix ? "" : "[command]";
+      if (IS_WINDOWS) {
+        if (this._isCmdFile()) {
+          cmd += toolPath;
+          for (const a of args) {
+            cmd += ` ${a}`;
+          }
+        } else if (options.windowsVerbatimArguments) {
+          cmd += `"${toolPath}"`;
+          for (const a of args) {
+            cmd += ` ${a}`;
+          }
+        } else {
+          cmd += this._windowsQuoteCmdArg(toolPath);
+          for (const a of args) {
+            cmd += ` ${this._windowsQuoteCmdArg(a)}`;
+          }
+        }
+      } else {
+        cmd += toolPath;
+        for (const a of args) {
+          cmd += ` ${a}`;
+        }
+      }
+      return cmd;
+    }
+    _processLineBuffer(data, strBuffer, onLine) {
+      try {
+        let s = strBuffer + data.toString();
+        let n = s.indexOf(os.EOL);
+        while (n > -1) {
+          const line = s.substring(0, n);
+          onLine(line);
+          s = s.substring(n + os.EOL.length);
+          n = s.indexOf(os.EOL);
+        }
+        return s;
+      } catch (err) {
+        this._debug(`error processing line. Failed with error ${err}`);
+        return "";
+      }
+    }
+    _getSpawnFileName() {
+      if (IS_WINDOWS) {
+        if (this._isCmdFile()) {
+          return process.env["COMSPEC"] || "cmd.exe";
+        }
+      }
+      return this.toolPath;
+    }
+    _getSpawnArgs(options) {
+      if (IS_WINDOWS) {
+        if (this._isCmdFile()) {
+          let argline = `/D /S /C "${this._windowsQuoteCmdArg(this.toolPath)}`;
+          for (const a of this.args) {
+            argline += " ";
+            argline += options.windowsVerbatimArguments ? a : this._windowsQuoteCmdArg(a);
+          }
+          argline += '"';
+          return [argline];
+        }
+      }
+      return this.args;
+    }
+    _endsWith(str, end) {
+      return str.endsWith(end);
+    }
+    _isCmdFile() {
+      const upperToolPath = this.toolPath.toUpperCase();
+      return this._endsWith(upperToolPath, ".CMD") || this._endsWith(upperToolPath, ".BAT");
+    }
+    _windowsQuoteCmdArg(arg) {
+      if (!this._isCmdFile()) {
+        return this._uvQuoteCmdArg(arg);
+      }
+      if (!arg) {
+        return '""';
+      }
+      const cmdSpecialChars = [
+        " ",
+        "\t",
+        "&",
+        "(",
+        ")",
+        "[",
+        "]",
+        "{",
+        "}",
+        "^",
+        "=",
+        ";",
+        "!",
+        "'",
+        "+",
+        ",",
+        "`",
+        "~",
+        "|",
+        "<",
+        ">",
+        '"'
+      ];
+      let needsQuotes = false;
+      for (const char of arg) {
+        if (cmdSpecialChars.some((x) => x === char)) {
+          needsQuotes = true;
+          break;
+        }
+      }
+      if (!needsQuotes) {
+        return arg;
+      }
+      let reverse = '"';
+      let quoteHit = true;
+      for (let i = arg.length;i > 0; i--) {
+        reverse += arg[i - 1];
+        if (quoteHit && arg[i - 1] === "\\") {
+          reverse += "\\";
+        } else if (arg[i - 1] === '"') {
+          quoteHit = true;
+          reverse += '"';
+        } else {
+          quoteHit = false;
+        }
+      }
+      reverse += '"';
+      return reverse.split("").reverse().join("");
+    }
+    _uvQuoteCmdArg(arg) {
+      if (!arg) {
+        return '""';
+      }
+      if (!arg.includes(" ") && !arg.includes("\t") && !arg.includes('"')) {
+        return arg;
+      }
+      if (!arg.includes('"') && !arg.includes("\\")) {
+        return `"${arg}"`;
+      }
+      let reverse = '"';
+      let quoteHit = true;
+      for (let i = arg.length;i > 0; i--) {
+        reverse += arg[i - 1];
+        if (quoteHit && arg[i - 1] === "\\") {
+          reverse += "\\";
+        } else if (arg[i - 1] === '"') {
+          quoteHit = true;
+          reverse += "\\";
+        } else {
+          quoteHit = false;
+        }
+      }
+      reverse += '"';
+      return reverse.split("").reverse().join("");
+    }
+    _cloneExecOptions(options) {
+      options = options || {};
+      const result = {
+        cwd: options.cwd || process.cwd(),
+        env: options.env || process.env,
+        silent: options.silent || false,
+        windowsVerbatimArguments: options.windowsVerbatimArguments || false,
+        failOnStdErr: options.failOnStdErr || false,
+        ignoreReturnCode: options.ignoreReturnCode || false,
+        delay: options.delay || 1e4
+      };
+      result.outStream = options.outStream || process.stdout;
+      result.errStream = options.errStream || process.stderr;
+      return result;
+    }
+    _getSpawnOptions(options, toolPath) {
+      options = options || {};
+      const result = {};
+      result.cwd = options.cwd;
+      result.env = options.env;
+      result["windowsVerbatimArguments"] = options.windowsVerbatimArguments || this._isCmdFile();
+      if (options.windowsVerbatimArguments) {
+        result.argv0 = `"${toolPath}"`;
+      }
+      return result;
+    }
+    exec() {
+      return __awaiter(this, undefined, undefined, function* () {
+        if (!ioUtil.isRooted(this.toolPath) && (this.toolPath.includes("/") || IS_WINDOWS && this.toolPath.includes("\\"))) {
+          this.toolPath = path.resolve(process.cwd(), this.options.cwd || process.cwd(), this.toolPath);
+        }
+        this.toolPath = yield io.which(this.toolPath, true);
+        return new Promise((resolve, reject) => __awaiter(this, undefined, undefined, function* () {
+          this._debug(`exec tool: ${this.toolPath}`);
+          this._debug("arguments:");
+          for (const arg of this.args) {
+            this._debug(`   ${arg}`);
+          }
+          const optionsNonNull = this._cloneExecOptions(this.options);
+          if (!optionsNonNull.silent && optionsNonNull.outStream) {
+            optionsNonNull.outStream.write(this._getCommandString(optionsNonNull) + os.EOL);
+          }
+          const state = new ExecState(optionsNonNull, this.toolPath);
+          state.on("debug", (message) => {
+            this._debug(message);
+          });
+          if (this.options.cwd && !(yield ioUtil.exists(this.options.cwd))) {
+            return reject(new Error(`The cwd: ${this.options.cwd} does not exist!`));
+          }
+          const fileName = this._getSpawnFileName();
+          const cp = child.spawn(fileName, this._getSpawnArgs(optionsNonNull), this._getSpawnOptions(this.options, fileName));
+          let stdbuffer = "";
+          if (cp.stdout) {
+            cp.stdout.on("data", (data) => {
+              if (this.options.listeners && this.options.listeners.stdout) {
+                this.options.listeners.stdout(data);
+              }
+              if (!optionsNonNull.silent && optionsNonNull.outStream) {
+                optionsNonNull.outStream.write(data);
+              }
+              stdbuffer = this._processLineBuffer(data, stdbuffer, (line) => {
+                if (this.options.listeners && this.options.listeners.stdline) {
+                  this.options.listeners.stdline(line);
+                }
+              });
+            });
+          }
+          let errbuffer = "";
+          if (cp.stderr) {
+            cp.stderr.on("data", (data) => {
+              state.processStderr = true;
+              if (this.options.listeners && this.options.listeners.stderr) {
+                this.options.listeners.stderr(data);
+              }
+              if (!optionsNonNull.silent && optionsNonNull.errStream && optionsNonNull.outStream) {
+                const s = optionsNonNull.failOnStdErr ? optionsNonNull.errStream : optionsNonNull.outStream;
+                s.write(data);
+              }
+              errbuffer = this._processLineBuffer(data, errbuffer, (line) => {
+                if (this.options.listeners && this.options.listeners.errline) {
+                  this.options.listeners.errline(line);
+                }
+              });
+            });
+          }
+          cp.on("error", (err) => {
+            state.processError = err.message;
+            state.processExited = true;
+            state.processClosed = true;
+            state.CheckComplete();
+          });
+          cp.on("exit", (code) => {
+            state.processExitCode = code;
+            state.processExited = true;
+            this._debug(`Exit code ${code} received from tool '${this.toolPath}'`);
+            state.CheckComplete();
+          });
+          cp.on("close", (code) => {
+            state.processExitCode = code;
+            state.processExited = true;
+            state.processClosed = true;
+            this._debug(`STDIO streams have closed for tool '${this.toolPath}'`);
+            state.CheckComplete();
+          });
+          state.on("done", (error, exitCode) => {
+            if (stdbuffer.length > 0) {
+              this.emit("stdline", stdbuffer);
+            }
+            if (errbuffer.length > 0) {
+              this.emit("errline", errbuffer);
+            }
+            cp.removeAllListeners();
+            if (error) {
+              reject(error);
+            } else {
+              resolve(exitCode);
+            }
+          });
+          if (this.options.input) {
+            if (!cp.stdin) {
+              throw new Error("child process missing stdin");
+            }
+            cp.stdin.end(this.options.input);
+          }
+        }));
+      });
+    }
+  }
+  exports.ToolRunner = ToolRunner;
+  function argStringToArray(argString) {
+    const args = [];
+    let inQuotes = false;
+    let escaped = false;
+    let arg = "";
+    function append(c) {
+      if (escaped && c !== '"') {
+        arg += "\\";
+      }
+      arg += c;
+      escaped = false;
+    }
+    for (let i = 0;i < argString.length; i++) {
+      const c = argString.charAt(i);
+      if (c === '"') {
+        if (!escaped) {
+          inQuotes = !inQuotes;
+        } else {
+          append(c);
+        }
+        continue;
+      }
+      if (c === "\\" && escaped) {
+        append(c);
+        continue;
+      }
+      if (c === "\\" && inQuotes) {
+        escaped = true;
+        continue;
+      }
+      if (c === " " && !inQuotes) {
+        if (arg.length > 0) {
+          args.push(arg);
+          arg = "";
+        }
+        continue;
+      }
+      append(c);
+    }
+    if (arg.length > 0) {
+      args.push(arg.trim());
+    }
+    return args;
+  }
+  exports.argStringToArray = argStringToArray;
+
+  class ExecState extends events.EventEmitter {
+    constructor(options, toolPath) {
+      super();
+      this.processClosed = false;
+      this.processError = "";
+      this.processExitCode = 0;
+      this.processExited = false;
+      this.processStderr = false;
+      this.delay = 1e4;
+      this.done = false;
+      this.timeout = null;
+      if (!toolPath) {
+        throw new Error("toolPath must not be empty");
+      }
+      this.options = options;
+      this.toolPath = toolPath;
+      if (options.delay) {
+        this.delay = options.delay;
+      }
+    }
+    CheckComplete() {
+      if (this.done) {
+        return;
+      }
+      if (this.processClosed) {
+        this._setResult();
+      } else if (this.processExited) {
+        this.timeout = timers_1.setTimeout(ExecState.HandleTimeout, this.delay, this);
+      }
+    }
+    _debug(message) {
+      this.emit("debug", message);
+    }
+    _setResult() {
+      let error;
+      if (this.processExited) {
+        if (this.processError) {
+          error = new Error(`There was an error when attempting to execute the process '${this.toolPath}'. This may indicate the process failed to start. Error: ${this.processError}`);
+        } else if (this.processExitCode !== 0 && !this.options.ignoreReturnCode) {
+          error = new Error(`The process '${this.toolPath}' failed with exit code ${this.processExitCode}`);
+        } else if (this.processStderr && this.options.failOnStdErr) {
+          error = new Error(`The process '${this.toolPath}' failed because one or more lines were written to the STDERR stream`);
+        }
+      }
+      if (this.timeout) {
+        clearTimeout(this.timeout);
+        this.timeout = null;
+      }
+      this.done = true;
+      this.emit("done", error, this.processExitCode);
+    }
+    static HandleTimeout(state) {
+      if (state.done) {
+        return;
+      }
+      if (!state.processClosed && state.processExited) {
+        const message = `The STDIO streams did not close within ${state.delay / 1000} seconds of the exit event from process '${state.toolPath}'. This may indicate a child process inherited the STDIO streams and has not yet exited.`;
+        state._debug(message);
+      }
+      state._setResult();
+    }
+  }
+});
+
+// node_modules/@actions/exec/lib/exec.js
+var require_exec = __commonJS((exports) => {
+  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() {
+      return m[k];
+    } });
+  } : function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    o[k2] = m[k];
+  });
+  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+  } : function(o, v) {
+    o["default"] = v;
+  });
+  var __importStar = exports && exports.__importStar || function(mod) {
+    if (mod && mod.__esModule)
+      return mod;
+    var result = {};
+    if (mod != null) {
+      for (var k in mod)
+        if (k !== "default" && Object.hasOwnProperty.call(mod, k))
+          __createBinding(result, mod, k);
+    }
+    __setModuleDefault(result, mod);
+    return result;
+  };
+  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
+    function adopt(value) {
+      return value instanceof P ? value : new P(function(resolve) {
+        resolve(value);
+      });
+    }
+    return new (P || (P = Promise))(function(resolve, reject) {
+      function fulfilled(value) {
+        try {
+          step(generator.next(value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function rejected(value) {
+        try {
+          step(generator["throw"](value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function step(result) {
+        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+      }
+      step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+  };
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.getExecOutput = exports.exec = undefined;
+  var string_decoder_1 = __require("string_decoder");
+  var tr = __importStar(require_toolrunner());
+  function exec(commandLine, args, options) {
+    return __awaiter(this, undefined, undefined, function* () {
+      const commandArgs = tr.argStringToArray(commandLine);
+      if (commandArgs.length === 0) {
+        throw new Error(`Parameter 'commandLine' cannot be null or empty.`);
+      }
+      const toolPath = commandArgs[0];
+      args = commandArgs.slice(1).concat(args || []);
+      const runner = new tr.ToolRunner(toolPath, args, options);
+      return runner.exec();
+    });
+  }
+  exports.exec = exec;
+  function getExecOutput(commandLine, args, options) {
+    var _a, _b;
+    return __awaiter(this, undefined, undefined, function* () {
+      let stdout = "";
+      let stderr = "";
+      const stdoutDecoder = new string_decoder_1.StringDecoder("utf8");
+      const stderrDecoder = new string_decoder_1.StringDecoder("utf8");
+      const originalStdoutListener = (_a = options === null || options === undefined ? undefined : options.listeners) === null || _a === undefined ? undefined : _a.stdout;
+      const originalStdErrListener = (_b = options === null || options === undefined ? undefined : options.listeners) === null || _b === undefined ? undefined : _b.stderr;
+      const stdErrListener = (data) => {
+        stderr += stderrDecoder.write(data);
+        if (originalStdErrListener) {
+          originalStdErrListener(data);
+        }
+      };
+      const stdOutListener = (data) => {
+        stdout += stdoutDecoder.write(data);
+        if (originalStdoutListener) {
+          originalStdoutListener(data);
+        }
+      };
+      const listeners = Object.assign(Object.assign({}, options === null || options === undefined ? undefined : options.listeners), { stdout: stdOutListener, stderr: stdErrListener });
+      const exitCode = yield exec(commandLine, args, Object.assign(Object.assign({}, options), { listeners }));
+      stdout += stdoutDecoder.end();
+      stderr += stderrDecoder.end();
+      return {
+        exitCode,
+        stdout,
+        stderr
+      };
+    });
+  }
+  exports.getExecOutput = getExecOutput;
+});
+
+// node_modules/@actions/core/lib/platform.js
+var require_platform = __commonJS((exports) => {
+  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() {
+        return m[k];
+      } };
+    }
+    Object.defineProperty(o, k2, desc);
+  } : function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    o[k2] = m[k];
+  });
+  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+  } : function(o, v) {
+    o["default"] = v;
+  });
+  var __importStar = exports && exports.__importStar || function(mod) {
+    if (mod && mod.__esModule)
+      return mod;
+    var result = {};
+    if (mod != null) {
+      for (var k in mod)
+        if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
+          __createBinding(result, mod, k);
+    }
+    __setModuleDefault(result, mod);
+    return result;
+  };
+  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
+    function adopt(value) {
+      return value instanceof P ? value : new P(function(resolve) {
+        resolve(value);
+      });
+    }
+    return new (P || (P = Promise))(function(resolve, reject) {
+      function fulfilled(value) {
+        try {
+          step(generator.next(value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function rejected(value) {
+        try {
+          step(generator["throw"](value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function step(result) {
+        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+      }
+      step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+  };
+  var __importDefault = exports && exports.__importDefault || function(mod) {
+    return mod && mod.__esModule ? mod : { default: mod };
+  };
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.getDetails = exports.isLinux = exports.isMacOS = exports.isWindows = exports.arch = exports.platform = undefined;
+  var os_1 = __importDefault(__require("os"));
+  var exec = __importStar(require_exec());
+  var getWindowsInfo = () => __awaiter(undefined, undefined, undefined, function* () {
+    const { stdout: version } = yield exec.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Version"', undefined, {
+      silent: true
+    });
+    const { stdout: name } = yield exec.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Caption"', undefined, {
+      silent: true
+    });
+    return {
+      name: name.trim(),
+      version: version.trim()
+    };
+  });
+  var getMacOsInfo = () => __awaiter(undefined, undefined, undefined, function* () {
+    var _a, _b, _c, _d;
+    const { stdout } = yield exec.getExecOutput("sw_vers", undefined, {
+      silent: true
+    });
+    const version = (_b = (_a = stdout.match(/ProductVersion:\s*(.+)/)) === null || _a === undefined ? undefined : _a[1]) !== null && _b !== undefined ? _b : "";
+    const name = (_d = (_c = stdout.match(/ProductName:\s*(.+)/)) === null || _c === undefined ? undefined : _c[1]) !== null && _d !== undefined ? _d : "";
+    return {
+      name,
+      version
+    };
+  });
+  var getLinuxInfo = () => __awaiter(undefined, undefined, undefined, function* () {
+    const { stdout } = yield exec.getExecOutput("lsb_release", ["-i", "-r", "-s"], {
+      silent: true
+    });
+    const [name, version] = stdout.trim().split(`
+`);
+    return {
+      name,
+      version
+    };
+  });
+  exports.platform = os_1.default.platform();
+  exports.arch = os_1.default.arch();
+  exports.isWindows = exports.platform === "win32";
+  exports.isMacOS = exports.platform === "darwin";
+  exports.isLinux = exports.platform === "linux";
+  function getDetails() {
+    return __awaiter(this, undefined, undefined, function* () {
+      return Object.assign(Object.assign({}, yield exports.isWindows ? getWindowsInfo() : exports.isMacOS ? getMacOsInfo() : getLinuxInfo()), {
+        platform: exports.platform,
+        arch: exports.arch,
+        isWindows: exports.isWindows,
+        isMacOS: exports.isMacOS,
+        isLinux: exports.isLinux
+      });
+    });
+  }
+  exports.getDetails = getDetails;
+});
+
+// node_modules/@actions/core/lib/core.js
+var require_core = __commonJS((exports) => {
+  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() {
+        return m[k];
+      } };
+    }
+    Object.defineProperty(o, k2, desc);
+  } : function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    o[k2] = m[k];
+  });
+  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+  } : function(o, v) {
+    o["default"] = v;
+  });
+  var __importStar = exports && exports.__importStar || function(mod) {
+    if (mod && mod.__esModule)
+      return mod;
+    var result = {};
+    if (mod != null) {
+      for (var k in mod)
+        if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
+          __createBinding(result, mod, k);
+    }
+    __setModuleDefault(result, mod);
+    return result;
+  };
+  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
+    function adopt(value) {
+      return value instanceof P ? value : new P(function(resolve) {
+        resolve(value);
+      });
+    }
+    return new (P || (P = Promise))(function(resolve, reject) {
+      function fulfilled(value) {
+        try {
+          step(generator.next(value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function rejected(value) {
+        try {
+          step(generator["throw"](value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function step(result) {
+        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+      }
+      step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+  };
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.platform = exports.toPlatformPath = exports.toWin32Path = exports.toPosixPath = exports.markdownSummary = exports.summary = exports.getIDToken = exports.getState = exports.saveState = exports.group = exports.endGroup = exports.startGroup = exports.info = exports.notice = exports.warning = exports.error = exports.debug = exports.isDebug = exports.setFailed = exports.setCommandEcho = exports.setOutput = exports.getBooleanInput = exports.getMultilineInput = exports.getInput = exports.addPath = exports.setSecret = exports.exportVariable = exports.ExitCode = undefined;
+  var command_1 = require_command();
+  var file_command_1 = require_file_command();
+  var utils_1 = require_utils();
+  var os = __importStar(__require("os"));
+  var path = __importStar(__require("path"));
+  var oidc_utils_1 = require_oidc_utils();
+  var ExitCode;
+  (function(ExitCode2) {
+    ExitCode2[ExitCode2["Success"] = 0] = "Success";
+    ExitCode2[ExitCode2["Failure"] = 1] = "Failure";
+  })(ExitCode || (exports.ExitCode = ExitCode = {}));
+  function exportVariable(name, val) {
+    const convertedVal = (0, utils_1.toCommandValue)(val);
+    process.env[name] = convertedVal;
+    const filePath = process.env["GITHUB_ENV"] || "";
+    if (filePath) {
+      return (0, file_command_1.issueFileCommand)("ENV", (0, file_command_1.prepareKeyValueMessage)(name, val));
+    }
+    (0, command_1.issueCommand)("set-env", { name }, convertedVal);
+  }
+  exports.exportVariable = exportVariable;
+  function setSecret(secret) {
+    (0, command_1.issueCommand)("add-mask", {}, secret);
+  }
+  exports.setSecret = setSecret;
+  function addPath(inputPath) {
+    const filePath = process.env["GITHUB_PATH"] || "";
+    if (filePath) {
+      (0, file_command_1.issueFileCommand)("PATH", inputPath);
+    } else {
+      (0, command_1.issueCommand)("add-path", {}, inputPath);
+    }
+    process.env["PATH"] = `${inputPath}${path.delimiter}${process.env["PATH"]}`;
+  }
+  exports.addPath = addPath;
+  function getInput(name, options) {
+    const val = process.env[`INPUT_${name.replace(/ /g, "_").toUpperCase()}`] || "";
+    if (options && options.required && !val) {
+      throw new Error(`Input required and not supplied: ${name}`);
+    }
+    if (options && options.trimWhitespace === false) {
+      return val;
+    }
+    return val.trim();
+  }
+  exports.getInput = getInput;
+  function getMultilineInput(name, options) {
+    const inputs = getInput(name, options).split(`
+`).filter((x) => x !== "");
+    if (options && options.trimWhitespace === false) {
+      return inputs;
+    }
+    return inputs.map((input) => input.trim());
+  }
+  exports.getMultilineInput = getMultilineInput;
+  function getBooleanInput(name, options) {
+    const trueValue = ["true", "True", "TRUE"];
+    const falseValue = ["false", "False", "FALSE"];
+    const val = getInput(name, options);
+    if (trueValue.includes(val))
+      return true;
+    if (falseValue.includes(val))
+      return false;
+    throw new TypeError(`Input does not meet YAML 1.2 "Core Schema" specification: ${name}
+` + `Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
+  }
+  exports.getBooleanInput = getBooleanInput;
+  function setOutput(name, value) {
+    const filePath = process.env["GITHUB_OUTPUT"] || "";
+    if (filePath) {
+      return (0, file_command_1.issueFileCommand)("OUTPUT", (0, file_command_1.prepareKeyValueMessage)(name, value));
+    }
+    process.stdout.write(os.EOL);
+    (0, command_1.issueCommand)("set-output", { name }, (0, utils_1.toCommandValue)(value));
+  }
+  exports.setOutput = setOutput;
+  function setCommandEcho(enabled) {
+    (0, command_1.issue)("echo", enabled ? "on" : "off");
+  }
+  exports.setCommandEcho = setCommandEcho;
+  function setFailed(message) {
+    process.exitCode = ExitCode.Failure;
+    error(message);
+  }
+  exports.setFailed = setFailed;
+  function isDebug() {
+    return process.env["RUNNER_DEBUG"] === "1";
+  }
+  exports.isDebug = isDebug;
+  function debug(message) {
+    (0, command_1.issueCommand)("debug", {}, message);
+  }
+  exports.debug = debug;
+  function error(message, properties = {}) {
+    (0, command_1.issueCommand)("error", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
+  }
+  exports.error = error;
+  function warning(message, properties = {}) {
+    (0, command_1.issueCommand)("warning", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
+  }
+  exports.warning = warning;
+  function notice(message, properties = {}) {
+    (0, command_1.issueCommand)("notice", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
+  }
+  exports.notice = notice;
+  function info(message) {
+    process.stdout.write(message + os.EOL);
+  }
+  exports.info = info;
+  function startGroup(name) {
+    (0, command_1.issue)("group", name);
+  }
+  exports.startGroup = startGroup;
+  function endGroup() {
+    (0, command_1.issue)("endgroup");
+  }
+  exports.endGroup = endGroup;
+  function group(name, fn) {
+    return __awaiter(this, undefined, undefined, function* () {
+      startGroup(name);
+      let result;
+      try {
+        result = yield fn();
+      } finally {
+        endGroup();
+      }
+      return result;
+    });
+  }
+  exports.group = group;
+  function saveState(name, value) {
+    const filePath = process.env["GITHUB_STATE"] || "";
+    if (filePath) {
+      return (0, file_command_1.issueFileCommand)("STATE", (0, file_command_1.prepareKeyValueMessage)(name, value));
+    }
+    (0, command_1.issueCommand)("save-state", { name }, (0, utils_1.toCommandValue)(value));
+  }
+  exports.saveState = saveState;
+  function getState(name) {
+    return process.env[`STATE_${name}`] || "";
+  }
+  exports.getState = getState;
+  function getIDToken(aud) {
+    return __awaiter(this, undefined, undefined, function* () {
+      return yield oidc_utils_1.OidcClient.getIDToken(aud);
+    });
+  }
+  exports.getIDToken = getIDToken;
+  var summary_1 = require_summary();
+  Object.defineProperty(exports, "summary", { enumerable: true, get: function() {
+    return summary_1.summary;
+  } });
+  var summary_2 = require_summary();
+  Object.defineProperty(exports, "markdownSummary", { enumerable: true, get: function() {
+    return summary_2.markdownSummary;
+  } });
+  var path_utils_1 = require_path_utils();
+  Object.defineProperty(exports, "toPosixPath", { enumerable: true, get: function() {
+    return path_utils_1.toPosixPath;
+  } });
+  Object.defineProperty(exports, "toWin32Path", { enumerable: true, get: function() {
+    return path_utils_1.toWin32Path;
+  } });
+  Object.defineProperty(exports, "toPlatformPath", { enumerable: true, get: function() {
+    return path_utils_1.toPlatformPath;
+  } });
+  exports.platform = __importStar(require_platform());
+});
+
+// node_modules/@actions/github/lib/context.js
+var require_context = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.Context = undefined;
+  var fs_1 = __require("fs");
+  var os_1 = __require("os");
+
+  class Context {
+    constructor() {
+      var _a, _b, _c;
+      this.payload = {};
+      if (process.env.GITHUB_EVENT_PATH) {
+        if ((0, fs_1.existsSync)(process.env.GITHUB_EVENT_PATH)) {
+          this.payload = JSON.parse((0, fs_1.readFileSync)(process.env.GITHUB_EVENT_PATH, { encoding: "utf8" }));
+        } else {
+          const path = process.env.GITHUB_EVENT_PATH;
+          process.stdout.write(`GITHUB_EVENT_PATH ${path} does not exist${os_1.EOL}`);
+        }
+      }
+      this.eventName = process.env.GITHUB_EVENT_NAME;
+      this.sha = process.env.GITHUB_SHA;
+      this.ref = process.env.GITHUB_REF;
+      this.workflow = process.env.GITHUB_WORKFLOW;
+      this.action = process.env.GITHUB_ACTION;
+      this.actor = process.env.GITHUB_ACTOR;
+      this.job = process.env.GITHUB_JOB;
+      this.runAttempt = parseInt(process.env.GITHUB_RUN_ATTEMPT, 10);
+      this.runNumber = parseInt(process.env.GITHUB_RUN_NUMBER, 10);
+      this.runId = parseInt(process.env.GITHUB_RUN_ID, 10);
+      this.apiUrl = (_a = process.env.GITHUB_API_URL) !== null && _a !== undefined ? _a : `https://api.github.com`;
+      this.serverUrl = (_b = process.env.GITHUB_SERVER_URL) !== null && _b !== undefined ? _b : `https://github.com`;
+      this.graphqlUrl = (_c = process.env.GITHUB_GRAPHQL_URL) !== null && _c !== undefined ? _c : `https://api.github.com/graphql`;
+    }
+    get issue() {
+      const payload = this.payload;
+      return Object.assign(Object.assign({}, this.repo), { number: (payload.issue || payload.pull_request || payload).number });
+    }
+    get repo() {
+      if (process.env.GITHUB_REPOSITORY) {
+        const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
+        return { owner, repo };
+      }
+      if (this.payload.repository) {
+        return {
+          owner: this.payload.repository.owner.login,
+          repo: this.payload.repository.name
+        };
+      }
+      throw new Error("context.repo requires a GITHUB_REPOSITORY environment variable like 'owner/repo'");
+    }
+  }
+  exports.Context = Context;
+});
+
 // node_modules/@actions/github/lib/internal/utils.js
-var require_utils2 = __commonJS((exports) => {
+var require_utils3 = __commonJS((exports) => {
   var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
     if (k2 === undefined)
       k2 = k;
@@ -20638,7 +22597,7 @@ var require_dist_node10 = __commonJS((exports, module) => {
 });
 
 // node_modules/@actions/github/lib/utils.js
-var require_utils3 = __commonJS((exports) => {
+var require_utils4 = __commonJS((exports) => {
   var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
     if (k2 === undefined)
       k2 = k;
@@ -20674,7 +22633,7 @@ var require_utils3 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.getOctokitOptions = exports.GitHub = exports.defaults = exports.context = undefined;
   var Context = __importStar(require_context());
-  var Utils = __importStar(require_utils2());
+  var Utils = __importStar(require_utils3());
   var core_1 = require_dist_node8();
   var plugin_rest_endpoint_methods_1 = require_dist_node9();
   var plugin_paginate_rest_1 = require_dist_node10();
@@ -20736,7 +22695,7 @@ var require_github = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.getOctokit = exports.context = undefined;
   var Context = __importStar(require_context());
-  var utils_1 = require_utils3();
+  var utils_1 = require_utils4();
   exports.context = new Context.Context;
   function getOctokit(token, options, ...additionalPlugins) {
     const GitHubWithPlugins = utils_1.GitHub.plugin(...additionalPlugins);
@@ -20745,1973 +22704,14 @@ var require_github = __commonJS((exports) => {
   exports.getOctokit = getOctokit;
 });
 
-// node_modules/@actions/core/lib/utils.js
-var require_utils4 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.toCommandProperties = exports.toCommandValue = undefined;
-  function toCommandValue(input) {
-    if (input === null || input === undefined) {
-      return "";
-    } else if (typeof input === "string" || input instanceof String) {
-      return input;
-    }
-    return JSON.stringify(input);
-  }
-  exports.toCommandValue = toCommandValue;
-  function toCommandProperties(annotationProperties) {
-    if (!Object.keys(annotationProperties).length) {
-      return {};
-    }
-    return {
-      title: annotationProperties.title,
-      file: annotationProperties.file,
-      line: annotationProperties.startLine,
-      endLine: annotationProperties.endLine,
-      col: annotationProperties.startColumn,
-      endColumn: annotationProperties.endColumn
-    };
-  }
-  exports.toCommandProperties = toCommandProperties;
-});
-
-// node_modules/@actions/core/lib/command.js
-var require_command = __commonJS((exports) => {
-  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() {
-        return m[k];
-      } };
-    }
-    Object.defineProperty(o, k2, desc);
-  } : function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    o[k2] = m[k];
-  });
-  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-  } : function(o, v) {
-    o["default"] = v;
-  });
-  var __importStar = exports && exports.__importStar || function(mod) {
-    if (mod && mod.__esModule)
-      return mod;
-    var result = {};
-    if (mod != null) {
-      for (var k in mod)
-        if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
-          __createBinding(result, mod, k);
-    }
-    __setModuleDefault(result, mod);
-    return result;
-  };
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.issue = exports.issueCommand = undefined;
-  var os = __importStar(__require("os"));
-  var utils_1 = require_utils4();
-  function issueCommand(command, properties, message) {
-    const cmd = new Command(command, properties, message);
-    process.stdout.write(cmd.toString() + os.EOL);
-  }
-  exports.issueCommand = issueCommand;
-  function issue(name, message = "") {
-    issueCommand(name, {}, message);
-  }
-  exports.issue = issue;
-  var CMD_STRING = "::";
-
-  class Command {
-    constructor(command, properties, message) {
-      if (!command) {
-        command = "missing.command";
-      }
-      this.command = command;
-      this.properties = properties;
-      this.message = message;
-    }
-    toString() {
-      let cmdStr = CMD_STRING + this.command;
-      if (this.properties && Object.keys(this.properties).length > 0) {
-        cmdStr += " ";
-        let first = true;
-        for (const key in this.properties) {
-          if (this.properties.hasOwnProperty(key)) {
-            const val = this.properties[key];
-            if (val) {
-              if (first) {
-                first = false;
-              } else {
-                cmdStr += ",";
-              }
-              cmdStr += `${key}=${escapeProperty(val)}`;
-            }
-          }
-        }
-      }
-      cmdStr += `${CMD_STRING}${escapeData(this.message)}`;
-      return cmdStr;
-    }
-  }
-  function escapeData(s) {
-    return (0, utils_1.toCommandValue)(s).replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
-  }
-  function escapeProperty(s) {
-    return (0, utils_1.toCommandValue)(s).replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A").replace(/:/g, "%3A").replace(/,/g, "%2C");
-  }
-});
-
-// node_modules/@actions/core/lib/file-command.js
-var require_file_command = __commonJS((exports) => {
-  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() {
-        return m[k];
-      } };
-    }
-    Object.defineProperty(o, k2, desc);
-  } : function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    o[k2] = m[k];
-  });
-  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-  } : function(o, v) {
-    o["default"] = v;
-  });
-  var __importStar = exports && exports.__importStar || function(mod) {
-    if (mod && mod.__esModule)
-      return mod;
-    var result = {};
-    if (mod != null) {
-      for (var k in mod)
-        if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
-          __createBinding(result, mod, k);
-    }
-    __setModuleDefault(result, mod);
-    return result;
-  };
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.prepareKeyValueMessage = exports.issueFileCommand = undefined;
-  var crypto2 = __importStar(__require("crypto"));
-  var fs = __importStar(__require("fs"));
-  var os = __importStar(__require("os"));
-  var utils_1 = require_utils4();
-  function issueFileCommand(command, message) {
-    const filePath = process.env[`GITHUB_${command}`];
-    if (!filePath) {
-      throw new Error(`Unable to find environment variable for file command ${command}`);
-    }
-    if (!fs.existsSync(filePath)) {
-      throw new Error(`Missing file at path: ${filePath}`);
-    }
-    fs.appendFileSync(filePath, `${(0, utils_1.toCommandValue)(message)}${os.EOL}`, {
-      encoding: "utf8"
-    });
-  }
-  exports.issueFileCommand = issueFileCommand;
-  function prepareKeyValueMessage(key, value) {
-    const delimiter = `ghadelimiter_${crypto2.randomUUID()}`;
-    const convertedValue = (0, utils_1.toCommandValue)(value);
-    if (key.includes(delimiter)) {
-      throw new Error(`Unexpected input: name should not contain the delimiter "${delimiter}"`);
-    }
-    if (convertedValue.includes(delimiter)) {
-      throw new Error(`Unexpected input: value should not contain the delimiter "${delimiter}"`);
-    }
-    return `${key}<<${delimiter}${os.EOL}${convertedValue}${os.EOL}${delimiter}`;
-  }
-  exports.prepareKeyValueMessage = prepareKeyValueMessage;
-});
-
-// node_modules/@actions/http-client/lib/auth.js
-var require_auth = __commonJS((exports) => {
-  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
-    function adopt(value) {
-      return value instanceof P ? value : new P(function(resolve) {
-        resolve(value);
-      });
-    }
-    return new (P || (P = Promise))(function(resolve, reject) {
-      function fulfilled(value) {
-        try {
-          step(generator.next(value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function rejected(value) {
-        try {
-          step(generator["throw"](value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function step(result) {
-        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-      }
-      step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-  };
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.PersonalAccessTokenCredentialHandler = exports.BearerCredentialHandler = exports.BasicCredentialHandler = undefined;
-
-  class BasicCredentialHandler {
-    constructor(username, password) {
-      this.username = username;
-      this.password = password;
-    }
-    prepareRequest(options) {
-      if (!options.headers) {
-        throw Error("The request has no headers");
-      }
-      options.headers["Authorization"] = `Basic ${Buffer.from(`${this.username}:${this.password}`).toString("base64")}`;
-    }
-    canHandleAuthentication() {
-      return false;
-    }
-    handleAuthentication() {
-      return __awaiter(this, undefined, undefined, function* () {
-        throw new Error("not implemented");
-      });
-    }
-  }
-  exports.BasicCredentialHandler = BasicCredentialHandler;
-
-  class BearerCredentialHandler {
-    constructor(token) {
-      this.token = token;
-    }
-    prepareRequest(options) {
-      if (!options.headers) {
-        throw Error("The request has no headers");
-      }
-      options.headers["Authorization"] = `Bearer ${this.token}`;
-    }
-    canHandleAuthentication() {
-      return false;
-    }
-    handleAuthentication() {
-      return __awaiter(this, undefined, undefined, function* () {
-        throw new Error("not implemented");
-      });
-    }
-  }
-  exports.BearerCredentialHandler = BearerCredentialHandler;
-
-  class PersonalAccessTokenCredentialHandler {
-    constructor(token) {
-      this.token = token;
-    }
-    prepareRequest(options) {
-      if (!options.headers) {
-        throw Error("The request has no headers");
-      }
-      options.headers["Authorization"] = `Basic ${Buffer.from(`PAT:${this.token}`).toString("base64")}`;
-    }
-    canHandleAuthentication() {
-      return false;
-    }
-    handleAuthentication() {
-      return __awaiter(this, undefined, undefined, function* () {
-        throw new Error("not implemented");
-      });
-    }
-  }
-  exports.PersonalAccessTokenCredentialHandler = PersonalAccessTokenCredentialHandler;
-});
-
-// node_modules/@actions/core/lib/oidc-utils.js
-var require_oidc_utils = __commonJS((exports) => {
-  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
-    function adopt(value) {
-      return value instanceof P ? value : new P(function(resolve) {
-        resolve(value);
-      });
-    }
-    return new (P || (P = Promise))(function(resolve, reject) {
-      function fulfilled(value) {
-        try {
-          step(generator.next(value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function rejected(value) {
-        try {
-          step(generator["throw"](value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function step(result) {
-        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-      }
-      step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-  };
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.OidcClient = undefined;
-  var http_client_1 = require_lib();
-  var auth_1 = require_auth();
-  var core_1 = require_core();
-
-  class OidcClient {
-    static createHttpClient(allowRetry = true, maxRetry = 10) {
-      const requestOptions = {
-        allowRetries: allowRetry,
-        maxRetries: maxRetry
-      };
-      return new http_client_1.HttpClient("actions/oidc-client", [new auth_1.BearerCredentialHandler(OidcClient.getRequestToken())], requestOptions);
-    }
-    static getRequestToken() {
-      const token = process.env["ACTIONS_ID_TOKEN_REQUEST_TOKEN"];
-      if (!token) {
-        throw new Error("Unable to get ACTIONS_ID_TOKEN_REQUEST_TOKEN env variable");
-      }
-      return token;
-    }
-    static getIDTokenUrl() {
-      const runtimeUrl = process.env["ACTIONS_ID_TOKEN_REQUEST_URL"];
-      if (!runtimeUrl) {
-        throw new Error("Unable to get ACTIONS_ID_TOKEN_REQUEST_URL env variable");
-      }
-      return runtimeUrl;
-    }
-    static getCall(id_token_url) {
-      var _a;
-      return __awaiter(this, undefined, undefined, function* () {
-        const httpclient = OidcClient.createHttpClient();
-        const res = yield httpclient.getJson(id_token_url).catch((error) => {
-          throw new Error(`Failed to get ID Token. 
- 
-        Error Code : ${error.statusCode}
- 
-        Error Message: ${error.message}`);
-        });
-        const id_token = (_a = res.result) === null || _a === undefined ? undefined : _a.value;
-        if (!id_token) {
-          throw new Error("Response json body do not have ID Token field");
-        }
-        return id_token;
-      });
-    }
-    static getIDToken(audience) {
-      return __awaiter(this, undefined, undefined, function* () {
-        try {
-          let id_token_url = OidcClient.getIDTokenUrl();
-          if (audience) {
-            const encodedAudience = encodeURIComponent(audience);
-            id_token_url = `${id_token_url}&audience=${encodedAudience}`;
-          }
-          (0, core_1.debug)(`ID token url is ${id_token_url}`);
-          const id_token = yield OidcClient.getCall(id_token_url);
-          (0, core_1.setSecret)(id_token);
-          return id_token;
-        } catch (error) {
-          throw new Error(`Error message: ${error.message}`);
-        }
-      });
-    }
-  }
-  exports.OidcClient = OidcClient;
-});
-
-// node_modules/@actions/core/lib/summary.js
-var require_summary = __commonJS((exports) => {
-  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
-    function adopt(value) {
-      return value instanceof P ? value : new P(function(resolve) {
-        resolve(value);
-      });
-    }
-    return new (P || (P = Promise))(function(resolve, reject) {
-      function fulfilled(value) {
-        try {
-          step(generator.next(value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function rejected(value) {
-        try {
-          step(generator["throw"](value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function step(result) {
-        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-      }
-      step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-  };
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.summary = exports.markdownSummary = exports.SUMMARY_DOCS_URL = exports.SUMMARY_ENV_VAR = undefined;
-  var os_1 = __require("os");
-  var fs_1 = __require("fs");
-  var { access, appendFile, writeFile } = fs_1.promises;
-  exports.SUMMARY_ENV_VAR = "GITHUB_STEP_SUMMARY";
-  exports.SUMMARY_DOCS_URL = "https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary";
-
-  class Summary {
-    constructor() {
-      this._buffer = "";
-    }
-    filePath() {
-      return __awaiter(this, undefined, undefined, function* () {
-        if (this._filePath) {
-          return this._filePath;
-        }
-        const pathFromEnv = process.env[exports.SUMMARY_ENV_VAR];
-        if (!pathFromEnv) {
-          throw new Error(`Unable to find environment variable for $${exports.SUMMARY_ENV_VAR}. Check if your runtime environment supports job summaries.`);
-        }
-        try {
-          yield access(pathFromEnv, fs_1.constants.R_OK | fs_1.constants.W_OK);
-        } catch (_a) {
-          throw new Error(`Unable to access summary file: '${pathFromEnv}'. Check if the file has correct read/write permissions.`);
-        }
-        this._filePath = pathFromEnv;
-        return this._filePath;
-      });
-    }
-    wrap(tag, content, attrs = {}) {
-      const htmlAttrs = Object.entries(attrs).map(([key, value]) => ` ${key}="${value}"`).join("");
-      if (!content) {
-        return `<${tag}${htmlAttrs}>`;
-      }
-      return `<${tag}${htmlAttrs}>${content}</${tag}>`;
-    }
-    write(options) {
-      return __awaiter(this, undefined, undefined, function* () {
-        const overwrite = !!(options === null || options === undefined ? undefined : options.overwrite);
-        const filePath = yield this.filePath();
-        const writeFunc = overwrite ? writeFile : appendFile;
-        yield writeFunc(filePath, this._buffer, { encoding: "utf8" });
-        return this.emptyBuffer();
-      });
-    }
-    clear() {
-      return __awaiter(this, undefined, undefined, function* () {
-        return this.emptyBuffer().write({ overwrite: true });
-      });
-    }
-    stringify() {
-      return this._buffer;
-    }
-    isEmptyBuffer() {
-      return this._buffer.length === 0;
-    }
-    emptyBuffer() {
-      this._buffer = "";
-      return this;
-    }
-    addRaw(text, addEOL = false) {
-      this._buffer += text;
-      return addEOL ? this.addEOL() : this;
-    }
-    addEOL() {
-      return this.addRaw(os_1.EOL);
-    }
-    addCodeBlock(code, lang) {
-      const attrs = Object.assign({}, lang && { lang });
-      const element = this.wrap("pre", this.wrap("code", code), attrs);
-      return this.addRaw(element).addEOL();
-    }
-    addList(items, ordered = false) {
-      const tag = ordered ? "ol" : "ul";
-      const listItems = items.map((item) => this.wrap("li", item)).join("");
-      const element = this.wrap(tag, listItems);
-      return this.addRaw(element).addEOL();
-    }
-    addTable(rows) {
-      const tableBody = rows.map((row) => {
-        const cells = row.map((cell) => {
-          if (typeof cell === "string") {
-            return this.wrap("td", cell);
-          }
-          const { header, data, colspan, rowspan } = cell;
-          const tag = header ? "th" : "td";
-          const attrs = Object.assign(Object.assign({}, colspan && { colspan }), rowspan && { rowspan });
-          return this.wrap(tag, data, attrs);
-        }).join("");
-        return this.wrap("tr", cells);
-      }).join("");
-      const element = this.wrap("table", tableBody);
-      return this.addRaw(element).addEOL();
-    }
-    addDetails(label, content) {
-      const element = this.wrap("details", this.wrap("summary", label) + content);
-      return this.addRaw(element).addEOL();
-    }
-    addImage(src, alt, options) {
-      const { width, height } = options || {};
-      const attrs = Object.assign(Object.assign({}, width && { width }), height && { height });
-      const element = this.wrap("img", null, Object.assign({ src, alt }, attrs));
-      return this.addRaw(element).addEOL();
-    }
-    addHeading(text, level) {
-      const tag = `h${level}`;
-      const allowedTag = ["h1", "h2", "h3", "h4", "h5", "h6"].includes(tag) ? tag : "h1";
-      const element = this.wrap(allowedTag, text);
-      return this.addRaw(element).addEOL();
-    }
-    addSeparator() {
-      const element = this.wrap("hr", null);
-      return this.addRaw(element).addEOL();
-    }
-    addBreak() {
-      const element = this.wrap("br", null);
-      return this.addRaw(element).addEOL();
-    }
-    addQuote(text, cite) {
-      const attrs = Object.assign({}, cite && { cite });
-      const element = this.wrap("blockquote", text, attrs);
-      return this.addRaw(element).addEOL();
-    }
-    addLink(text, href) {
-      const element = this.wrap("a", text, { href });
-      return this.addRaw(element).addEOL();
-    }
-  }
-  var _summary = new Summary;
-  exports.markdownSummary = _summary;
-  exports.summary = _summary;
-});
-
-// node_modules/@actions/core/lib/path-utils.js
-var require_path_utils = __commonJS((exports) => {
-  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() {
-        return m[k];
-      } };
-    }
-    Object.defineProperty(o, k2, desc);
-  } : function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    o[k2] = m[k];
-  });
-  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-  } : function(o, v) {
-    o["default"] = v;
-  });
-  var __importStar = exports && exports.__importStar || function(mod) {
-    if (mod && mod.__esModule)
-      return mod;
-    var result = {};
-    if (mod != null) {
-      for (var k in mod)
-        if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
-          __createBinding(result, mod, k);
-    }
-    __setModuleDefault(result, mod);
-    return result;
-  };
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.toPlatformPath = exports.toWin32Path = exports.toPosixPath = undefined;
-  var path = __importStar(__require("path"));
-  function toPosixPath(pth) {
-    return pth.replace(/[\\]/g, "/");
-  }
-  exports.toPosixPath = toPosixPath;
-  function toWin32Path(pth) {
-    return pth.replace(/[/]/g, "\\");
-  }
-  exports.toWin32Path = toWin32Path;
-  function toPlatformPath(pth) {
-    return pth.replace(/[/\\]/g, path.sep);
-  }
-  exports.toPlatformPath = toPlatformPath;
-});
-
-// node_modules/@actions/io/lib/io-util.js
-var require_io_util = __commonJS((exports) => {
-  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() {
-      return m[k];
-    } });
-  } : function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    o[k2] = m[k];
-  });
-  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-  } : function(o, v) {
-    o["default"] = v;
-  });
-  var __importStar = exports && exports.__importStar || function(mod) {
-    if (mod && mod.__esModule)
-      return mod;
-    var result = {};
-    if (mod != null) {
-      for (var k in mod)
-        if (k !== "default" && Object.hasOwnProperty.call(mod, k))
-          __createBinding(result, mod, k);
-    }
-    __setModuleDefault(result, mod);
-    return result;
-  };
-  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
-    function adopt(value) {
-      return value instanceof P ? value : new P(function(resolve) {
-        resolve(value);
-      });
-    }
-    return new (P || (P = Promise))(function(resolve, reject) {
-      function fulfilled(value) {
-        try {
-          step(generator.next(value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function rejected(value) {
-        try {
-          step(generator["throw"](value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function step(result) {
-        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-      }
-      step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-  };
-  var _a;
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.getCmdPath = exports.tryGetExecutablePath = exports.isRooted = exports.isDirectory = exports.exists = exports.READONLY = exports.UV_FS_O_EXLOCK = exports.IS_WINDOWS = exports.unlink = exports.symlink = exports.stat = exports.rmdir = exports.rm = exports.rename = exports.readlink = exports.readdir = exports.open = exports.mkdir = exports.lstat = exports.copyFile = exports.chmod = undefined;
-  var fs = __importStar(__require("fs"));
-  var path = __importStar(__require("path"));
-  _a = fs.promises, exports.chmod = _a.chmod, exports.copyFile = _a.copyFile, exports.lstat = _a.lstat, exports.mkdir = _a.mkdir, exports.open = _a.open, exports.readdir = _a.readdir, exports.readlink = _a.readlink, exports.rename = _a.rename, exports.rm = _a.rm, exports.rmdir = _a.rmdir, exports.stat = _a.stat, exports.symlink = _a.symlink, exports.unlink = _a.unlink;
-  exports.IS_WINDOWS = process.platform === "win32";
-  exports.UV_FS_O_EXLOCK = 268435456;
-  exports.READONLY = fs.constants.O_RDONLY;
-  function exists(fsPath) {
-    return __awaiter(this, undefined, undefined, function* () {
-      try {
-        yield exports.stat(fsPath);
-      } catch (err) {
-        if (err.code === "ENOENT") {
-          return false;
-        }
-        throw err;
-      }
-      return true;
-    });
-  }
-  exports.exists = exists;
-  function isDirectory(fsPath, useStat = false) {
-    return __awaiter(this, undefined, undefined, function* () {
-      const stats = useStat ? yield exports.stat(fsPath) : yield exports.lstat(fsPath);
-      return stats.isDirectory();
-    });
-  }
-  exports.isDirectory = isDirectory;
-  function isRooted(p) {
-    p = normalizeSeparators(p);
-    if (!p) {
-      throw new Error('isRooted() parameter "p" cannot be empty');
-    }
-    if (exports.IS_WINDOWS) {
-      return p.startsWith("\\") || /^[A-Z]:/i.test(p);
-    }
-    return p.startsWith("/");
-  }
-  exports.isRooted = isRooted;
-  function tryGetExecutablePath(filePath, extensions) {
-    return __awaiter(this, undefined, undefined, function* () {
-      let stats = undefined;
-      try {
-        stats = yield exports.stat(filePath);
-      } catch (err) {
-        if (err.code !== "ENOENT") {
-          console.log(`Unexpected error attempting to determine if executable file exists '${filePath}': ${err}`);
-        }
-      }
-      if (stats && stats.isFile()) {
-        if (exports.IS_WINDOWS) {
-          const upperExt = path.extname(filePath).toUpperCase();
-          if (extensions.some((validExt) => validExt.toUpperCase() === upperExt)) {
-            return filePath;
-          }
-        } else {
-          if (isUnixExecutable(stats)) {
-            return filePath;
-          }
-        }
-      }
-      const originalFilePath = filePath;
-      for (const extension of extensions) {
-        filePath = originalFilePath + extension;
-        stats = undefined;
-        try {
-          stats = yield exports.stat(filePath);
-        } catch (err) {
-          if (err.code !== "ENOENT") {
-            console.log(`Unexpected error attempting to determine if executable file exists '${filePath}': ${err}`);
-          }
-        }
-        if (stats && stats.isFile()) {
-          if (exports.IS_WINDOWS) {
-            try {
-              const directory = path.dirname(filePath);
-              const upperName = path.basename(filePath).toUpperCase();
-              for (const actualName of yield exports.readdir(directory)) {
-                if (upperName === actualName.toUpperCase()) {
-                  filePath = path.join(directory, actualName);
-                  break;
-                }
-              }
-            } catch (err) {
-              console.log(`Unexpected error attempting to determine the actual case of the file '${filePath}': ${err}`);
-            }
-            return filePath;
-          } else {
-            if (isUnixExecutable(stats)) {
-              return filePath;
-            }
-          }
-        }
-      }
-      return "";
-    });
-  }
-  exports.tryGetExecutablePath = tryGetExecutablePath;
-  function normalizeSeparators(p) {
-    p = p || "";
-    if (exports.IS_WINDOWS) {
-      p = p.replace(/\//g, "\\");
-      return p.replace(/\\\\+/g, "\\");
-    }
-    return p.replace(/\/\/+/g, "/");
-  }
-  function isUnixExecutable(stats) {
-    return (stats.mode & 1) > 0 || (stats.mode & 8) > 0 && stats.gid === process.getgid() || (stats.mode & 64) > 0 && stats.uid === process.getuid();
-  }
-  function getCmdPath() {
-    var _a2;
-    return (_a2 = process.env["COMSPEC"]) !== null && _a2 !== undefined ? _a2 : `cmd.exe`;
-  }
-  exports.getCmdPath = getCmdPath;
-});
-
-// node_modules/@actions/io/lib/io.js
-var require_io = __commonJS((exports) => {
-  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() {
-      return m[k];
-    } });
-  } : function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    o[k2] = m[k];
-  });
-  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-  } : function(o, v) {
-    o["default"] = v;
-  });
-  var __importStar = exports && exports.__importStar || function(mod) {
-    if (mod && mod.__esModule)
-      return mod;
-    var result = {};
-    if (mod != null) {
-      for (var k in mod)
-        if (k !== "default" && Object.hasOwnProperty.call(mod, k))
-          __createBinding(result, mod, k);
-    }
-    __setModuleDefault(result, mod);
-    return result;
-  };
-  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
-    function adopt(value) {
-      return value instanceof P ? value : new P(function(resolve) {
-        resolve(value);
-      });
-    }
-    return new (P || (P = Promise))(function(resolve, reject) {
-      function fulfilled(value) {
-        try {
-          step(generator.next(value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function rejected(value) {
-        try {
-          step(generator["throw"](value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function step(result) {
-        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-      }
-      step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-  };
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.findInPath = exports.which = exports.mkdirP = exports.rmRF = exports.mv = exports.cp = undefined;
-  var assert_1 = __require("assert");
-  var path = __importStar(__require("path"));
-  var ioUtil = __importStar(require_io_util());
-  function cp(source, dest, options = {}) {
-    return __awaiter(this, undefined, undefined, function* () {
-      const { force, recursive, copySourceDirectory } = readCopyOptions(options);
-      const destStat = (yield ioUtil.exists(dest)) ? yield ioUtil.stat(dest) : null;
-      if (destStat && destStat.isFile() && !force) {
-        return;
-      }
-      const newDest = destStat && destStat.isDirectory() && copySourceDirectory ? path.join(dest, path.basename(source)) : dest;
-      if (!(yield ioUtil.exists(source))) {
-        throw new Error(`no such file or directory: ${source}`);
-      }
-      const sourceStat = yield ioUtil.stat(source);
-      if (sourceStat.isDirectory()) {
-        if (!recursive) {
-          throw new Error(`Failed to copy. ${source} is a directory, but tried to copy without recursive flag.`);
-        } else {
-          yield cpDirRecursive(source, newDest, 0, force);
-        }
-      } else {
-        if (path.relative(source, newDest) === "") {
-          throw new Error(`'${newDest}' and '${source}' are the same file`);
-        }
-        yield copyFile(source, newDest, force);
-      }
-    });
-  }
-  exports.cp = cp;
-  function mv(source, dest, options = {}) {
-    return __awaiter(this, undefined, undefined, function* () {
-      if (yield ioUtil.exists(dest)) {
-        let destExists = true;
-        if (yield ioUtil.isDirectory(dest)) {
-          dest = path.join(dest, path.basename(source));
-          destExists = yield ioUtil.exists(dest);
-        }
-        if (destExists) {
-          if (options.force == null || options.force) {
-            yield rmRF(dest);
-          } else {
-            throw new Error("Destination already exists");
-          }
-        }
-      }
-      yield mkdirP(path.dirname(dest));
-      yield ioUtil.rename(source, dest);
-    });
-  }
-  exports.mv = mv;
-  function rmRF(inputPath) {
-    return __awaiter(this, undefined, undefined, function* () {
-      if (ioUtil.IS_WINDOWS) {
-        if (/[*"<>|]/.test(inputPath)) {
-          throw new Error('File path must not contain `*`, `"`, `<`, `>` or `|` on Windows');
-        }
-      }
-      try {
-        yield ioUtil.rm(inputPath, {
-          force: true,
-          maxRetries: 3,
-          recursive: true,
-          retryDelay: 300
-        });
-      } catch (err) {
-        throw new Error(`File was unable to be removed ${err}`);
-      }
-    });
-  }
-  exports.rmRF = rmRF;
-  function mkdirP(fsPath) {
-    return __awaiter(this, undefined, undefined, function* () {
-      assert_1.ok(fsPath, "a path argument must be provided");
-      yield ioUtil.mkdir(fsPath, { recursive: true });
-    });
-  }
-  exports.mkdirP = mkdirP;
-  function which(tool, check) {
-    return __awaiter(this, undefined, undefined, function* () {
-      if (!tool) {
-        throw new Error("parameter 'tool' is required");
-      }
-      if (check) {
-        const result = yield which(tool, false);
-        if (!result) {
-          if (ioUtil.IS_WINDOWS) {
-            throw new Error(`Unable to locate executable file: ${tool}. Please verify either the file path exists or the file can be found within a directory specified by the PATH environment variable. Also verify the file has a valid extension for an executable file.`);
-          } else {
-            throw new Error(`Unable to locate executable file: ${tool}. Please verify either the file path exists or the file can be found within a directory specified by the PATH environment variable. Also check the file mode to verify the file is executable.`);
-          }
-        }
-        return result;
-      }
-      const matches = yield findInPath(tool);
-      if (matches && matches.length > 0) {
-        return matches[0];
-      }
-      return "";
-    });
-  }
-  exports.which = which;
-  function findInPath(tool) {
-    return __awaiter(this, undefined, undefined, function* () {
-      if (!tool) {
-        throw new Error("parameter 'tool' is required");
-      }
-      const extensions = [];
-      if (ioUtil.IS_WINDOWS && process.env["PATHEXT"]) {
-        for (const extension of process.env["PATHEXT"].split(path.delimiter)) {
-          if (extension) {
-            extensions.push(extension);
-          }
-        }
-      }
-      if (ioUtil.isRooted(tool)) {
-        const filePath = yield ioUtil.tryGetExecutablePath(tool, extensions);
-        if (filePath) {
-          return [filePath];
-        }
-        return [];
-      }
-      if (tool.includes(path.sep)) {
-        return [];
-      }
-      const directories = [];
-      if (process.env.PATH) {
-        for (const p of process.env.PATH.split(path.delimiter)) {
-          if (p) {
-            directories.push(p);
-          }
-        }
-      }
-      const matches = [];
-      for (const directory of directories) {
-        const filePath = yield ioUtil.tryGetExecutablePath(path.join(directory, tool), extensions);
-        if (filePath) {
-          matches.push(filePath);
-        }
-      }
-      return matches;
-    });
-  }
-  exports.findInPath = findInPath;
-  function readCopyOptions(options) {
-    const force = options.force == null ? true : options.force;
-    const recursive = Boolean(options.recursive);
-    const copySourceDirectory = options.copySourceDirectory == null ? true : Boolean(options.copySourceDirectory);
-    return { force, recursive, copySourceDirectory };
-  }
-  function cpDirRecursive(sourceDir, destDir, currentDepth, force) {
-    return __awaiter(this, undefined, undefined, function* () {
-      if (currentDepth >= 255)
-        return;
-      currentDepth++;
-      yield mkdirP(destDir);
-      const files = yield ioUtil.readdir(sourceDir);
-      for (const fileName of files) {
-        const srcFile = `${sourceDir}/${fileName}`;
-        const destFile = `${destDir}/${fileName}`;
-        const srcFileStat = yield ioUtil.lstat(srcFile);
-        if (srcFileStat.isDirectory()) {
-          yield cpDirRecursive(srcFile, destFile, currentDepth, force);
-        } else {
-          yield copyFile(srcFile, destFile, force);
-        }
-      }
-      yield ioUtil.chmod(destDir, (yield ioUtil.stat(sourceDir)).mode);
-    });
-  }
-  function copyFile(srcFile, destFile, force) {
-    return __awaiter(this, undefined, undefined, function* () {
-      if ((yield ioUtil.lstat(srcFile)).isSymbolicLink()) {
-        try {
-          yield ioUtil.lstat(destFile);
-          yield ioUtil.unlink(destFile);
-        } catch (e) {
-          if (e.code === "EPERM") {
-            yield ioUtil.chmod(destFile, "0666");
-            yield ioUtil.unlink(destFile);
-          }
-        }
-        const symlinkFull = yield ioUtil.readlink(srcFile);
-        yield ioUtil.symlink(symlinkFull, destFile, ioUtil.IS_WINDOWS ? "junction" : null);
-      } else if (!(yield ioUtil.exists(destFile)) || force) {
-        yield ioUtil.copyFile(srcFile, destFile);
-      }
-    });
-  }
-});
-
-// node_modules/@actions/exec/lib/toolrunner.js
-var require_toolrunner = __commonJS((exports) => {
-  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() {
-      return m[k];
-    } });
-  } : function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    o[k2] = m[k];
-  });
-  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-  } : function(o, v) {
-    o["default"] = v;
-  });
-  var __importStar = exports && exports.__importStar || function(mod) {
-    if (mod && mod.__esModule)
-      return mod;
-    var result = {};
-    if (mod != null) {
-      for (var k in mod)
-        if (k !== "default" && Object.hasOwnProperty.call(mod, k))
-          __createBinding(result, mod, k);
-    }
-    __setModuleDefault(result, mod);
-    return result;
-  };
-  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
-    function adopt(value) {
-      return value instanceof P ? value : new P(function(resolve) {
-        resolve(value);
-      });
-    }
-    return new (P || (P = Promise))(function(resolve, reject) {
-      function fulfilled(value) {
-        try {
-          step(generator.next(value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function rejected(value) {
-        try {
-          step(generator["throw"](value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function step(result) {
-        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-      }
-      step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-  };
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.argStringToArray = exports.ToolRunner = undefined;
-  var os = __importStar(__require("os"));
-  var events = __importStar(__require("events"));
-  var child = __importStar(__require("child_process"));
-  var path = __importStar(__require("path"));
-  var io = __importStar(require_io());
-  var ioUtil = __importStar(require_io_util());
-  var timers_1 = __require("timers");
-  var IS_WINDOWS = process.platform === "win32";
-
-  class ToolRunner extends events.EventEmitter {
-    constructor(toolPath, args, options) {
-      super();
-      if (!toolPath) {
-        throw new Error("Parameter 'toolPath' cannot be null or empty.");
-      }
-      this.toolPath = toolPath;
-      this.args = args || [];
-      this.options = options || {};
-    }
-    _debug(message) {
-      if (this.options.listeners && this.options.listeners.debug) {
-        this.options.listeners.debug(message);
-      }
-    }
-    _getCommandString(options, noPrefix) {
-      const toolPath = this._getSpawnFileName();
-      const args = this._getSpawnArgs(options);
-      let cmd = noPrefix ? "" : "[command]";
-      if (IS_WINDOWS) {
-        if (this._isCmdFile()) {
-          cmd += toolPath;
-          for (const a of args) {
-            cmd += ` ${a}`;
-          }
-        } else if (options.windowsVerbatimArguments) {
-          cmd += `"${toolPath}"`;
-          for (const a of args) {
-            cmd += ` ${a}`;
-          }
-        } else {
-          cmd += this._windowsQuoteCmdArg(toolPath);
-          for (const a of args) {
-            cmd += ` ${this._windowsQuoteCmdArg(a)}`;
-          }
-        }
-      } else {
-        cmd += toolPath;
-        for (const a of args) {
-          cmd += ` ${a}`;
-        }
-      }
-      return cmd;
-    }
-    _processLineBuffer(data, strBuffer, onLine) {
-      try {
-        let s = strBuffer + data.toString();
-        let n = s.indexOf(os.EOL);
-        while (n > -1) {
-          const line = s.substring(0, n);
-          onLine(line);
-          s = s.substring(n + os.EOL.length);
-          n = s.indexOf(os.EOL);
-        }
-        return s;
-      } catch (err) {
-        this._debug(`error processing line. Failed with error ${err}`);
-        return "";
-      }
-    }
-    _getSpawnFileName() {
-      if (IS_WINDOWS) {
-        if (this._isCmdFile()) {
-          return process.env["COMSPEC"] || "cmd.exe";
-        }
-      }
-      return this.toolPath;
-    }
-    _getSpawnArgs(options) {
-      if (IS_WINDOWS) {
-        if (this._isCmdFile()) {
-          let argline = `/D /S /C "${this._windowsQuoteCmdArg(this.toolPath)}`;
-          for (const a of this.args) {
-            argline += " ";
-            argline += options.windowsVerbatimArguments ? a : this._windowsQuoteCmdArg(a);
-          }
-          argline += '"';
-          return [argline];
-        }
-      }
-      return this.args;
-    }
-    _endsWith(str, end) {
-      return str.endsWith(end);
-    }
-    _isCmdFile() {
-      const upperToolPath = this.toolPath.toUpperCase();
-      return this._endsWith(upperToolPath, ".CMD") || this._endsWith(upperToolPath, ".BAT");
-    }
-    _windowsQuoteCmdArg(arg) {
-      if (!this._isCmdFile()) {
-        return this._uvQuoteCmdArg(arg);
-      }
-      if (!arg) {
-        return '""';
-      }
-      const cmdSpecialChars = [
-        " ",
-        "\t",
-        "&",
-        "(",
-        ")",
-        "[",
-        "]",
-        "{",
-        "}",
-        "^",
-        "=",
-        ";",
-        "!",
-        "'",
-        "+",
-        ",",
-        "`",
-        "~",
-        "|",
-        "<",
-        ">",
-        '"'
-      ];
-      let needsQuotes = false;
-      for (const char of arg) {
-        if (cmdSpecialChars.some((x) => x === char)) {
-          needsQuotes = true;
-          break;
-        }
-      }
-      if (!needsQuotes) {
-        return arg;
-      }
-      let reverse = '"';
-      let quoteHit = true;
-      for (let i = arg.length;i > 0; i--) {
-        reverse += arg[i - 1];
-        if (quoteHit && arg[i - 1] === "\\") {
-          reverse += "\\";
-        } else if (arg[i - 1] === '"') {
-          quoteHit = true;
-          reverse += '"';
-        } else {
-          quoteHit = false;
-        }
-      }
-      reverse += '"';
-      return reverse.split("").reverse().join("");
-    }
-    _uvQuoteCmdArg(arg) {
-      if (!arg) {
-        return '""';
-      }
-      if (!arg.includes(" ") && !arg.includes("\t") && !arg.includes('"')) {
-        return arg;
-      }
-      if (!arg.includes('"') && !arg.includes("\\")) {
-        return `"${arg}"`;
-      }
-      let reverse = '"';
-      let quoteHit = true;
-      for (let i = arg.length;i > 0; i--) {
-        reverse += arg[i - 1];
-        if (quoteHit && arg[i - 1] === "\\") {
-          reverse += "\\";
-        } else if (arg[i - 1] === '"') {
-          quoteHit = true;
-          reverse += "\\";
-        } else {
-          quoteHit = false;
-        }
-      }
-      reverse += '"';
-      return reverse.split("").reverse().join("");
-    }
-    _cloneExecOptions(options) {
-      options = options || {};
-      const result = {
-        cwd: options.cwd || process.cwd(),
-        env: options.env || process.env,
-        silent: options.silent || false,
-        windowsVerbatimArguments: options.windowsVerbatimArguments || false,
-        failOnStdErr: options.failOnStdErr || false,
-        ignoreReturnCode: options.ignoreReturnCode || false,
-        delay: options.delay || 1e4
-      };
-      result.outStream = options.outStream || process.stdout;
-      result.errStream = options.errStream || process.stderr;
-      return result;
-    }
-    _getSpawnOptions(options, toolPath) {
-      options = options || {};
-      const result = {};
-      result.cwd = options.cwd;
-      result.env = options.env;
-      result["windowsVerbatimArguments"] = options.windowsVerbatimArguments || this._isCmdFile();
-      if (options.windowsVerbatimArguments) {
-        result.argv0 = `"${toolPath}"`;
-      }
-      return result;
-    }
-    exec() {
-      return __awaiter(this, undefined, undefined, function* () {
-        if (!ioUtil.isRooted(this.toolPath) && (this.toolPath.includes("/") || IS_WINDOWS && this.toolPath.includes("\\"))) {
-          this.toolPath = path.resolve(process.cwd(), this.options.cwd || process.cwd(), this.toolPath);
-        }
-        this.toolPath = yield io.which(this.toolPath, true);
-        return new Promise((resolve, reject) => __awaiter(this, undefined, undefined, function* () {
-          this._debug(`exec tool: ${this.toolPath}`);
-          this._debug("arguments:");
-          for (const arg of this.args) {
-            this._debug(`   ${arg}`);
-          }
-          const optionsNonNull = this._cloneExecOptions(this.options);
-          if (!optionsNonNull.silent && optionsNonNull.outStream) {
-            optionsNonNull.outStream.write(this._getCommandString(optionsNonNull) + os.EOL);
-          }
-          const state = new ExecState(optionsNonNull, this.toolPath);
-          state.on("debug", (message) => {
-            this._debug(message);
-          });
-          if (this.options.cwd && !(yield ioUtil.exists(this.options.cwd))) {
-            return reject(new Error(`The cwd: ${this.options.cwd} does not exist!`));
-          }
-          const fileName = this._getSpawnFileName();
-          const cp = child.spawn(fileName, this._getSpawnArgs(optionsNonNull), this._getSpawnOptions(this.options, fileName));
-          let stdbuffer = "";
-          if (cp.stdout) {
-            cp.stdout.on("data", (data) => {
-              if (this.options.listeners && this.options.listeners.stdout) {
-                this.options.listeners.stdout(data);
-              }
-              if (!optionsNonNull.silent && optionsNonNull.outStream) {
-                optionsNonNull.outStream.write(data);
-              }
-              stdbuffer = this._processLineBuffer(data, stdbuffer, (line) => {
-                if (this.options.listeners && this.options.listeners.stdline) {
-                  this.options.listeners.stdline(line);
-                }
-              });
-            });
-          }
-          let errbuffer = "";
-          if (cp.stderr) {
-            cp.stderr.on("data", (data) => {
-              state.processStderr = true;
-              if (this.options.listeners && this.options.listeners.stderr) {
-                this.options.listeners.stderr(data);
-              }
-              if (!optionsNonNull.silent && optionsNonNull.errStream && optionsNonNull.outStream) {
-                const s = optionsNonNull.failOnStdErr ? optionsNonNull.errStream : optionsNonNull.outStream;
-                s.write(data);
-              }
-              errbuffer = this._processLineBuffer(data, errbuffer, (line) => {
-                if (this.options.listeners && this.options.listeners.errline) {
-                  this.options.listeners.errline(line);
-                }
-              });
-            });
-          }
-          cp.on("error", (err) => {
-            state.processError = err.message;
-            state.processExited = true;
-            state.processClosed = true;
-            state.CheckComplete();
-          });
-          cp.on("exit", (code) => {
-            state.processExitCode = code;
-            state.processExited = true;
-            this._debug(`Exit code ${code} received from tool '${this.toolPath}'`);
-            state.CheckComplete();
-          });
-          cp.on("close", (code) => {
-            state.processExitCode = code;
-            state.processExited = true;
-            state.processClosed = true;
-            this._debug(`STDIO streams have closed for tool '${this.toolPath}'`);
-            state.CheckComplete();
-          });
-          state.on("done", (error, exitCode) => {
-            if (stdbuffer.length > 0) {
-              this.emit("stdline", stdbuffer);
-            }
-            if (errbuffer.length > 0) {
-              this.emit("errline", errbuffer);
-            }
-            cp.removeAllListeners();
-            if (error) {
-              reject(error);
-            } else {
-              resolve(exitCode);
-            }
-          });
-          if (this.options.input) {
-            if (!cp.stdin) {
-              throw new Error("child process missing stdin");
-            }
-            cp.stdin.end(this.options.input);
-          }
-        }));
-      });
-    }
-  }
-  exports.ToolRunner = ToolRunner;
-  function argStringToArray(argString) {
-    const args = [];
-    let inQuotes = false;
-    let escaped = false;
-    let arg = "";
-    function append(c) {
-      if (escaped && c !== '"') {
-        arg += "\\";
-      }
-      arg += c;
-      escaped = false;
-    }
-    for (let i = 0;i < argString.length; i++) {
-      const c = argString.charAt(i);
-      if (c === '"') {
-        if (!escaped) {
-          inQuotes = !inQuotes;
-        } else {
-          append(c);
-        }
-        continue;
-      }
-      if (c === "\\" && escaped) {
-        append(c);
-        continue;
-      }
-      if (c === "\\" && inQuotes) {
-        escaped = true;
-        continue;
-      }
-      if (c === " " && !inQuotes) {
-        if (arg.length > 0) {
-          args.push(arg);
-          arg = "";
-        }
-        continue;
-      }
-      append(c);
-    }
-    if (arg.length > 0) {
-      args.push(arg.trim());
-    }
-    return args;
-  }
-  exports.argStringToArray = argStringToArray;
-
-  class ExecState extends events.EventEmitter {
-    constructor(options, toolPath) {
-      super();
-      this.processClosed = false;
-      this.processError = "";
-      this.processExitCode = 0;
-      this.processExited = false;
-      this.processStderr = false;
-      this.delay = 1e4;
-      this.done = false;
-      this.timeout = null;
-      if (!toolPath) {
-        throw new Error("toolPath must not be empty");
-      }
-      this.options = options;
-      this.toolPath = toolPath;
-      if (options.delay) {
-        this.delay = options.delay;
-      }
-    }
-    CheckComplete() {
-      if (this.done) {
-        return;
-      }
-      if (this.processClosed) {
-        this._setResult();
-      } else if (this.processExited) {
-        this.timeout = timers_1.setTimeout(ExecState.HandleTimeout, this.delay, this);
-      }
-    }
-    _debug(message) {
-      this.emit("debug", message);
-    }
-    _setResult() {
-      let error;
-      if (this.processExited) {
-        if (this.processError) {
-          error = new Error(`There was an error when attempting to execute the process '${this.toolPath}'. This may indicate the process failed to start. Error: ${this.processError}`);
-        } else if (this.processExitCode !== 0 && !this.options.ignoreReturnCode) {
-          error = new Error(`The process '${this.toolPath}' failed with exit code ${this.processExitCode}`);
-        } else if (this.processStderr && this.options.failOnStdErr) {
-          error = new Error(`The process '${this.toolPath}' failed because one or more lines were written to the STDERR stream`);
-        }
-      }
-      if (this.timeout) {
-        clearTimeout(this.timeout);
-        this.timeout = null;
-      }
-      this.done = true;
-      this.emit("done", error, this.processExitCode);
-    }
-    static HandleTimeout(state) {
-      if (state.done) {
-        return;
-      }
-      if (!state.processClosed && state.processExited) {
-        const message = `The STDIO streams did not close within ${state.delay / 1000} seconds of the exit event from process '${state.toolPath}'. This may indicate a child process inherited the STDIO streams and has not yet exited.`;
-        state._debug(message);
-      }
-      state._setResult();
-    }
-  }
-});
-
-// node_modules/@actions/exec/lib/exec.js
-var require_exec = __commonJS((exports) => {
-  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() {
-      return m[k];
-    } });
-  } : function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    o[k2] = m[k];
-  });
-  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-  } : function(o, v) {
-    o["default"] = v;
-  });
-  var __importStar = exports && exports.__importStar || function(mod) {
-    if (mod && mod.__esModule)
-      return mod;
-    var result = {};
-    if (mod != null) {
-      for (var k in mod)
-        if (k !== "default" && Object.hasOwnProperty.call(mod, k))
-          __createBinding(result, mod, k);
-    }
-    __setModuleDefault(result, mod);
-    return result;
-  };
-  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
-    function adopt(value) {
-      return value instanceof P ? value : new P(function(resolve) {
-        resolve(value);
-      });
-    }
-    return new (P || (P = Promise))(function(resolve, reject) {
-      function fulfilled(value) {
-        try {
-          step(generator.next(value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function rejected(value) {
-        try {
-          step(generator["throw"](value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function step(result) {
-        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-      }
-      step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-  };
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.getExecOutput = exports.exec = undefined;
-  var string_decoder_1 = __require("string_decoder");
-  var tr = __importStar(require_toolrunner());
-  function exec(commandLine, args, options) {
-    return __awaiter(this, undefined, undefined, function* () {
-      const commandArgs = tr.argStringToArray(commandLine);
-      if (commandArgs.length === 0) {
-        throw new Error(`Parameter 'commandLine' cannot be null or empty.`);
-      }
-      const toolPath = commandArgs[0];
-      args = commandArgs.slice(1).concat(args || []);
-      const runner = new tr.ToolRunner(toolPath, args, options);
-      return runner.exec();
-    });
-  }
-  exports.exec = exec;
-  function getExecOutput(commandLine, args, options) {
-    var _a, _b;
-    return __awaiter(this, undefined, undefined, function* () {
-      let stdout = "";
-      let stderr = "";
-      const stdoutDecoder = new string_decoder_1.StringDecoder("utf8");
-      const stderrDecoder = new string_decoder_1.StringDecoder("utf8");
-      const originalStdoutListener = (_a = options === null || options === undefined ? undefined : options.listeners) === null || _a === undefined ? undefined : _a.stdout;
-      const originalStdErrListener = (_b = options === null || options === undefined ? undefined : options.listeners) === null || _b === undefined ? undefined : _b.stderr;
-      const stdErrListener = (data) => {
-        stderr += stderrDecoder.write(data);
-        if (originalStdErrListener) {
-          originalStdErrListener(data);
-        }
-      };
-      const stdOutListener = (data) => {
-        stdout += stdoutDecoder.write(data);
-        if (originalStdoutListener) {
-          originalStdoutListener(data);
-        }
-      };
-      const listeners = Object.assign(Object.assign({}, options === null || options === undefined ? undefined : options.listeners), { stdout: stdOutListener, stderr: stdErrListener });
-      const exitCode = yield exec(commandLine, args, Object.assign(Object.assign({}, options), { listeners }));
-      stdout += stdoutDecoder.end();
-      stderr += stderrDecoder.end();
-      return {
-        exitCode,
-        stdout,
-        stderr
-      };
-    });
-  }
-  exports.getExecOutput = getExecOutput;
-});
-
-// node_modules/@actions/core/lib/platform.js
-var require_platform = __commonJS((exports) => {
-  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() {
-        return m[k];
-      } };
-    }
-    Object.defineProperty(o, k2, desc);
-  } : function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    o[k2] = m[k];
-  });
-  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-  } : function(o, v) {
-    o["default"] = v;
-  });
-  var __importStar = exports && exports.__importStar || function(mod) {
-    if (mod && mod.__esModule)
-      return mod;
-    var result = {};
-    if (mod != null) {
-      for (var k in mod)
-        if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
-          __createBinding(result, mod, k);
-    }
-    __setModuleDefault(result, mod);
-    return result;
-  };
-  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
-    function adopt(value) {
-      return value instanceof P ? value : new P(function(resolve) {
-        resolve(value);
-      });
-    }
-    return new (P || (P = Promise))(function(resolve, reject) {
-      function fulfilled(value) {
-        try {
-          step(generator.next(value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function rejected(value) {
-        try {
-          step(generator["throw"](value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function step(result) {
-        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-      }
-      step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-  };
-  var __importDefault = exports && exports.__importDefault || function(mod) {
-    return mod && mod.__esModule ? mod : { default: mod };
-  };
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.getDetails = exports.isLinux = exports.isMacOS = exports.isWindows = exports.arch = exports.platform = undefined;
-  var os_1 = __importDefault(__require("os"));
-  var exec = __importStar(require_exec());
-  var getWindowsInfo = () => __awaiter(undefined, undefined, undefined, function* () {
-    const { stdout: version } = yield exec.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Version"', undefined, {
-      silent: true
-    });
-    const { stdout: name } = yield exec.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Caption"', undefined, {
-      silent: true
-    });
-    return {
-      name: name.trim(),
-      version: version.trim()
-    };
-  });
-  var getMacOsInfo = () => __awaiter(undefined, undefined, undefined, function* () {
-    var _a, _b, _c, _d;
-    const { stdout } = yield exec.getExecOutput("sw_vers", undefined, {
-      silent: true
-    });
-    const version = (_b = (_a = stdout.match(/ProductVersion:\s*(.+)/)) === null || _a === undefined ? undefined : _a[1]) !== null && _b !== undefined ? _b : "";
-    const name = (_d = (_c = stdout.match(/ProductName:\s*(.+)/)) === null || _c === undefined ? undefined : _c[1]) !== null && _d !== undefined ? _d : "";
-    return {
-      name,
-      version
-    };
-  });
-  var getLinuxInfo = () => __awaiter(undefined, undefined, undefined, function* () {
-    const { stdout } = yield exec.getExecOutput("lsb_release", ["-i", "-r", "-s"], {
-      silent: true
-    });
-    const [name, version] = stdout.trim().split(`
-`);
-    return {
-      name,
-      version
-    };
-  });
-  exports.platform = os_1.default.platform();
-  exports.arch = os_1.default.arch();
-  exports.isWindows = exports.platform === "win32";
-  exports.isMacOS = exports.platform === "darwin";
-  exports.isLinux = exports.platform === "linux";
-  function getDetails() {
-    return __awaiter(this, undefined, undefined, function* () {
-      return Object.assign(Object.assign({}, yield exports.isWindows ? getWindowsInfo() : exports.isMacOS ? getMacOsInfo() : getLinuxInfo()), {
-        platform: exports.platform,
-        arch: exports.arch,
-        isWindows: exports.isWindows,
-        isMacOS: exports.isMacOS,
-        isLinux: exports.isLinux
-      });
-    });
-  }
-  exports.getDetails = getDetails;
-});
-
-// node_modules/@actions/core/lib/core.js
-var require_core = __commonJS((exports) => {
-  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() {
-        return m[k];
-      } };
-    }
-    Object.defineProperty(o, k2, desc);
-  } : function(o, m, k, k2) {
-    if (k2 === undefined)
-      k2 = k;
-    o[k2] = m[k];
-  });
-  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-  } : function(o, v) {
-    o["default"] = v;
-  });
-  var __importStar = exports && exports.__importStar || function(mod) {
-    if (mod && mod.__esModule)
-      return mod;
-    var result = {};
-    if (mod != null) {
-      for (var k in mod)
-        if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
-          __createBinding(result, mod, k);
-    }
-    __setModuleDefault(result, mod);
-    return result;
-  };
-  var __awaiter = exports && exports.__awaiter || function(thisArg, _arguments, P, generator) {
-    function adopt(value) {
-      return value instanceof P ? value : new P(function(resolve) {
-        resolve(value);
-      });
-    }
-    return new (P || (P = Promise))(function(resolve, reject) {
-      function fulfilled(value) {
-        try {
-          step(generator.next(value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function rejected(value) {
-        try {
-          step(generator["throw"](value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function step(result) {
-        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-      }
-      step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-  };
-  Object.defineProperty(exports, "__esModule", { value: true });
-  exports.platform = exports.toPlatformPath = exports.toWin32Path = exports.toPosixPath = exports.markdownSummary = exports.summary = exports.getIDToken = exports.getState = exports.saveState = exports.group = exports.endGroup = exports.startGroup = exports.info = exports.notice = exports.warning = exports.error = exports.debug = exports.isDebug = exports.setFailed = exports.setCommandEcho = exports.setOutput = exports.getBooleanInput = exports.getMultilineInput = exports.getInput = exports.addPath = exports.setSecret = exports.exportVariable = exports.ExitCode = undefined;
-  var command_1 = require_command();
-  var file_command_1 = require_file_command();
-  var utils_1 = require_utils4();
-  var os = __importStar(__require("os"));
-  var path = __importStar(__require("path"));
-  var oidc_utils_1 = require_oidc_utils();
-  var ExitCode;
-  (function(ExitCode2) {
-    ExitCode2[ExitCode2["Success"] = 0] = "Success";
-    ExitCode2[ExitCode2["Failure"] = 1] = "Failure";
-  })(ExitCode || (exports.ExitCode = ExitCode = {}));
-  function exportVariable(name, val) {
-    const convertedVal = (0, utils_1.toCommandValue)(val);
-    process.env[name] = convertedVal;
-    const filePath = process.env["GITHUB_ENV"] || "";
-    if (filePath) {
-      return (0, file_command_1.issueFileCommand)("ENV", (0, file_command_1.prepareKeyValueMessage)(name, val));
-    }
-    (0, command_1.issueCommand)("set-env", { name }, convertedVal);
-  }
-  exports.exportVariable = exportVariable;
-  function setSecret(secret) {
-    (0, command_1.issueCommand)("add-mask", {}, secret);
-  }
-  exports.setSecret = setSecret;
-  function addPath(inputPath) {
-    const filePath = process.env["GITHUB_PATH"] || "";
-    if (filePath) {
-      (0, file_command_1.issueFileCommand)("PATH", inputPath);
-    } else {
-      (0, command_1.issueCommand)("add-path", {}, inputPath);
-    }
-    process.env["PATH"] = `${inputPath}${path.delimiter}${process.env["PATH"]}`;
-  }
-  exports.addPath = addPath;
-  function getInput(name, options) {
-    const val = process.env[`INPUT_${name.replace(/ /g, "_").toUpperCase()}`] || "";
-    if (options && options.required && !val) {
-      throw new Error(`Input required and not supplied: ${name}`);
-    }
-    if (options && options.trimWhitespace === false) {
-      return val;
-    }
-    return val.trim();
-  }
-  exports.getInput = getInput;
-  function getMultilineInput(name, options) {
-    const inputs = getInput(name, options).split(`
-`).filter((x) => x !== "");
-    if (options && options.trimWhitespace === false) {
-      return inputs;
-    }
-    return inputs.map((input) => input.trim());
-  }
-  exports.getMultilineInput = getMultilineInput;
-  function getBooleanInput(name, options) {
-    const trueValue = ["true", "True", "TRUE"];
-    const falseValue = ["false", "False", "FALSE"];
-    const val = getInput(name, options);
-    if (trueValue.includes(val))
-      return true;
-    if (falseValue.includes(val))
-      return false;
-    throw new TypeError(`Input does not meet YAML 1.2 "Core Schema" specification: ${name}
-` + `Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
-  }
-  exports.getBooleanInput = getBooleanInput;
-  function setOutput(name, value) {
-    const filePath = process.env["GITHUB_OUTPUT"] || "";
-    if (filePath) {
-      return (0, file_command_1.issueFileCommand)("OUTPUT", (0, file_command_1.prepareKeyValueMessage)(name, value));
-    }
-    process.stdout.write(os.EOL);
-    (0, command_1.issueCommand)("set-output", { name }, (0, utils_1.toCommandValue)(value));
-  }
-  exports.setOutput = setOutput;
-  function setCommandEcho(enabled) {
-    (0, command_1.issue)("echo", enabled ? "on" : "off");
-  }
-  exports.setCommandEcho = setCommandEcho;
-  function setFailed(message) {
-    process.exitCode = ExitCode.Failure;
-    error(message);
-  }
-  exports.setFailed = setFailed;
-  function isDebug() {
-    return process.env["RUNNER_DEBUG"] === "1";
-  }
-  exports.isDebug = isDebug;
-  function debug(message) {
-    (0, command_1.issueCommand)("debug", {}, message);
-  }
-  exports.debug = debug;
-  function error(message, properties = {}) {
-    (0, command_1.issueCommand)("error", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
-  }
-  exports.error = error;
-  function warning(message, properties = {}) {
-    (0, command_1.issueCommand)("warning", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
-  }
-  exports.warning = warning;
-  function notice(message, properties = {}) {
-    (0, command_1.issueCommand)("notice", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
-  }
-  exports.notice = notice;
-  function info(message) {
-    process.stdout.write(message + os.EOL);
-  }
-  exports.info = info;
-  function startGroup(name) {
-    (0, command_1.issue)("group", name);
-  }
-  exports.startGroup = startGroup;
-  function endGroup() {
-    (0, command_1.issue)("endgroup");
-  }
-  exports.endGroup = endGroup;
-  function group(name, fn) {
-    return __awaiter(this, undefined, undefined, function* () {
-      startGroup(name);
-      let result;
-      try {
-        result = yield fn();
-      } finally {
-        endGroup();
-      }
-      return result;
-    });
-  }
-  exports.group = group;
-  function saveState(name, value) {
-    const filePath = process.env["GITHUB_STATE"] || "";
-    if (filePath) {
-      return (0, file_command_1.issueFileCommand)("STATE", (0, file_command_1.prepareKeyValueMessage)(name, value));
-    }
-    (0, command_1.issueCommand)("save-state", { name }, (0, utils_1.toCommandValue)(value));
-  }
-  exports.saveState = saveState;
-  function getState(name) {
-    return process.env[`STATE_${name}`] || "";
-  }
-  exports.getState = getState;
-  function getIDToken(aud) {
-    return __awaiter(this, undefined, undefined, function* () {
-      return yield oidc_utils_1.OidcClient.getIDToken(aud);
-    });
-  }
-  exports.getIDToken = getIDToken;
-  var summary_1 = require_summary();
-  Object.defineProperty(exports, "summary", { enumerable: true, get: function() {
-    return summary_1.summary;
-  } });
-  var summary_2 = require_summary();
-  Object.defineProperty(exports, "markdownSummary", { enumerable: true, get: function() {
-    return summary_2.markdownSummary;
-  } });
-  var path_utils_1 = require_path_utils();
-  Object.defineProperty(exports, "toPosixPath", { enumerable: true, get: function() {
-    return path_utils_1.toPosixPath;
-  } });
-  Object.defineProperty(exports, "toWin32Path", { enumerable: true, get: function() {
-    return path_utils_1.toWin32Path;
-  } });
-  Object.defineProperty(exports, "toPlatformPath", { enumerable: true, get: function() {
-    return path_utils_1.toPlatformPath;
-  } });
-  exports.platform = __importStar(require_platform());
-});
-
 // node_modules/decamelize/index.js
 var require_decamelize = __commonJS((exports, module) => {
-  module.exports = function(str, sep2) {
+  module.exports = function(str, sep) {
     if (typeof str !== "string") {
       throw new TypeError("Expected a string");
     }
-    sep2 = typeof sep2 === "undefined" ? "_" : sep2;
-    return str.replace(/([a-z\d])([A-Z])/g, "$1" + sep2 + "$2").replace(/([A-Z]+)([A-Z][a-z\d]+)/g, "$1" + sep2 + "$2").toLowerCase();
+    sep = typeof sep === "undefined" ? "_" : sep;
+    return str.replace(/([a-z\d])([A-Z])/g, "$1" + sep + "$2").replace(/([A-Z]+)([A-Z][a-z\d]+)/g, "$1" + sep + "$2").toLowerCase();
   };
 });
 
@@ -22853,7 +22853,7 @@ var require_parse2 = __commonJS((exports) => {
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
-  function parse4(uuid2) {
+  function parse3(uuid2) {
     if (!(0, _validate.default)(uuid2)) {
       throw TypeError("Invalid UUID");
     }
@@ -22877,7 +22877,7 @@ var require_parse2 = __commonJS((exports) => {
     arr[15] = v & 255;
     return arr;
   }
-  var _default2 = exports.default = parse4;
+  var _default2 = exports.default = parse3;
 });
 
 // node_modules/@langchain/core/node_modules/uuid/dist/stringify.js
@@ -23515,7 +23515,7 @@ var require_parse3 = __commonJS((exports) => {
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
-  function parse5(uuid3) {
+  function parse4(uuid3) {
     if (!(0, _validate.default)(uuid3)) {
       throw TypeError("Invalid UUID");
     }
@@ -23539,7 +23539,7 @@ var require_parse3 = __commonJS((exports) => {
     arr[15] = v & 255;
     return arr;
   }
-  var _default2 = exports.default = parse5;
+  var _default2 = exports.default = parse4;
 });
 
 // node_modules/langsmith/node_modules/uuid/dist/stringify.js
@@ -25065,7 +25065,7 @@ var require_semver = __commonJS((exports, module) => {
 // node_modules/semver/functions/parse.js
 var require_parse4 = __commonJS((exports, module) => {
   var SemVer = require_semver();
-  var parse6 = (version4, options, throwErrors = false) => {
+  var parse5 = (version4, options, throwErrors = false) => {
     if (version4 instanceof SemVer) {
       return version4;
     }
@@ -25078,14 +25078,14 @@ var require_parse4 = __commonJS((exports, module) => {
       throw er;
     }
   };
-  module.exports = parse6;
+  module.exports = parse5;
 });
 
 // node_modules/semver/functions/valid.js
 var require_valid = __commonJS((exports, module) => {
-  var parse6 = require_parse4();
+  var parse5 = require_parse4();
   var valid = (version4, options) => {
-    const v = parse6(version4, options);
+    const v = parse5(version4, options);
     return v ? v.version : null;
   };
   module.exports = valid;
@@ -25093,9 +25093,9 @@ var require_valid = __commonJS((exports, module) => {
 
 // node_modules/semver/functions/clean.js
 var require_clean = __commonJS((exports, module) => {
-  var parse6 = require_parse4();
+  var parse5 = require_parse4();
   var clean = (version4, options) => {
-    const s = parse6(version4.trim().replace(/^[=v]+/, ""), options);
+    const s = parse5(version4.trim().replace(/^[=v]+/, ""), options);
     return s ? s.version : null;
   };
   module.exports = clean;
@@ -25121,10 +25121,10 @@ var require_inc = __commonJS((exports, module) => {
 
 // node_modules/semver/functions/diff.js
 var require_diff = __commonJS((exports, module) => {
-  var parse6 = require_parse4();
+  var parse5 = require_parse4();
   var diff = (version1, version22) => {
-    const v13 = parse6(version1, null, true);
-    const v2 = parse6(version22, null, true);
+    const v13 = parse5(version1, null, true);
+    const v2 = parse5(version22, null, true);
     const comparison = v13.compare(v2);
     if (comparison === 0) {
       return null;
@@ -25183,9 +25183,9 @@ var require_patch = __commonJS((exports, module) => {
 
 // node_modules/semver/functions/prerelease.js
 var require_prerelease = __commonJS((exports, module) => {
-  var parse6 = require_parse4();
+  var parse5 = require_parse4();
   var prerelease = (version4, options) => {
-    const parsed = parse6(version4, options);
+    const parsed = parse5(version4, options);
     return parsed && parsed.prerelease.length ? parsed.prerelease : null;
   };
   module.exports = prerelease;
@@ -25329,7 +25329,7 @@ var require_cmp = __commonJS((exports, module) => {
 // node_modules/semver/functions/coerce.js
 var require_coerce = __commonJS((exports, module) => {
   var SemVer = require_semver();
-  var parse6 = require_parse4();
+  var parse5 = require_parse4();
   var { safeRe: re, t } = require_re();
   var coerce2 = (version4, options) => {
     if (version4 instanceof SemVer) {
@@ -25364,7 +25364,7 @@ var require_coerce = __commonJS((exports, module) => {
     const patch = match[4] || "0";
     const prerelease = options.includePrerelease && match[5] ? `-${match[5]}` : "";
     const build = options.includePrerelease && match[6] ? `+${match[6]}` : "";
-    return parse6(`${major}.${minor}.${patch}${prerelease}${build}`, options);
+    return parse5(`${major}.${minor}.${patch}${prerelease}${build}`, options);
   };
   module.exports = coerce2;
 });
@@ -26333,7 +26333,7 @@ var require_semver2 = __commonJS((exports, module) => {
   var constants = require_constants6();
   var SemVer = require_semver();
   var identifiers = require_identifiers();
-  var parse6 = require_parse4();
+  var parse5 = require_parse4();
   var valid = require_valid();
   var clean = require_clean();
   var inc = require_inc();
@@ -26371,7 +26371,7 @@ var require_semver2 = __commonJS((exports, module) => {
   var simplifyRange = require_simplify();
   var subset = require_subset();
   module.exports = {
-    parse: parse6,
+    parse: parse5,
     valid,
     clean,
     inc,
@@ -26699,7 +26699,7 @@ var require_parse5 = __commonJS((exports) => {
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
-  function parse8(uuid9) {
+  function parse7(uuid9) {
     if (!(0, _validate.default)(uuid9)) {
       throw TypeError("Invalid UUID");
     }
@@ -26723,7 +26723,7 @@ var require_parse5 = __commonJS((exports) => {
     arr2[15] = v & 255;
     return arr2;
   }
-  var _default3 = exports.default = parse8;
+  var _default3 = exports.default = parse7;
 });
 
 // node_modules/langchain/node_modules/uuid/dist/stringify.js
@@ -27361,7 +27361,7 @@ var require_parse6 = __commonJS((exports) => {
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
-  function parse11(uuid9) {
+  function parse10(uuid9) {
     if (!(0, _validate.default)(uuid9)) {
       throw TypeError("Invalid UUID");
     }
@@ -27385,7 +27385,7 @@ var require_parse6 = __commonJS((exports) => {
     arr3[15] = v & 255;
     return arr3;
   }
-  var _default4 = exports.default = parse11;
+  var _default4 = exports.default = parse10;
 });
 
 // node_modules/@langchain/langgraph/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/stringify.js
@@ -28023,7 +28023,7 @@ var require_parse7 = __commonJS((exports) => {
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
-  function parse12(uuid9) {
+  function parse11(uuid9) {
     if (!(0, _validate.default)(uuid9)) {
       throw TypeError("Invalid UUID");
     }
@@ -28047,7 +28047,7 @@ var require_parse7 = __commonJS((exports) => {
     arr4[15] = v & 255;
     return arr4;
   }
-  var _default4 = exports.default = parse12;
+  var _default4 = exports.default = parse11;
 });
 
 // node_modules/@langchain/langgraph-checkpoint/node_modules/uuid/dist/stringify.js
@@ -28632,34 +28632,34 @@ var require_dist6 = __commonJS((exports) => {
   }
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/max.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/max.js
 var require_max6 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.default = undefined;
-  var _default7 = exports.default = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+  var _default8 = exports.default = "ffffffff-ffff-ffff-ffff-ffffffffffff";
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/nil.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/nil.js
 var require_nil6 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.default = undefined;
-  var _default7 = exports.default = "00000000-0000-0000-0000-000000000000";
+  var _default8 = exports.default = "00000000-0000-0000-0000-000000000000";
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/regex.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/regex.js
 var require_regex6 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.default = undefined;
-  var _default7 = exports.default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/i;
+  var _default8 = exports.default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/i;
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/validate.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/validate.js
 var require_validate6 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -28672,10 +28672,10 @@ var require_validate6 = __commonJS((exports) => {
   function validate13(uuid9) {
     return typeof uuid9 === "string" && _regex4.default.test(uuid9);
   }
-  var _default7 = exports.default = validate13;
+  var _default8 = exports.default = validate13;
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/parse.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/parse.js
 var require_parse8 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -28685,7 +28685,7 @@ var require_parse8 = __commonJS((exports) => {
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
-  function parse19(uuid9) {
+  function parse20(uuid9) {
     if (!(0, _validate.default)(uuid9)) {
       throw TypeError("Invalid UUID");
     }
@@ -28709,10 +28709,10 @@ var require_parse8 = __commonJS((exports) => {
     arr5[15] = v & 255;
     return arr5;
   }
-  var _default7 = exports.default = parse19;
+  var _default8 = exports.default = parse20;
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/stringify.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/stringify.js
 var require_stringify6 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -28737,10 +28737,10 @@ var require_stringify6 = __commonJS((exports) => {
     }
     return uuid9;
   }
-  var _default7 = exports.default = stringify8;
+  var _default8 = exports.default = stringify8;
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/rng.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/rng.js
 var require_rng6 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -28761,14 +28761,14 @@ var require_rng6 = __commonJS((exports) => {
   }
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/v1.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v1.js
 var require_v16 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.default = undefined;
   var _rng = _interopRequireDefault(require_rng6());
-  var _stringify3 = require_stringify6();
+  var _stringify4 = require_stringify6();
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
@@ -28837,40 +28837,40 @@ var require_v16 = __commonJS((exports) => {
     for (let n4 = 0;n4 < 6; ++n4) {
       b[i + n4] = node[n4];
     }
-    return buf || (0, _stringify3.unsafeStringify)(b);
+    return buf || (0, _stringify4.unsafeStringify)(b);
   }
-  var _default7 = exports.default = v16;
+  var _default8 = exports.default = v16;
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/v1ToV6.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v1ToV6.js
 var require_v1ToV66 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.default = v1ToV66;
   var _parse4 = _interopRequireDefault(require_parse8());
-  var _stringify3 = require_stringify6();
+  var _stringify4 = require_stringify6();
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
   function v1ToV66(uuid9) {
     const v1Bytes = typeof uuid9 === "string" ? (0, _parse4.default)(uuid9) : uuid9;
     const v6Bytes = _v1ToV6(v1Bytes);
-    return typeof uuid9 === "string" ? (0, _stringify3.unsafeStringify)(v6Bytes) : v6Bytes;
+    return typeof uuid9 === "string" ? (0, _stringify4.unsafeStringify)(v6Bytes) : v6Bytes;
   }
   function _v1ToV6(v1Bytes, randomize = false) {
     return Uint8Array.of((v1Bytes[6] & 15) << 4 | v1Bytes[7] >> 4 & 15, (v1Bytes[7] & 15) << 4 | (v1Bytes[4] & 240) >> 4, (v1Bytes[4] & 15) << 4 | (v1Bytes[5] & 240) >> 4, (v1Bytes[5] & 15) << 4 | (v1Bytes[0] & 240) >> 4, (v1Bytes[0] & 15) << 4 | (v1Bytes[1] & 240) >> 4, (v1Bytes[1] & 15) << 4 | (v1Bytes[2] & 240) >> 4, 96 | v1Bytes[2] & 15, v1Bytes[3], v1Bytes[8], v1Bytes[9], v1Bytes[10], v1Bytes[11], v1Bytes[12], v1Bytes[13], v1Bytes[14], v1Bytes[15]);
   }
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/v35.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v35.js
 var require_v356 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.URL = exports.DNS = undefined;
   exports.default = v352;
-  var _stringify3 = require_stringify6();
+  var _stringify4 = require_stringify6();
   var _parse4 = _interopRequireDefault(require_parse8());
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
@@ -28910,7 +28910,7 @@ var require_v356 = __commonJS((exports) => {
         }
         return buf;
       }
-      return (0, _stringify3.unsafeStringify)(bytes);
+      return (0, _stringify4.unsafeStringify)(bytes);
     }
     try {
       generateUUID.name = name;
@@ -28921,7 +28921,7 @@ var require_v356 = __commonJS((exports) => {
   }
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/md5.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/md5.js
 var require_md56 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -28939,10 +28939,10 @@ var require_md56 = __commonJS((exports) => {
     }
     return _nodeCrypto.default.createHash("md5").update(bytes).digest();
   }
-  var _default7 = exports.default = md5;
+  var _default8 = exports.default = md5;
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/v3.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v3.js
 var require_v38 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -28954,10 +28954,10 @@ var require_v38 = __commonJS((exports) => {
     return e && e.__esModule ? e : { default: e };
   }
   var v36 = (0, _v.default)("v3", 48, _md.default);
-  var _default7 = exports.default = v36;
+  var _default8 = exports.default = v36;
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/native.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/native.js
 var require_native6 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -28967,12 +28967,12 @@ var require_native6 = __commonJS((exports) => {
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
-  var _default7 = exports.default = {
+  var _default8 = exports.default = {
     randomUUID: _nodeCrypto.default.randomUUID
   };
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/v4.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v4.js
 var require_v46 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -28980,7 +28980,7 @@ var require_v46 = __commonJS((exports) => {
   exports.default = undefined;
   var _native = _interopRequireDefault(require_native6());
   var _rng = _interopRequireDefault(require_rng6());
-  var _stringify3 = require_stringify6();
+  var _stringify4 = require_stringify6();
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
@@ -28999,12 +28999,12 @@ var require_v46 = __commonJS((exports) => {
       }
       return buf;
     }
-    return (0, _stringify3.unsafeStringify)(rnds);
+    return (0, _stringify4.unsafeStringify)(rnds);
   }
-  var _default7 = exports.default = v49;
+  var _default8 = exports.default = v49;
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/sha1.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/sha1.js
 var require_sha16 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -29022,10 +29022,10 @@ var require_sha16 = __commonJS((exports) => {
     }
     return _nodeCrypto.default.createHash("sha1").update(bytes).digest();
   }
-  var _default7 = exports.default = sha1;
+  var _default8 = exports.default = sha1;
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/v5.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v5.js
 var require_v56 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -29037,16 +29037,16 @@ var require_v56 = __commonJS((exports) => {
     return e && e.__esModule ? e : { default: e };
   }
   var v56 = (0, _v.default)("v5", 80, _sha.default);
-  var _default7 = exports.default = v56;
+  var _default8 = exports.default = v56;
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/v6.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v6.js
 var require_v66 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.default = v66;
-  var _stringify3 = require_stringify6();
+  var _stringify4 = require_stringify6();
   var _v = _interopRequireDefault(require_v16());
   var _v1ToV = _interopRequireDefault(require_v1ToV66());
   function _interopRequireDefault(e) {
@@ -29064,39 +29064,39 @@ var require_v66 = __commonJS((exports) => {
       }
       return buf;
     }
-    return (0, _stringify3.unsafeStringify)(bytes);
+    return (0, _stringify4.unsafeStringify)(bytes);
   }
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/v6ToV1.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v6ToV1.js
 var require_v6ToV16 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.default = v6ToV16;
   var _parse4 = _interopRequireDefault(require_parse8());
-  var _stringify3 = require_stringify6();
+  var _stringify4 = require_stringify6();
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
   function v6ToV16(uuid9) {
     const v6Bytes = typeof uuid9 === "string" ? (0, _parse4.default)(uuid9) : uuid9;
     const v1Bytes = _v6ToV1(v6Bytes);
-    return typeof uuid9 === "string" ? (0, _stringify3.unsafeStringify)(v1Bytes) : v1Bytes;
+    return typeof uuid9 === "string" ? (0, _stringify4.unsafeStringify)(v1Bytes) : v1Bytes;
   }
   function _v6ToV1(v6Bytes) {
     return Uint8Array.of((v6Bytes[3] & 15) << 4 | v6Bytes[4] >> 4 & 15, (v6Bytes[4] & 15) << 4 | (v6Bytes[5] & 240) >> 4, (v6Bytes[5] & 15) << 4 | v6Bytes[6] & 15, v6Bytes[7], (v6Bytes[1] & 15) << 4 | (v6Bytes[2] & 240) >> 4, (v6Bytes[2] & 15) << 4 | (v6Bytes[3] & 240) >> 4, 16 | (v6Bytes[0] & 240) >> 4, (v6Bytes[0] & 15) << 4 | (v6Bytes[1] & 240) >> 4, v6Bytes[8], v6Bytes[9], v6Bytes[10], v6Bytes[11], v6Bytes[12], v6Bytes[13], v6Bytes[14], v6Bytes[15]);
   }
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/v7.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v7.js
 var require_v76 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
   exports.default = undefined;
   var _rng = _interopRequireDefault(require_rng6());
-  var _stringify3 = require_stringify6();
+  var _stringify4 = require_stringify6();
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
@@ -29162,12 +29162,12 @@ var require_v76 = __commonJS((exports) => {
     b[i++] = rnds[13];
     b[i++] = rnds[14];
     b[i++] = rnds[15];
-    return buf || (0, _stringify3.unsafeStringify)(b);
+    return buf || (0, _stringify4.unsafeStringify)(b);
   }
-  var _default7 = exports.default = v79;
+  var _default8 = exports.default = v79;
 });
 
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/version.js
+// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/version.js
 var require_version6 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
@@ -29183,673 +29183,11 @@ var require_version6 = __commonJS((exports) => {
     }
     return parseInt(uuid9.slice(14, 15), 16);
   }
-  var _default7 = exports.default = version9;
-});
-
-// node_modules/@langchain/langgraph/node_modules/uuid/dist/index.js
-var require_dist7 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  Object.defineProperty(exports, "MAX", {
-    enumerable: true,
-    get: function() {
-      return _max.default;
-    }
-  });
-  Object.defineProperty(exports, "NIL", {
-    enumerable: true,
-    get: function() {
-      return _nil.default;
-    }
-  });
-  Object.defineProperty(exports, "parse", {
-    enumerable: true,
-    get: function() {
-      return _parse4.default;
-    }
-  });
-  Object.defineProperty(exports, "stringify", {
-    enumerable: true,
-    get: function() {
-      return _stringify3.default;
-    }
-  });
-  Object.defineProperty(exports, "v1", {
-    enumerable: true,
-    get: function() {
-      return _v.default;
-    }
-  });
-  Object.defineProperty(exports, "v1ToV6", {
-    enumerable: true,
-    get: function() {
-      return _v1ToV.default;
-    }
-  });
-  Object.defineProperty(exports, "v3", {
-    enumerable: true,
-    get: function() {
-      return _v2.default;
-    }
-  });
-  Object.defineProperty(exports, "v4", {
-    enumerable: true,
-    get: function() {
-      return _v3.default;
-    }
-  });
-  Object.defineProperty(exports, "v5", {
-    enumerable: true,
-    get: function() {
-      return _v4.default;
-    }
-  });
-  Object.defineProperty(exports, "v6", {
-    enumerable: true,
-    get: function() {
-      return _v5.default;
-    }
-  });
-  Object.defineProperty(exports, "v6ToV1", {
-    enumerable: true,
-    get: function() {
-      return _v6ToV.default;
-    }
-  });
-  Object.defineProperty(exports, "v7", {
-    enumerable: true,
-    get: function() {
-      return _v6.default;
-    }
-  });
-  Object.defineProperty(exports, "validate", {
-    enumerable: true,
-    get: function() {
-      return _validate.default;
-    }
-  });
-  Object.defineProperty(exports, "version", {
-    enumerable: true,
-    get: function() {
-      return _version.default;
-    }
-  });
-  var _max = _interopRequireDefault(require_max6());
-  var _nil = _interopRequireDefault(require_nil6());
-  var _parse4 = _interopRequireDefault(require_parse8());
-  var _stringify3 = _interopRequireDefault(require_stringify6());
-  var _v = _interopRequireDefault(require_v16());
-  var _v1ToV = _interopRequireDefault(require_v1ToV66());
-  var _v2 = _interopRequireDefault(require_v38());
-  var _v3 = _interopRequireDefault(require_v46());
-  var _v4 = _interopRequireDefault(require_v56());
-  var _v5 = _interopRequireDefault(require_v66());
-  var _v6ToV = _interopRequireDefault(require_v6ToV16());
-  var _v6 = _interopRequireDefault(require_v76());
-  var _validate = _interopRequireDefault(require_validate6());
-  var _version = _interopRequireDefault(require_version6());
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/max.js
-var require_max7 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = undefined;
-  var _default8 = exports.default = "ffffffff-ffff-ffff-ffff-ffffffffffff";
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/nil.js
-var require_nil7 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = undefined;
-  var _default8 = exports.default = "00000000-0000-0000-0000-000000000000";
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/regex.js
-var require_regex7 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = undefined;
-  var _default8 = exports.default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/i;
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/validate.js
-var require_validate7 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = undefined;
-  var _regex4 = _interopRequireDefault(require_regex7());
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-  function validate14(uuid9) {
-    return typeof uuid9 === "string" && _regex4.default.test(uuid9);
-  }
-  var _default8 = exports.default = validate14;
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/parse.js
-var require_parse9 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = undefined;
-  var _validate = _interopRequireDefault(require_validate7());
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-  function parse22(uuid9) {
-    if (!(0, _validate.default)(uuid9)) {
-      throw TypeError("Invalid UUID");
-    }
-    let v;
-    const arr5 = new Uint8Array(16);
-    arr5[0] = (v = parseInt(uuid9.slice(0, 8), 16)) >>> 24;
-    arr5[1] = v >>> 16 & 255;
-    arr5[2] = v >>> 8 & 255;
-    arr5[3] = v & 255;
-    arr5[4] = (v = parseInt(uuid9.slice(9, 13), 16)) >>> 8;
-    arr5[5] = v & 255;
-    arr5[6] = (v = parseInt(uuid9.slice(14, 18), 16)) >>> 8;
-    arr5[7] = v & 255;
-    arr5[8] = (v = parseInt(uuid9.slice(19, 23), 16)) >>> 8;
-    arr5[9] = v & 255;
-    arr5[10] = (v = parseInt(uuid9.slice(24, 36), 16)) / 1099511627776 & 255;
-    arr5[11] = v / 4294967296 & 255;
-    arr5[12] = v >>> 24 & 255;
-    arr5[13] = v >>> 16 & 255;
-    arr5[14] = v >>> 8 & 255;
-    arr5[15] = v & 255;
-    return arr5;
-  }
-  var _default8 = exports.default = parse22;
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/stringify.js
-var require_stringify7 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = undefined;
-  exports.unsafeStringify = unsafeStringify4;
-  var _validate = _interopRequireDefault(require_validate7());
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-  var byteToHex4 = [];
-  for (let i = 0;i < 256; ++i) {
-    byteToHex4.push((i + 256).toString(16).slice(1));
-  }
-  function unsafeStringify4(arr5, offset = 0) {
-    return (byteToHex4[arr5[offset + 0]] + byteToHex4[arr5[offset + 1]] + byteToHex4[arr5[offset + 2]] + byteToHex4[arr5[offset + 3]] + "-" + byteToHex4[arr5[offset + 4]] + byteToHex4[arr5[offset + 5]] + "-" + byteToHex4[arr5[offset + 6]] + byteToHex4[arr5[offset + 7]] + "-" + byteToHex4[arr5[offset + 8]] + byteToHex4[arr5[offset + 9]] + "-" + byteToHex4[arr5[offset + 10]] + byteToHex4[arr5[offset + 11]] + byteToHex4[arr5[offset + 12]] + byteToHex4[arr5[offset + 13]] + byteToHex4[arr5[offset + 14]] + byteToHex4[arr5[offset + 15]]).toLowerCase();
-  }
-  function stringify9(arr5, offset = 0) {
-    const uuid9 = unsafeStringify4(arr5, offset);
-    if (!(0, _validate.default)(uuid9)) {
-      throw TypeError("Stringified UUID is invalid");
-    }
-    return uuid9;
-  }
-  var _default8 = exports.default = stringify9;
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/rng.js
-var require_rng7 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = rng4;
-  var _nodeCrypto = _interopRequireDefault(__require("node:crypto"));
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-  var rnds8Pool4 = new Uint8Array(256);
-  var poolPtr4 = rnds8Pool4.length;
-  function rng4() {
-    if (poolPtr4 > rnds8Pool4.length - 16) {
-      _nodeCrypto.default.randomFillSync(rnds8Pool4);
-      poolPtr4 = 0;
-    }
-    return rnds8Pool4.slice(poolPtr4, poolPtr4 += 16);
-  }
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v1.js
-var require_v17 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = undefined;
-  var _rng = _interopRequireDefault(require_rng7());
-  var _stringify4 = require_stringify7();
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-  var _nodeId;
-  var _clockseq;
-  var _lastMSecs = 0;
-  var _lastNSecs = 0;
-  function v17(options, buf, offset) {
-    let i = buf && offset || 0;
-    const b = buf || new Array(16);
-    options = options || {};
-    let node = options.node;
-    let clockseq = options.clockseq;
-    if (!options._v6) {
-      if (!node) {
-        node = _nodeId;
-      }
-      if (clockseq == null) {
-        clockseq = _clockseq;
-      }
-    }
-    if (node == null || clockseq == null) {
-      const seedBytes = options.random || (options.rng || _rng.default)();
-      if (node == null) {
-        node = [seedBytes[0], seedBytes[1], seedBytes[2], seedBytes[3], seedBytes[4], seedBytes[5]];
-        if (!_nodeId && !options._v6) {
-          node[0] |= 1;
-          _nodeId = node;
-        }
-      }
-      if (clockseq == null) {
-        clockseq = (seedBytes[6] << 8 | seedBytes[7]) & 16383;
-        if (_clockseq === undefined && !options._v6) {
-          _clockseq = clockseq;
-        }
-      }
-    }
-    let msecs = options.msecs !== undefined ? options.msecs : Date.now();
-    let nsecs = options.nsecs !== undefined ? options.nsecs : _lastNSecs + 1;
-    const dt = msecs - _lastMSecs + (nsecs - _lastNSecs) / 1e4;
-    if (dt < 0 && options.clockseq === undefined) {
-      clockseq = clockseq + 1 & 16383;
-    }
-    if ((dt < 0 || msecs > _lastMSecs) && options.nsecs === undefined) {
-      nsecs = 0;
-    }
-    if (nsecs >= 1e4) {
-      throw new Error("uuid.v1(): Can't create more than 10M uuids/sec");
-    }
-    _lastMSecs = msecs;
-    _lastNSecs = nsecs;
-    _clockseq = clockseq;
-    msecs += 12219292800000;
-    const tl = ((msecs & 268435455) * 1e4 + nsecs) % 4294967296;
-    b[i++] = tl >>> 24 & 255;
-    b[i++] = tl >>> 16 & 255;
-    b[i++] = tl >>> 8 & 255;
-    b[i++] = tl & 255;
-    const tmh = msecs / 4294967296 * 1e4 & 268435455;
-    b[i++] = tmh >>> 8 & 255;
-    b[i++] = tmh & 255;
-    b[i++] = tmh >>> 24 & 15 | 16;
-    b[i++] = tmh >>> 16 & 255;
-    b[i++] = clockseq >>> 8 | 128;
-    b[i++] = clockseq & 255;
-    for (let n4 = 0;n4 < 6; ++n4) {
-      b[i + n4] = node[n4];
-    }
-    return buf || (0, _stringify4.unsafeStringify)(b);
-  }
-  var _default8 = exports.default = v17;
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v1ToV6.js
-var require_v1ToV67 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = v1ToV67;
-  var _parse4 = _interopRequireDefault(require_parse9());
-  var _stringify4 = require_stringify7();
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-  function v1ToV67(uuid9) {
-    const v1Bytes = typeof uuid9 === "string" ? (0, _parse4.default)(uuid9) : uuid9;
-    const v6Bytes = _v1ToV6(v1Bytes);
-    return typeof uuid9 === "string" ? (0, _stringify4.unsafeStringify)(v6Bytes) : v6Bytes;
-  }
-  function _v1ToV6(v1Bytes, randomize = false) {
-    return Uint8Array.of((v1Bytes[6] & 15) << 4 | v1Bytes[7] >> 4 & 15, (v1Bytes[7] & 15) << 4 | (v1Bytes[4] & 240) >> 4, (v1Bytes[4] & 15) << 4 | (v1Bytes[5] & 240) >> 4, (v1Bytes[5] & 15) << 4 | (v1Bytes[0] & 240) >> 4, (v1Bytes[0] & 15) << 4 | (v1Bytes[1] & 240) >> 4, (v1Bytes[1] & 15) << 4 | (v1Bytes[2] & 240) >> 4, 96 | v1Bytes[2] & 15, v1Bytes[3], v1Bytes[8], v1Bytes[9], v1Bytes[10], v1Bytes[11], v1Bytes[12], v1Bytes[13], v1Bytes[14], v1Bytes[15]);
-  }
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v35.js
-var require_v357 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.URL = exports.DNS = undefined;
-  exports.default = v352;
-  var _stringify4 = require_stringify7();
-  var _parse4 = _interopRequireDefault(require_parse9());
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-  function stringToBytes(str2) {
-    str2 = unescape(encodeURIComponent(str2));
-    const bytes = [];
-    for (let i = 0;i < str2.length; ++i) {
-      bytes.push(str2.charCodeAt(i));
-    }
-    return bytes;
-  }
-  var DNS = exports.DNS = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
-  var URL2 = exports.URL = "6ba7b811-9dad-11d1-80b4-00c04fd430c8";
-  function v352(name, version10, hashfunc) {
-    function generateUUID(value, namespace, buf, offset) {
-      var _namespace;
-      if (typeof value === "string") {
-        value = stringToBytes(value);
-      }
-      if (typeof namespace === "string") {
-        namespace = (0, _parse4.default)(namespace);
-      }
-      if (((_namespace = namespace) === null || _namespace === undefined ? undefined : _namespace.length) !== 16) {
-        throw TypeError("Namespace must be array-like (16 iterable integer values, 0-255)");
-      }
-      let bytes = new Uint8Array(16 + value.length);
-      bytes.set(namespace);
-      bytes.set(value, namespace.length);
-      bytes = hashfunc(bytes);
-      bytes[6] = bytes[6] & 15 | version10;
-      bytes[8] = bytes[8] & 63 | 128;
-      if (buf) {
-        offset = offset || 0;
-        for (let i = 0;i < 16; ++i) {
-          buf[offset + i] = bytes[i];
-        }
-        return buf;
-      }
-      return (0, _stringify4.unsafeStringify)(bytes);
-    }
-    try {
-      generateUUID.name = name;
-    } catch (err) {}
-    generateUUID.DNS = DNS;
-    generateUUID.URL = URL2;
-    return generateUUID;
-  }
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/md5.js
-var require_md57 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = undefined;
-  var _nodeCrypto = _interopRequireDefault(__require("node:crypto"));
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-  function md5(bytes) {
-    if (Array.isArray(bytes)) {
-      bytes = Buffer.from(bytes);
-    } else if (typeof bytes === "string") {
-      bytes = Buffer.from(bytes, "utf8");
-    }
-    return _nodeCrypto.default.createHash("md5").update(bytes).digest();
-  }
-  var _default8 = exports.default = md5;
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v3.js
-var require_v39 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = undefined;
-  var _v = _interopRequireDefault(require_v357());
-  var _md = _interopRequireDefault(require_md57());
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-  var v37 = (0, _v.default)("v3", 48, _md.default);
-  var _default8 = exports.default = v37;
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/native.js
-var require_native7 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = undefined;
-  var _nodeCrypto = _interopRequireDefault(__require("node:crypto"));
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-  var _default8 = exports.default = {
-    randomUUID: _nodeCrypto.default.randomUUID
-  };
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v4.js
-var require_v47 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = undefined;
-  var _native = _interopRequireDefault(require_native7());
-  var _rng = _interopRequireDefault(require_rng7());
-  var _stringify4 = require_stringify7();
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-  function v410(options, buf, offset) {
-    if (_native.default.randomUUID && !buf && !options) {
-      return _native.default.randomUUID();
-    }
-    options = options || {};
-    const rnds = options.random || (options.rng || _rng.default)();
-    rnds[6] = rnds[6] & 15 | 64;
-    rnds[8] = rnds[8] & 63 | 128;
-    if (buf) {
-      offset = offset || 0;
-      for (let i = 0;i < 16; ++i) {
-        buf[offset + i] = rnds[i];
-      }
-      return buf;
-    }
-    return (0, _stringify4.unsafeStringify)(rnds);
-  }
-  var _default8 = exports.default = v410;
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/sha1.js
-var require_sha17 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = undefined;
-  var _nodeCrypto = _interopRequireDefault(__require("node:crypto"));
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-  function sha1(bytes) {
-    if (Array.isArray(bytes)) {
-      bytes = Buffer.from(bytes);
-    } else if (typeof bytes === "string") {
-      bytes = Buffer.from(bytes, "utf8");
-    }
-    return _nodeCrypto.default.createHash("sha1").update(bytes).digest();
-  }
-  var _default8 = exports.default = sha1;
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v5.js
-var require_v57 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = undefined;
-  var _v = _interopRequireDefault(require_v357());
-  var _sha = _interopRequireDefault(require_sha17());
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-  var v57 = (0, _v.default)("v5", 80, _sha.default);
-  var _default8 = exports.default = v57;
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v6.js
-var require_v67 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = v67;
-  var _stringify4 = require_stringify7();
-  var _v = _interopRequireDefault(require_v17());
-  var _v1ToV = _interopRequireDefault(require_v1ToV67());
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-  function v67(options = {}, buf, offset = 0) {
-    let bytes = (0, _v.default)({
-      ...options,
-      _v6: true
-    }, new Uint8Array(16));
-    bytes = (0, _v1ToV.default)(bytes);
-    if (buf) {
-      for (let i = 0;i < 16; i++) {
-        buf[offset + i] = bytes[i];
-      }
-      return buf;
-    }
-    return (0, _stringify4.unsafeStringify)(bytes);
-  }
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v6ToV1.js
-var require_v6ToV17 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = v6ToV17;
-  var _parse4 = _interopRequireDefault(require_parse9());
-  var _stringify4 = require_stringify7();
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-  function v6ToV17(uuid9) {
-    const v6Bytes = typeof uuid9 === "string" ? (0, _parse4.default)(uuid9) : uuid9;
-    const v1Bytes = _v6ToV1(v6Bytes);
-    return typeof uuid9 === "string" ? (0, _stringify4.unsafeStringify)(v1Bytes) : v1Bytes;
-  }
-  function _v6ToV1(v6Bytes) {
-    return Uint8Array.of((v6Bytes[3] & 15) << 4 | v6Bytes[4] >> 4 & 15, (v6Bytes[4] & 15) << 4 | (v6Bytes[5] & 240) >> 4, (v6Bytes[5] & 15) << 4 | v6Bytes[6] & 15, v6Bytes[7], (v6Bytes[1] & 15) << 4 | (v6Bytes[2] & 240) >> 4, (v6Bytes[2] & 15) << 4 | (v6Bytes[3] & 240) >> 4, 16 | (v6Bytes[0] & 240) >> 4, (v6Bytes[0] & 15) << 4 | (v6Bytes[1] & 240) >> 4, v6Bytes[8], v6Bytes[9], v6Bytes[10], v6Bytes[11], v6Bytes[12], v6Bytes[13], v6Bytes[14], v6Bytes[15]);
-  }
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/v7.js
-var require_v77 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = undefined;
-  var _rng = _interopRequireDefault(require_rng7());
-  var _stringify4 = require_stringify7();
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-  var _seqLow = null;
-  var _seqHigh = null;
-  var _msecs = 0;
-  function v710(options, buf, offset) {
-    options = options || {};
-    let i = buf && offset || 0;
-    const b = buf || new Uint8Array(16);
-    const rnds = options.random || (options.rng || _rng.default)();
-    const msecs = options.msecs !== undefined ? options.msecs : Date.now();
-    let seq = options.seq !== undefined ? options.seq : null;
-    let seqHigh = _seqHigh;
-    let seqLow = _seqLow;
-    if (msecs > _msecs && options.msecs === undefined) {
-      _msecs = msecs;
-      if (seq !== null) {
-        seqHigh = null;
-        seqLow = null;
-      }
-    }
-    if (seq !== null) {
-      if (seq > 2147483647) {
-        seq = 2147483647;
-      }
-      seqHigh = seq >>> 19 & 4095;
-      seqLow = seq & 524287;
-    }
-    if (seqHigh === null || seqLow === null) {
-      seqHigh = rnds[6] & 127;
-      seqHigh = seqHigh << 8 | rnds[7];
-      seqLow = rnds[8] & 63;
-      seqLow = seqLow << 8 | rnds[9];
-      seqLow = seqLow << 5 | rnds[10] >>> 3;
-    }
-    if (msecs + 1e4 > _msecs && seq === null) {
-      if (++seqLow > 524287) {
-        seqLow = 0;
-        if (++seqHigh > 4095) {
-          seqHigh = 0;
-          _msecs++;
-        }
-      }
-    } else {
-      _msecs = msecs;
-    }
-    _seqHigh = seqHigh;
-    _seqLow = seqLow;
-    b[i++] = _msecs / 1099511627776 & 255;
-    b[i++] = _msecs / 4294967296 & 255;
-    b[i++] = _msecs / 16777216 & 255;
-    b[i++] = _msecs / 65536 & 255;
-    b[i++] = _msecs / 256 & 255;
-    b[i++] = _msecs & 255;
-    b[i++] = seqHigh >>> 4 & 15 | 112;
-    b[i++] = seqHigh & 255;
-    b[i++] = seqLow >>> 13 & 63 | 128;
-    b[i++] = seqLow >>> 5 & 255;
-    b[i++] = seqLow << 3 & 255 | rnds[10] & 7;
-    b[i++] = rnds[11];
-    b[i++] = rnds[12];
-    b[i++] = rnds[13];
-    b[i++] = rnds[14];
-    b[i++] = rnds[15];
-    return buf || (0, _stringify4.unsafeStringify)(b);
-  }
-  var _default8 = exports.default = v710;
-});
-
-// node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/version.js
-var require_version7 = __commonJS((exports) => {
-  Object.defineProperty(exports, "__esModule", {
-    value: true
-  });
-  exports.default = undefined;
-  var _validate = _interopRequireDefault(require_validate7());
-  function _interopRequireDefault(e) {
-    return e && e.__esModule ? e : { default: e };
-  }
-  function version10(uuid9) {
-    if (!(0, _validate.default)(uuid9)) {
-      throw TypeError("Invalid UUID");
-    }
-    return parseInt(uuid9.slice(14, 15), 16);
-  }
-  var _default8 = exports.default = version10;
+  var _default8 = exports.default = version9;
 });
 
 // node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/dist/index.js
-var require_dist8 = __commonJS((exports) => {
+var require_dist7 = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", {
     value: true
   });
@@ -29937,20 +29275,20 @@ var require_dist8 = __commonJS((exports) => {
       return _version.default;
     }
   });
-  var _max = _interopRequireDefault(require_max7());
-  var _nil = _interopRequireDefault(require_nil7());
-  var _parse4 = _interopRequireDefault(require_parse9());
-  var _stringify4 = _interopRequireDefault(require_stringify7());
-  var _v = _interopRequireDefault(require_v17());
-  var _v1ToV = _interopRequireDefault(require_v1ToV67());
-  var _v2 = _interopRequireDefault(require_v39());
-  var _v3 = _interopRequireDefault(require_v47());
-  var _v4 = _interopRequireDefault(require_v57());
-  var _v5 = _interopRequireDefault(require_v67());
-  var _v6ToV = _interopRequireDefault(require_v6ToV17());
-  var _v6 = _interopRequireDefault(require_v77());
-  var _validate = _interopRequireDefault(require_validate7());
-  var _version = _interopRequireDefault(require_version7());
+  var _max = _interopRequireDefault(require_max6());
+  var _nil = _interopRequireDefault(require_nil6());
+  var _parse4 = _interopRequireDefault(require_parse8());
+  var _stringify4 = _interopRequireDefault(require_stringify6());
+  var _v = _interopRequireDefault(require_v16());
+  var _v1ToV = _interopRequireDefault(require_v1ToV66());
+  var _v2 = _interopRequireDefault(require_v38());
+  var _v3 = _interopRequireDefault(require_v46());
+  var _v4 = _interopRequireDefault(require_v56());
+  var _v5 = _interopRequireDefault(require_v66());
+  var _v6ToV = _interopRequireDefault(require_v6ToV16());
+  var _v6 = _interopRequireDefault(require_v76());
+  var _validate = _interopRequireDefault(require_validate6());
+  var _version = _interopRequireDefault(require_version6());
   function _interopRequireDefault(e) {
     return e && e.__esModule ? e : { default: e };
   }
@@ -30044,10 +29382,10 @@ var require_utils5 = __commonJS((exports) => {
 });
 
 // node_modules/braces/lib/stringify.js
-var require_stringify8 = __commonJS((exports, module) => {
+var require_stringify7 = __commonJS((exports, module) => {
   var utils = require_utils5();
   module.exports = (ast, options = {}) => {
-    const stringify10 = (node, parent = {}) => {
+    const stringify9 = (node, parent = {}) => {
       const invalidBlock = options.escapeInvalid && utils.isInvalidBrace(parent);
       const invalidNode = node.invalid === true && options.escapeInvalid === true;
       let output = "";
@@ -30062,12 +29400,12 @@ var require_stringify8 = __commonJS((exports, module) => {
       }
       if (node.nodes) {
         for (const child of node.nodes) {
-          output += stringify10(child);
+          output += stringify9(child);
         }
       }
       return output;
     };
-    return stringify10(ast);
+    return stringify9(ast);
   };
 });
 
@@ -30334,7 +29672,7 @@ var require_fill_range = __commonJS((exports, module) => {
       ;
     return index2 > 0;
   };
-  var stringify10 = (start, end, options) => {
+  var stringify9 = (start, end, options) => {
     if (typeof start === "string" || typeof end === "string") {
       return true;
     }
@@ -30436,7 +29774,7 @@ var require_fill_range = __commonJS((exports, module) => {
     step = Math.max(Math.abs(step), 1);
     let padded = zeros(startString) || zeros(endString) || zeros(stepString);
     let maxLen = padded ? Math.max(startString.length, endString.length, stepString.length) : 0;
-    let toNumber = padded === false && stringify10(start, end, options) === false;
+    let toNumber = padded === false && stringify9(start, end, options) === false;
     let format2 = options.transform || transform5(toNumber);
     if (options.toRegex && step === 1) {
       return toRange(toMaxLen(start, maxLen), toMaxLen(end, maxLen), true, options);
@@ -30566,7 +29904,7 @@ var require_compile = __commonJS((exports, module) => {
 // node_modules/braces/lib/expand.js
 var require_expand = __commonJS((exports, module) => {
   var fill = require_fill_range();
-  var stringify10 = require_stringify8();
+  var stringify9 = require_stringify7();
   var utils = require_utils5();
   var append = (queue5 = "", stash = "", enclose = false) => {
     const result = [];
@@ -30592,7 +29930,7 @@ var require_expand = __commonJS((exports, module) => {
     }
     return utils.flatten(result);
   };
-  var expand2 = (ast, options = {}) => {
+  var expand = (ast, options = {}) => {
     const rangeLimit = options.rangeLimit === undefined ? 1000 : options.rangeLimit;
     const walk = (node, parent = {}) => {
       node.queue = [];
@@ -30603,7 +29941,7 @@ var require_expand = __commonJS((exports, module) => {
         q = p.queue;
       }
       if (node.invalid || node.dollar) {
-        q.push(append(q.pop(), stringify10(node, options)));
+        q.push(append(q.pop(), stringify9(node, options)));
         return;
       }
       if (node.type === "brace" && node.invalid !== true && node.nodes.length === 2) {
@@ -30617,7 +29955,7 @@ var require_expand = __commonJS((exports, module) => {
         }
         let range = fill(...args, options);
         if (range.length === 0) {
-          range = stringify10(node, options);
+          range = stringify9(node, options);
         }
         q.push(append(q.pop(), range));
         node.nodes = [];
@@ -30654,7 +29992,7 @@ var require_expand = __commonJS((exports, module) => {
     };
     return utils.flatten(walk(ast));
   };
-  module.exports = expand2;
+  module.exports = expand;
 });
 
 // node_modules/braces/lib/constants.js
@@ -30710,8 +30048,8 @@ var require_constants7 = __commonJS((exports, module) => {
 });
 
 // node_modules/braces/lib/parse.js
-var require_parse10 = __commonJS((exports, module) => {
-  var stringify10 = require_stringify8();
+var require_parse9 = __commonJS((exports, module) => {
+  var stringify9 = require_stringify7();
   var {
     MAX_LENGTH,
     CHAR_BACKSLASH,
@@ -30729,7 +30067,7 @@ var require_parse10 = __commonJS((exports, module) => {
     CHAR_NO_BREAK_SPACE,
     CHAR_ZERO_WIDTH_NOBREAK_SPACE
   } = require_constants7();
-  var parse27 = (input, options = {}) => {
+  var parse25 = (input, options = {}) => {
     if (typeof input !== "string") {
       throw new TypeError("Expected a string");
     }
@@ -30872,7 +30210,7 @@ var require_parse10 = __commonJS((exports, module) => {
         if (block.ranges > 0) {
           block.ranges = 0;
           const open = block.nodes.shift();
-          block.nodes = [open, { type: "text", value: stringify10(block) }];
+          block.nodes = [open, { type: "text", value: stringify9(block) }];
         }
         push2({ type: "comma", value });
         block.commas++;
@@ -30933,15 +30271,15 @@ var require_parse10 = __commonJS((exports, module) => {
     push2({ type: "eos" });
     return ast;
   };
-  module.exports = parse27;
+  module.exports = parse25;
 });
 
 // node_modules/braces/index.js
 var require_braces = __commonJS((exports, module) => {
-  var stringify10 = require_stringify8();
+  var stringify9 = require_stringify7();
   var compile = require_compile();
-  var expand2 = require_expand();
-  var parse27 = require_parse10();
+  var expand = require_expand();
+  var parse25 = require_parse9();
   var braces = (input, options = {}) => {
     let output = [];
     if (Array.isArray(input)) {
@@ -30961,12 +30299,12 @@ var require_braces = __commonJS((exports, module) => {
     }
     return output;
   };
-  braces.parse = (input, options = {}) => parse27(input, options);
+  braces.parse = (input, options = {}) => parse25(input, options);
   braces.stringify = (input, options = {}) => {
     if (typeof input === "string") {
-      return stringify10(braces.parse(input, options), options);
+      return stringify9(braces.parse(input, options), options);
     }
-    return stringify10(input, options);
+    return stringify9(input, options);
   };
   braces.compile = (input, options = {}) => {
     if (typeof input === "string") {
@@ -30978,7 +30316,7 @@ var require_braces = __commonJS((exports, module) => {
     if (typeof input === "string") {
       input = braces.parse(input, options);
     }
-    let result = expand2(input, options);
+    let result = expand(input, options);
     if (options.noempty === true) {
       result = result.filter(Boolean);
     }
@@ -31512,7 +30850,7 @@ var require_scan = __commonJS((exports, module) => {
 });
 
 // node_modules/micromatch/node_modules/picomatch/lib/parse.js
-var require_parse11 = __commonJS((exports, module) => {
+var require_parse10 = __commonJS((exports, module) => {
   var constants = require_constants8();
   var utils = require_utils6();
   var {
@@ -31538,7 +30876,7 @@ var require_parse11 = __commonJS((exports, module) => {
   var syntaxError = (type, char) => {
     return `Missing ${type}: "${char}" - use "\\\\${char}" to match literal characters`;
   };
-  var parse27 = (input, options) => {
+  var parse25 = (input, options) => {
     if (typeof input !== "string") {
       throw new TypeError("Expected a string");
     }
@@ -31688,7 +31026,7 @@ var require_parse11 = __commonJS((exports, module) => {
           output = token.close = `)$))${extglobStar}`;
         }
         if (token.inner.includes("*") && (rest = remaining()) && /^\.[^\\/.]+$/.test(rest)) {
-          const expression = parse27(rest, { ...options, fastpaths: false }).output;
+          const expression = parse25(rest, { ...options, fastpaths: false }).output;
           output = token.close = `)${expression})${extglobStar})`;
         }
         if (token.prev.type === "bos") {
@@ -32217,7 +31555,7 @@ var require_parse11 = __commonJS((exports, module) => {
     }
     return state;
   };
-  parse27.fastpaths = (input, options) => {
+  parse25.fastpaths = (input, options) => {
     const opts = { ...options };
     const max = typeof opts.maxLength === "number" ? Math.min(MAX_LENGTH, opts.maxLength) : MAX_LENGTH;
     const len = input.length;
@@ -32286,14 +31624,14 @@ var require_parse11 = __commonJS((exports, module) => {
     }
     return source;
   };
-  module.exports = parse27;
+  module.exports = parse25;
 });
 
 // node_modules/micromatch/node_modules/picomatch/lib/picomatch.js
 var require_picomatch = __commonJS((exports, module) => {
   var path5 = __require("path");
   var scan2 = require_scan();
-  var parse27 = require_parse11();
+  var parse25 = require_parse10();
   var utils = require_utils6();
   var constants = require_constants8();
   var isObject7 = (val) => val && typeof val === "object" && !Array.isArray(val);
@@ -32383,7 +31721,7 @@ var require_picomatch = __commonJS((exports, module) => {
   picomatch.parse = (pattern, options) => {
     if (Array.isArray(pattern))
       return pattern.map((p) => picomatch.parse(p, options));
-    return parse27(pattern, { ...options, fastpaths: false });
+    return parse25(pattern, { ...options, fastpaths: false });
   };
   picomatch.scan = (input, options) => scan2(input, options);
   picomatch.compileRe = (state, options, returnOutput = false, returnState = false) => {
@@ -32409,10 +31747,10 @@ var require_picomatch = __commonJS((exports, module) => {
     }
     let parsed = { negated: false, fastpaths: true };
     if (options.fastpaths !== false && (input[0] === "." || input[0] === "*")) {
-      parsed.output = parse27.fastpaths(input, options);
+      parsed.output = parse25.fastpaths(input, options);
     }
     if (!parsed.output) {
-      parsed = parse27(input, options);
+      parsed = parse25(input, options);
     }
     return picomatch.compileRe(parsed, options, returnOutput, returnState);
   };
@@ -32444,7 +31782,7 @@ var require_micromatch = __commonJS((exports, module) => {
   var micromatch = (list, patterns, options) => {
     patterns = [].concat(patterns);
     list = [].concat(list);
-    let omit6 = new Set;
+    let omit5 = new Set;
     let keep = new Set;
     let items = new Set;
     let negatives = 0;
@@ -32465,15 +31803,15 @@ var require_micromatch = __commonJS((exports, module) => {
         if (!match)
           continue;
         if (negated) {
-          omit6.add(matched.output);
+          omit5.add(matched.output);
         } else {
-          omit6.delete(matched.output);
+          omit5.delete(matched.output);
           keep.add(matched.output);
         }
       }
     }
     let result = negatives === patterns.length ? [...items] : [...keep];
-    let matches = result.filter((item) => !omit6.has(item));
+    let matches = result.filter((item) => !omit5.has(item));
     if (options && matches.length === 0) {
       if (options.failglob === true) {
         throw new Error(`No matches found for "${patterns.join(", ")}"`);
@@ -32871,13 +32209,13 @@ var require_directives = __commonJS((exports) => {
             onError(0, "%YAML directive should contain exactly one part");
             return false;
           }
-          const [version12] = parts;
-          if (version12 === "1.1" || version12 === "1.2") {
-            this.yaml.version = version12;
+          const [version11] = parts;
+          if (version11 === "1.1" || version11 === "1.2") {
+            this.yaml.version = version11;
             return true;
           } else {
-            const isValid5 = /^\d+\.\d+$/.test(version12);
-            onError(6, `Unsupported YAML version ${version12}`, isValid5);
+            const isValid5 = /^\d+\.\d+$/.test(version11);
+            onError(6, `Unsupported YAML version ${version11}`, isValid5);
             return false;
           }
         }
@@ -33024,38 +32362,38 @@ var require_applyReviver = __commonJS((exports) => {
       if (Array.isArray(val)) {
         for (let i = 0, len = val.length;i < len; ++i) {
           const v0 = val[i];
-          const v18 = applyReviver(reviver2, val, String(i), v0);
-          if (v18 === undefined)
+          const v17 = applyReviver(reviver2, val, String(i), v0);
+          if (v17 === undefined)
             delete val[i];
-          else if (v18 !== v0)
-            val[i] = v18;
+          else if (v17 !== v0)
+            val[i] = v17;
         }
       } else if (val instanceof Map) {
         for (const k of Array.from(val.keys())) {
           const v0 = val.get(k);
-          const v18 = applyReviver(reviver2, val, k, v0);
-          if (v18 === undefined)
+          const v17 = applyReviver(reviver2, val, k, v0);
+          if (v17 === undefined)
             val.delete(k);
-          else if (v18 !== v0)
-            val.set(k, v18);
+          else if (v17 !== v0)
+            val.set(k, v17);
         }
       } else if (val instanceof Set) {
         for (const v0 of Array.from(val)) {
-          const v18 = applyReviver(reviver2, val, v0, v0);
-          if (v18 === undefined)
+          const v17 = applyReviver(reviver2, val, v0, v0);
+          if (v17 === undefined)
             val.delete(v0);
-          else if (v18 !== v0) {
+          else if (v17 !== v0) {
             val.delete(v0);
-            val.add(v18);
+            val.add(v17);
           }
         }
       } else {
         for (const [k, v0] of Object.entries(val)) {
-          const v18 = applyReviver(reviver2, val, k, v0);
-          if (v18 === undefined)
+          const v17 = applyReviver(reviver2, val, k, v0);
+          if (v17 === undefined)
             delete val[k];
-          else if (v18 !== v0)
-            val[k] = v18;
+          else if (v17 !== v0)
+            val[k] = v17;
         }
       }
     }
@@ -33365,7 +32703,7 @@ var require_Collection = __commonJS((exports) => {
   }
   var isEmptyPath = (path5) => path5 == null || typeof path5 === "object" && !!path5[Symbol.iterator]().next().done;
 
-  class Collection2 extends Node.NodeBase {
+  class Collection extends Node.NodeBase {
     constructor(type, schema) {
       super(type);
       Object.defineProperty(this, "schema", {
@@ -33446,7 +32784,7 @@ var require_Collection = __commonJS((exports) => {
       }
     }
   }
-  exports.Collection = Collection2;
+  exports.Collection = Collection;
   exports.collectionFromPath = collectionFromPath;
   exports.isEmptyPath = isEmptyPath;
 });
@@ -33904,7 +33242,7 @@ ${indent}`);
 });
 
 // node_modules/yaml/dist/stringify/stringify.js
-var require_stringify9 = __commonJS((exports) => {
+var require_stringify8 = __commonJS((exports) => {
   var anchors = require_anchors();
   var identity = require_identity();
   var stringifyComment = require_stringifyComment();
@@ -33991,7 +33329,7 @@ var require_stringify9 = __commonJS((exports) => {
       props.push(doc5.directives.tagString(tag));
     return props.join(" ");
   }
-  function stringify10(item, ctx, onComment, onChompKeep) {
+  function stringify9(item, ctx, onComment, onChompKeep) {
     if (identity.isPair(item))
       return item.toString(ctx, onComment, onChompKeep);
     if (identity.isAlias(item)) {
@@ -34020,14 +33358,14 @@ var require_stringify9 = __commonJS((exports) => {
 ${ctx.indent}${str2}`;
   }
   exports.createStringifyContext = createStringifyContext;
-  exports.stringify = stringify10;
+  exports.stringify = stringify9;
 });
 
 // node_modules/yaml/dist/stringify/stringifyPair.js
 var require_stringifyPair = __commonJS((exports) => {
   var identity = require_identity();
   var Scalar = require_Scalar();
-  var stringify10 = require_stringify9();
+  var stringify9 = require_stringify8();
   var stringifyComment = require_stringifyComment();
   function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
     const { allNullValues, doc: doc5, indent, indentStep, options: { commentString, indentSeq, simpleKeys } } = ctx;
@@ -34049,7 +33387,7 @@ var require_stringifyPair = __commonJS((exports) => {
     });
     let keyCommentDone = false;
     let chompKeep = false;
-    let str2 = stringify10.stringify(key, ctx, () => keyCommentDone = true, () => chompKeep = true);
+    let str2 = stringify9.stringify(key, ctx, () => keyCommentDone = true, () => chompKeep = true);
     if (!explicitKey && !ctx.inFlow && str2.length > 1024) {
       if (simpleKeys)
         throw new Error("With simple keys, single line scalar must not span more than 1024 characters");
@@ -34101,7 +33439,7 @@ ${indent}:`;
       ctx.indent = ctx.indent.substring(2);
     }
     let valueCommentDone = false;
-    const valueStr = stringify10.stringify(value, ctx, () => valueCommentDone = true, () => chompKeep = true);
+    const valueStr = stringify9.stringify(value, ctx, () => valueCommentDone = true, () => chompKeep = true);
     let ws = " ";
     if (keyComment || vsb || vcb) {
       ws = vsb ? `
@@ -34183,7 +33521,7 @@ var require_merge = __commonJS((exports) => {
   var identity = require_identity();
   var Scalar = require_Scalar();
   var MERGE_KEY = "<<";
-  var merge6 = {
+  var merge5 = {
     identify: (value) => value === MERGE_KEY || typeof value === "symbol" && value.description === MERGE_KEY,
     default: "key",
     tag: "tag:yaml.org,2002:merge",
@@ -34193,7 +33531,7 @@ var require_merge = __commonJS((exports) => {
     }),
     stringify: () => MERGE_KEY
   };
-  var isMergeKey = (ctx, key) => (merge6.identify(key) || identity.isScalar(key) && (!key.type || key.type === Scalar.Scalar.PLAIN) && merge6.identify(key.value)) && ctx?.doc.schema.tags.some((tag) => tag.tag === merge6.tag && tag.default);
+  var isMergeKey = (ctx, key) => (merge5.identify(key) || identity.isScalar(key) && (!key.type || key.type === Scalar.Scalar.PLAIN) && merge5.identify(key.value)) && ctx?.doc.schema.tags.some((tag) => tag.tag === merge5.tag && tag.default);
   function addMergeToJSMap(ctx, map6, value) {
     value = ctx && identity.isAlias(value) ? value.resolve(ctx.doc) : value;
     if (identity.isSeq(value))
@@ -34229,21 +33567,21 @@ var require_merge = __commonJS((exports) => {
   }
   exports.addMergeToJSMap = addMergeToJSMap;
   exports.isMergeKey = isMergeKey;
-  exports.merge = merge6;
+  exports.merge = merge5;
 });
 
 // node_modules/yaml/dist/nodes/addPairToJSMap.js
 var require_addPairToJSMap = __commonJS((exports) => {
   var log2 = require_log();
-  var merge6 = require_merge();
-  var stringify10 = require_stringify9();
+  var merge5 = require_merge();
+  var stringify9 = require_stringify8();
   var identity = require_identity();
   var toJS = require_toJS();
   function addPairToJSMap(ctx, map6, { key, value }) {
     if (identity.isNode(key) && key.addToJSMap)
       key.addToJSMap(ctx, map6, value);
-    else if (merge6.isMergeKey(ctx, key))
-      merge6.addMergeToJSMap(ctx, map6, value);
+    else if (merge5.isMergeKey(ctx, key))
+      merge5.addMergeToJSMap(ctx, map6, value);
     else {
       const jsKey = toJS.toJS(key, "", ctx);
       if (map6 instanceof Map) {
@@ -34272,7 +33610,7 @@ var require_addPairToJSMap = __commonJS((exports) => {
     if (typeof jsKey !== "object")
       return String(jsKey);
     if (identity.isNode(key) && ctx?.doc) {
-      const strCtx = stringify10.createStringifyContext(ctx.doc, {});
+      const strCtx = stringify9.createStringifyContext(ctx.doc, {});
       strCtx.anchors = new Set;
       for (const node of ctx.anchors.keys())
         strCtx.anchors.add(node.anchor);
@@ -34334,12 +33672,12 @@ var require_Pair = __commonJS((exports) => {
 // node_modules/yaml/dist/stringify/stringifyCollection.js
 var require_stringifyCollection = __commonJS((exports) => {
   var identity = require_identity();
-  var stringify10 = require_stringify9();
+  var stringify9 = require_stringify8();
   var stringifyComment = require_stringifyComment();
   function stringifyCollection(collection, ctx, options) {
     const flow = ctx.inFlow ?? collection.flow;
-    const stringify11 = flow ? stringifyFlowCollection : stringifyBlockCollection;
-    return stringify11(collection, ctx, options);
+    const stringify10 = flow ? stringifyFlowCollection : stringifyBlockCollection;
+    return stringify10(collection, ctx, options);
   }
   function stringifyBlockCollection({ comment, items }, ctx, { blockItemPrefix, flowChars, itemIndent, onChompKeep, onComment }) {
     const { indent, options: { commentString } } = ctx;
@@ -34364,7 +33702,7 @@ var require_stringifyCollection = __commonJS((exports) => {
         }
       }
       chompKeep = false;
-      let str3 = stringify10.stringify(item, itemCtx, () => comment2 = null, () => chompKeep = true);
+      let str3 = stringify9.stringify(item, itemCtx, () => comment2 = null, () => chompKeep = true);
       if (comment2)
         str3 += stringifyComment.lineComment(str3, itemIndent, commentString(comment2));
       if (chompKeep && comment2)
@@ -34433,7 +33771,7 @@ ${indent}${line}` : `
       }
       if (comment)
         reqNewline = true;
-      let str2 = stringify10.stringify(item, itemCtx, () => comment = null);
+      let str2 = stringify9.stringify(item, itemCtx, () => comment = null);
       if (i < items.length - 1)
         str2 += ",";
       if (comment)
@@ -34480,7 +33818,7 @@ ${indent}${end}`;
 var require_YAMLMap = __commonJS((exports) => {
   var stringifyCollection = require_stringifyCollection();
   var addPairToJSMap = require_addPairToJSMap();
-  var Collection2 = require_Collection();
+  var Collection = require_Collection();
   var identity = require_identity();
   var Pair = require_Pair();
   var Scalar = require_Scalar();
@@ -34497,7 +33835,7 @@ var require_YAMLMap = __commonJS((exports) => {
     return;
   }
 
-  class YAMLMap extends Collection2.Collection {
+  class YAMLMap extends Collection.Collection {
     static get tagName() {
       return "tag:yaml.org,2002:map";
     }
@@ -34626,12 +33964,12 @@ var require_map = __commonJS((exports) => {
 var require_YAMLSeq = __commonJS((exports) => {
   var createNode = require_createNode();
   var stringifyCollection = require_stringifyCollection();
-  var Collection2 = require_Collection();
+  var Collection = require_Collection();
   var identity = require_identity();
   var Scalar = require_Scalar();
   var toJS = require_toJS();
 
-  class YAMLSeq extends Collection2.Collection {
+  class YAMLSeq extends Collection.Collection {
     static get tagName() {
       return "tag:yaml.org,2002:seq";
     }
@@ -35512,7 +34850,7 @@ var require_schema3 = __commonJS((exports) => {
   var bool = require_bool2();
   var float = require_float2();
   var int5 = require_int2();
-  var merge6 = require_merge();
+  var merge5 = require_merge();
   var omap = require_omap();
   var pairs = require_pairs();
   var set6 = require_set();
@@ -35532,7 +34870,7 @@ var require_schema3 = __commonJS((exports) => {
     float.floatExp,
     float.float,
     binary.binary,
-    merge6.merge,
+    merge5.merge,
     omap.omap,
     pairs.pairs,
     set6.set,
@@ -35555,7 +34893,7 @@ var require_tags = __commonJS((exports) => {
   var schema = require_schema();
   var schema$1 = require_schema2();
   var binary = require_binary();
-  var merge6 = require_merge();
+  var merge5 = require_merge();
   var omap = require_omap();
   var pairs = require_pairs();
   var schema$2 = require_schema3();
@@ -35580,7 +34918,7 @@ var require_tags = __commonJS((exports) => {
     intOct: int5.intOct,
     intTime: timestamp.intTime,
     map: map6.map,
-    merge: merge6.merge,
+    merge: merge5.merge,
     null: _null13.nullTag,
     omap: omap.omap,
     pairs: pairs.pairs,
@@ -35590,7 +34928,7 @@ var require_tags = __commonJS((exports) => {
   };
   var coreKnownTags = {
     "tag:yaml.org,2002:binary": binary.binary,
-    "tag:yaml.org,2002:merge": merge6.merge,
+    "tag:yaml.org,2002:merge": merge5.merge,
     "tag:yaml.org,2002:omap": omap.omap,
     "tag:yaml.org,2002:pairs": pairs.pairs,
     "tag:yaml.org,2002:set": set6.set,
@@ -35599,7 +34937,7 @@ var require_tags = __commonJS((exports) => {
   function getTags(customTags, schemaName, addMergeTag) {
     const schemaTags = schemas9.get(schemaName);
     if (schemaTags && !customTags) {
-      return addMergeTag && !schemaTags.includes(merge6.merge) ? schemaTags.concat(merge6.merge) : schemaTags.slice();
+      return addMergeTag && !schemaTags.includes(merge5.merge) ? schemaTags.concat(merge5.merge) : schemaTags.slice();
     }
     let tags = schemaTags;
     if (!tags) {
@@ -35617,7 +34955,7 @@ var require_tags = __commonJS((exports) => {
       tags = customTags(tags.slice());
     }
     if (addMergeTag)
-      tags = tags.concat(merge6.merge);
+      tags = tags.concat(merge5.merge);
     return tags.reduce((tags2, tag) => {
       const tagObj = typeof tag === "string" ? tagsByName[tag] : tag;
       if (!tagObj) {
@@ -35644,11 +34982,11 @@ var require_Schema = __commonJS((exports) => {
   var sortMapEntriesByKey = (a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
 
   class Schema {
-    constructor({ compat: compat5, customTags, merge: merge6, resolveKnownTags, schema, sortMapEntries, toStringDefaults }) {
+    constructor({ compat: compat5, customTags, merge: merge5, resolveKnownTags, schema, sortMapEntries, toStringDefaults }) {
       this.compat = Array.isArray(compat5) ? tags.getTags(compat5, "compat") : compat5 ? tags.getTags(null, compat5) : null;
       this.name = typeof schema === "string" && schema || "core";
       this.knownTags = resolveKnownTags ? tags.coreKnownTags : {};
-      this.tags = tags.getTags(customTags, this.name, merge6);
+      this.tags = tags.getTags(customTags, this.name, merge5);
       this.toStringOptions = toStringDefaults ?? null;
       Object.defineProperty(this, identity.MAP, { value: map6.map });
       Object.defineProperty(this, identity.SCALAR, { value: string14.string });
@@ -35667,7 +35005,7 @@ var require_Schema = __commonJS((exports) => {
 // node_modules/yaml/dist/stringify/stringifyDocument.js
 var require_stringifyDocument = __commonJS((exports) => {
   var identity = require_identity();
-  var stringify10 = require_stringify9();
+  var stringify9 = require_stringify8();
   var stringifyComment = require_stringifyComment();
   function stringifyDocument(doc5, options) {
     const lines = [];
@@ -35682,7 +35020,7 @@ var require_stringifyDocument = __commonJS((exports) => {
     }
     if (hasDirectives)
       lines.push("---");
-    const ctx = stringify10.createStringifyContext(doc5, options);
+    const ctx = stringify9.createStringifyContext(doc5, options);
     const { commentString } = ctx.options;
     if (doc5.commentBefore) {
       if (lines.length !== 1)
@@ -35704,7 +35042,7 @@ var require_stringifyDocument = __commonJS((exports) => {
         contentComment = doc5.contents.comment;
       }
       const onChompKeep = contentComment ? undefined : () => chompKeep = true;
-      let body = stringify10.stringify(doc5.contents, ctx, () => contentComment = null, onChompKeep);
+      let body = stringify9.stringify(doc5.contents, ctx, () => contentComment = null, onChompKeep);
       if (contentComment)
         body += stringifyComment.lineComment(body, "", commentString(contentComment));
       if ((body[0] === "|" || body[0] === ">") && lines[lines.length - 1] === "---") {
@@ -35712,7 +35050,7 @@ var require_stringifyDocument = __commonJS((exports) => {
       } else
         lines.push(body);
     } else {
-      lines.push(stringify10.stringify(doc5.contents, ctx));
+      lines.push(stringify9.stringify(doc5.contents, ctx));
     }
     if (doc5.directives?.docEnd) {
       if (doc5.comment) {
@@ -35747,7 +35085,7 @@ var require_stringifyDocument = __commonJS((exports) => {
 // node_modules/yaml/dist/doc/Document.js
 var require_Document = __commonJS((exports) => {
   var Alias = require_Alias();
-  var Collection2 = require_Collection();
+  var Collection = require_Collection();
   var identity = require_identity();
   var Pair = require_Pair();
   var toJS = require_toJS();
@@ -35783,14 +35121,14 @@ var require_Document = __commonJS((exports) => {
         version: "1.2"
       }, options);
       this.options = opt;
-      let { version: version12 } = opt;
+      let { version: version11 } = opt;
       if (options?._directives) {
         this.directives = options._directives.atDocument();
         if (this.directives.yaml.explicit)
-          version12 = this.directives.yaml.version;
+          version11 = this.directives.yaml.version;
       } else
-        this.directives = new directives.Directives({ version: version12 });
-      this.setSchema(version12, options);
+        this.directives = new directives.Directives({ version: version11 });
+      this.setSchema(version11, options);
       this.contents = value === undefined ? null : this.createNode(value, _replacer, options);
     }
     clone() {
@@ -35866,7 +35204,7 @@ var require_Document = __commonJS((exports) => {
       return assertCollection(this.contents) ? this.contents.delete(key) : false;
     }
     deleteIn(path5) {
-      if (Collection2.isEmptyPath(path5)) {
+      if (Collection.isEmptyPath(path5)) {
         if (this.contents == null)
           return false;
         this.contents = null;
@@ -35878,7 +35216,7 @@ var require_Document = __commonJS((exports) => {
       return identity.isCollection(this.contents) ? this.contents.get(key, keepScalar) : undefined;
     }
     getIn(path5, keepScalar) {
-      if (Collection2.isEmptyPath(path5))
+      if (Collection.isEmptyPath(path5))
         return !keepScalar && identity.isScalar(this.contents) ? this.contents.value : this.contents;
       return identity.isCollection(this.contents) ? this.contents.getIn(path5, keepScalar) : undefined;
     }
@@ -35886,31 +35224,31 @@ var require_Document = __commonJS((exports) => {
       return identity.isCollection(this.contents) ? this.contents.has(key) : false;
     }
     hasIn(path5) {
-      if (Collection2.isEmptyPath(path5))
+      if (Collection.isEmptyPath(path5))
         return this.contents !== undefined;
       return identity.isCollection(this.contents) ? this.contents.hasIn(path5) : false;
     }
     set(key, value) {
       if (this.contents == null) {
-        this.contents = Collection2.collectionFromPath(this.schema, [key], value);
+        this.contents = Collection.collectionFromPath(this.schema, [key], value);
       } else if (assertCollection(this.contents)) {
         this.contents.set(key, value);
       }
     }
     setIn(path5, value) {
-      if (Collection2.isEmptyPath(path5)) {
+      if (Collection.isEmptyPath(path5)) {
         this.contents = value;
       } else if (this.contents == null) {
-        this.contents = Collection2.collectionFromPath(this.schema, Array.from(path5), value);
+        this.contents = Collection.collectionFromPath(this.schema, Array.from(path5), value);
       } else if (assertCollection(this.contents)) {
         this.contents.setIn(path5, value);
       }
     }
-    setSchema(version12, options = {}) {
-      if (typeof version12 === "number")
-        version12 = String(version12);
+    setSchema(version11, options = {}) {
+      if (typeof version11 === "number")
+        version11 = String(version11);
       let opt;
-      switch (version12) {
+      switch (version11) {
         case "1.1":
           if (this.directives)
             this.directives.yaml.version = "1.1";
@@ -35921,9 +35259,9 @@ var require_Document = __commonJS((exports) => {
         case "1.2":
         case "next":
           if (this.directives)
-            this.directives.yaml.version = version12;
+            this.directives.yaml.version = version11;
           else
-            this.directives = new directives.Directives({ version: version12 });
+            this.directives = new directives.Directives({ version: version11 });
           opt = { resolveKnownTags: true, schema: "core" };
           break;
         case null:
@@ -35932,7 +35270,7 @@ var require_Document = __commonJS((exports) => {
           opt = null;
           break;
         default: {
-          const sv = JSON.stringify(version12);
+          const sv = JSON.stringify(version11);
           throw new Error(`Expected '1.1', '1.2' or null as first argument, but found: ${sv}`);
         }
       }
@@ -36259,10 +35597,10 @@ var require_resolve_block_map = __commonJS((exports) => {
     let offset = bm.offset;
     let commentEnd = null;
     for (const collItem of bm.items) {
-      const { start, key, sep: sep2, value } = collItem;
+      const { start, key, sep, value } = collItem;
       const keyProps = resolveProps.resolveProps(start, {
         indicator: "explicit-key-ind",
-        next: key ?? sep2?.[0],
+        next: key ?? sep?.[0],
         offset,
         onError,
         parentIndent: bm.indent,
@@ -36276,7 +35614,7 @@ var require_resolve_block_map = __commonJS((exports) => {
           else if ("indent" in key && key.indent !== bm.indent)
             onError(offset, "BAD_INDENT", startColMsg);
         }
-        if (!keyProps.anchor && !keyProps.tag && !sep2) {
+        if (!keyProps.anchor && !keyProps.tag && !sep) {
           commentEnd = keyProps.end;
           if (keyProps.comment) {
             if (map6.comment)
@@ -36301,7 +35639,7 @@ var require_resolve_block_map = __commonJS((exports) => {
       ctx.atKey = false;
       if (utilMapIncludes.mapIncludes(ctx, map6.items, keyNode))
         onError(keyStart, "DUPLICATE_KEY", "Map keys must be unique");
-      const valueProps = resolveProps.resolveProps(sep2 ?? [], {
+      const valueProps = resolveProps.resolveProps(sep ?? [], {
         indicator: "map-value-ind",
         next: value,
         offset: keyNode.range[2],
@@ -36317,7 +35655,7 @@ var require_resolve_block_map = __commonJS((exports) => {
           if (ctx.options.strict && keyProps.start < valueProps.found.offset - 1024)
             onError(keyNode.range, "KEY_OVER_1024_CHARS", "The : indicator must be at most 1024 chars after the start of an implicit block mapping key");
         }
-        const valueNode = value ? composeNode(ctx, value, valueProps, onError) : composeEmptyNode(ctx, offset, sep2, null, valueProps, onError);
+        const valueNode = value ? composeNode(ctx, value, valueProps, onError) : composeEmptyNode(ctx, offset, sep, null, valueProps, onError);
         if (ctx.schema.compat)
           utilFlowIndentCheck.flowIndentCheck(bm.indent, value, onError);
         offset = valueNode.range[2];
@@ -36403,7 +35741,7 @@ var require_resolve_end = __commonJS((exports) => {
     let comment = "";
     if (end) {
       let hasSpace = false;
-      let sep2 = "";
+      let sep = "";
       for (const token of end) {
         const { source, type } = token;
         switch (type) {
@@ -36417,13 +35755,13 @@ var require_resolve_end = __commonJS((exports) => {
             if (!comment)
               comment = cb;
             else
-              comment += sep2 + cb;
-            sep2 = "";
+              comment += sep + cb;
+            sep = "";
             break;
           }
           case "newline":
             if (comment)
-              sep2 += source;
+              sep += source;
             hasSpace = true;
             break;
           default:
@@ -36463,18 +35801,18 @@ var require_resolve_flow_collection = __commonJS((exports) => {
     let offset = fc.offset + fc.start.source.length;
     for (let i = 0;i < fc.items.length; ++i) {
       const collItem = fc.items[i];
-      const { start, key, sep: sep2, value } = collItem;
+      const { start, key, sep, value } = collItem;
       const props = resolveProps.resolveProps(start, {
         flow: fcName,
         indicator: "explicit-key-ind",
-        next: key ?? sep2?.[0],
+        next: key ?? sep?.[0],
         offset,
         onError,
         parentIndent: fc.indent,
         startOnNewline: false
       });
       if (!props.found) {
-        if (!props.anchor && !props.tag && !sep2 && !value) {
+        if (!props.anchor && !props.tag && !sep && !value) {
           if (i === 0 && props.comma)
             onError(props.comma, "UNEXPECTED_TOKEN", `Unexpected , in ${fcName}`);
           else if (i < fc.items.length - 1)
@@ -36526,8 +35864,8 @@ var require_resolve_flow_collection = __commonJS((exports) => {
           }
         }
       }
-      if (!isMap && !sep2 && !props.found) {
-        const valueNode = value ? composeNode(ctx, value, props, onError) : composeEmptyNode(ctx, props.end, sep2, null, props, onError);
+      if (!isMap && !sep && !props.found) {
+        const valueNode = value ? composeNode(ctx, value, props, onError) : composeEmptyNode(ctx, props.end, sep, null, props, onError);
         coll.items.push(valueNode);
         offset = valueNode.range[2];
         if (isBlock(value))
@@ -36539,7 +35877,7 @@ var require_resolve_flow_collection = __commonJS((exports) => {
         if (isBlock(key))
           onError(keyNode.range, "BLOCK_IN_FLOW", blockMsg);
         ctx.atKey = false;
-        const valueProps = resolveProps.resolveProps(sep2 ?? [], {
+        const valueProps = resolveProps.resolveProps(sep ?? [], {
           flow: fcName,
           indicator: "map-value-ind",
           next: value,
@@ -36550,8 +35888,8 @@ var require_resolve_flow_collection = __commonJS((exports) => {
         });
         if (valueProps.found) {
           if (!isMap && !props.found && ctx.options.strict) {
-            if (sep2)
-              for (const st of sep2) {
+            if (sep)
+              for (const st of sep) {
                 if (st === valueProps.found)
                   break;
                 if (st.type === "newline") {
@@ -36568,7 +35906,7 @@ var require_resolve_flow_collection = __commonJS((exports) => {
           else
             onError(valueProps.start, "MISSING_CHAR", `Missing , or : between ${fcName} items`);
         }
-        const valueNode = value ? composeNode(ctx, value, valueProps, onError) : valueProps.found ? composeEmptyNode(ctx, valueProps.end, sep2, null, valueProps, onError) : null;
+        const valueNode = value ? composeNode(ctx, value, valueProps, onError) : valueProps.found ? composeEmptyNode(ctx, valueProps.end, sep, null, valueProps, onError) : null;
         if (valueNode) {
           if (isBlock(value))
             onError(valueNode.range, "BLOCK_IN_FLOW", blockMsg);
@@ -36745,7 +36083,7 @@ var require_resolve_block_scalar = __commonJS((exports) => {
         chompStart = i + 1;
     }
     let value = "";
-    let sep2 = "";
+    let sep = "";
     let prevMoreIndented = false;
     for (let i = 0;i < contentStart; ++i)
       value += lines[i][0].slice(trimIndent) + `
@@ -36763,33 +36101,33 @@ var require_resolve_block_scalar = __commonJS((exports) => {
         indent = "";
       }
       if (type === Scalar.Scalar.BLOCK_LITERAL) {
-        value += sep2 + indent.slice(trimIndent) + content;
-        sep2 = `
+        value += sep + indent.slice(trimIndent) + content;
+        sep = `
 `;
       } else if (indent.length > trimIndent || content[0] === "\t") {
-        if (sep2 === " ")
-          sep2 = `
+        if (sep === " ")
+          sep = `
 `;
-        else if (!prevMoreIndented && sep2 === `
+        else if (!prevMoreIndented && sep === `
 `)
-          sep2 = `
+          sep = `
 
 `;
-        value += sep2 + indent.slice(trimIndent) + content;
-        sep2 = `
+        value += sep + indent.slice(trimIndent) + content;
+        sep = `
 `;
         prevMoreIndented = true;
       } else if (content === "") {
-        if (sep2 === `
+        if (sep === `
 `)
           value += `
 `;
         else
-          sep2 = `
+          sep = `
 `;
       } else {
-        value += sep2 + content;
-        sep2 = " ";
+        value += sep + content;
+        sep = " ";
         prevMoreIndented = false;
       }
     }
@@ -36970,27 +36308,27 @@ var require_resolve_flow_scalar = __commonJS((exports) => {
     if (!match)
       return source;
     let res = match[1];
-    let sep2 = " ";
+    let sep = " ";
     let pos = first.lastIndex;
     line.lastIndex = pos;
     while (match = line.exec(source)) {
       if (match[1] === "") {
-        if (sep2 === `
+        if (sep === `
 `)
-          res += sep2;
+          res += sep;
         else
-          sep2 = `
+          sep = `
 `;
       } else {
-        res += sep2 + match[1];
-        sep2 = " ";
+        res += sep + match[1];
+        sep = " ";
       }
       pos = line.lastIndex;
     }
     const last = /[ \t]*(.*)/sy;
     last.lastIndex = pos;
     match = last.exec(source);
-    return res + sep2 + (match?.[1] ?? "");
+    return res + sep + (match?.[1] ?? "");
   }
   function doubleQuotedValue(source, onError) {
     let res = "";
@@ -37723,7 +37061,7 @@ var require_cst_scalar = __commonJS((exports) => {
 
 // node_modules/yaml/dist/parse/cst-stringify.js
 var require_cst_stringify = __commonJS((exports) => {
-  var stringify10 = (cst) => ("type" in cst) ? stringifyToken(cst) : stringifyItem(cst);
+  var stringify9 = (cst) => ("type" in cst) ? stringifyToken(cst) : stringifyItem(cst);
   function stringifyToken(token) {
     switch (token.type) {
       case "block-scalar": {
@@ -37763,20 +37101,20 @@ var require_cst_stringify = __commonJS((exports) => {
       }
     }
   }
-  function stringifyItem({ start, key, sep: sep2, value }) {
+  function stringifyItem({ start, key, sep, value }) {
     let res = "";
     for (const st of start)
       res += st.source;
     if (key)
       res += stringifyToken(key);
-    if (sep2)
-      for (const st of sep2)
+    if (sep)
+      for (const st of sep)
         res += st.source;
     if (value)
       res += stringifyToken(value);
     return res;
   }
-  exports.stringify = stringify10;
+  exports.stringify = stringify9;
 });
 
 // node_modules/yaml/dist/parse/cst-visit.js
@@ -38900,18 +38238,18 @@ var require_parser = __commonJS((exports) => {
       if (this.type === "map-value-ind") {
         const prev = getPrevProps(this.peek(2));
         const start = getFirstKeyStartProps(prev);
-        let sep2;
+        let sep;
         if (scalar.end) {
-          sep2 = scalar.end;
-          sep2.push(this.sourceToken);
+          sep = scalar.end;
+          sep.push(this.sourceToken);
           delete scalar.end;
         } else
-          sep2 = [this.sourceToken];
+          sep = [this.sourceToken];
         const map6 = {
           type: "block-map",
           offset: scalar.offset,
           indent: scalar.indent,
-          items: [{ start, key: scalar, sep: sep2 }]
+          items: [{ start, key: scalar, sep }]
         };
         this.onKeyLine = true;
         this.stack[this.stack.length - 1] = map6;
@@ -39065,15 +38403,15 @@ var require_parser = __commonJS((exports) => {
               } else if (isFlowToken(it.key) && !includesToken(it.sep, "newline")) {
                 const start2 = getFirstKeyStartProps(it.start);
                 const key = it.key;
-                const sep2 = it.sep;
-                sep2.push(this.sourceToken);
+                const sep = it.sep;
+                sep.push(this.sourceToken);
                 delete it.key;
                 delete it.sep;
                 this.stack.push({
                   type: "block-map",
                   offset: this.offset,
                   indent: this.indent,
-                  items: [{ start: start2, key, sep: sep2 }]
+                  items: [{ start: start2, key, sep }]
                 });
               } else if (start.length > 0) {
                 it.sep = it.sep.concat(start, this.sourceToken);
@@ -39267,13 +38605,13 @@ var require_parser = __commonJS((exports) => {
           const prev = getPrevProps(parent);
           const start = getFirstKeyStartProps(prev);
           fixFlowSeqItems(fc);
-          const sep2 = fc.end.splice(1, fc.end.length);
-          sep2.push(this.sourceToken);
+          const sep = fc.end.splice(1, fc.end.length);
+          sep.push(this.sourceToken);
           const map6 = {
             type: "block-map",
             offset: fc.offset,
             indent: fc.indent,
-            items: [{ start, key: fc, sep: sep2 }]
+            items: [{ start, key: fc, sep }]
           };
           this.onKeyLine = true;
           this.stack[this.stack.length - 1] = map6;
@@ -39449,7 +38787,7 @@ var require_public_api = __commonJS((exports) => {
     }
     return doc5;
   }
-  function parse27(src, reviver2, options) {
+  function parse25(src, reviver2, options) {
     let _reviver2 = undefined;
     if (typeof reviver2 === "function") {
       _reviver2 = reviver2;
@@ -39468,7 +38806,7 @@ var require_public_api = __commonJS((exports) => {
     }
     return doc5.toJS(Object.assign({ reviver: _reviver2 }, options));
   }
-  function stringify10(value, replacer, options) {
+  function stringify9(value, replacer, options) {
     let _replacer = null;
     if (typeof replacer === "function" || Array.isArray(replacer)) {
       _replacer = replacer;
@@ -39490,14 +38828,14 @@ var require_public_api = __commonJS((exports) => {
       return value.toString(options);
     return new Document3.Document(value, _replacer, options).toString(options);
   }
-  exports.parse = parse27;
+  exports.parse = parse25;
   exports.parseAllDocuments = parseAllDocuments;
   exports.parseDocument = parseDocument;
-  exports.stringify = stringify10;
+  exports.stringify = stringify9;
 });
 
 // node_modules/yaml/dist/index.js
-var require_dist9 = __commonJS((exports) => {
+var require_dist8 = __commonJS((exports) => {
   var composer = require_composer();
   var Document3 = require_Document();
   var Schema = require_Schema();
@@ -40118,7 +39456,7 @@ var require_stream = __commonJS((exports) => {
   Object.defineProperty(exports, "__esModule", { value: true });
   exports.merge = undefined;
   var merge22 = require_merge2();
-  function merge6(streams) {
+  function merge5(streams) {
     const mergedStream = merge22(streams);
     streams.forEach((stream) => {
       stream.once("error", (error188) => mergedStream.emit("error", error188));
@@ -40127,7 +39465,7 @@ var require_stream = __commonJS((exports) => {
     mergedStream.once("end", () => propagateCloseEventToSources(streams));
     return mergedStream;
   }
-  exports.merge = merge6;
+  exports.merge = merge5;
   function propagateCloseEventToSources(streams) {
     streams.forEach((stream) => stream.emit("close"));
   }
@@ -40794,8 +40132,8 @@ var require_queue = __commonJS((exports, module) => {
     var errorHandler = null;
     var self2 = {
       push: push2,
-      drain: noop4,
-      saturated: noop4,
+      drain: noop2,
+      saturated: noop2,
       pause,
       paused: false,
       get concurrency() {
@@ -40819,7 +40157,7 @@ var require_queue = __commonJS((exports, module) => {
       length,
       getQueue: getQueue5,
       unshift,
-      empty: noop4,
+      empty: noop2,
       kill,
       killAndDrain,
       error: error188,
@@ -40872,7 +40210,7 @@ var require_queue = __commonJS((exports, module) => {
       current.context = context2;
       current.release = release;
       current.value = value;
-      current.callback = done || noop4;
+      current.callback = done || noop2;
       current.errorHandler = errorHandler;
       if (_running >= _concurrency || self2.paused) {
         if (queueTail) {
@@ -40893,7 +40231,7 @@ var require_queue = __commonJS((exports, module) => {
       current.context = context2;
       current.release = release;
       current.value = value;
-      current.callback = done || noop4;
+      current.callback = done || noop2;
       current.errorHandler = errorHandler;
       if (_running >= _concurrency || self2.paused) {
         if (queueHead) {
@@ -40935,13 +40273,13 @@ var require_queue = __commonJS((exports, module) => {
     function kill() {
       queueHead = null;
       queueTail = null;
-      self2.drain = noop4;
+      self2.drain = noop2;
     }
     function killAndDrain() {
       queueHead = null;
       queueTail = null;
       self2.drain();
-      self2.drain = noop4;
+      self2.drain = noop2;
     }
     function abort() {
       var current = queueHead;
@@ -40954,7 +40292,7 @@ var require_queue = __commonJS((exports, module) => {
         var val = current.value;
         var context3 = current.context;
         current.value = null;
-        current.callback = noop4;
+        current.callback = noop2;
         current.errorHandler = null;
         if (errorHandler2) {
           errorHandler2(new Error("abort"), val);
@@ -40963,18 +40301,18 @@ var require_queue = __commonJS((exports, module) => {
         current.release(current);
         current = next;
       }
-      self2.drain = noop4;
+      self2.drain = noop2;
     }
-    function error188(handler2) {
-      errorHandler = handler2;
+    function error188(handler) {
+      errorHandler = handler;
     }
   }
-  function noop4() {}
+  function noop2() {}
   function Task2() {
     this.value = null;
-    this.callback = noop4;
+    this.callback = noop2;
     this.next = null;
-    this.release = noop4;
+    this.release = noop2;
     this.context = null;
     this.errorHandler = null;
     var self2 = this;
@@ -40983,7 +40321,7 @@ var require_queue = __commonJS((exports, module) => {
       var errorHandler = self2.errorHandler;
       var val = self2.value;
       self2.value = null;
-      self2.callback = noop4;
+      self2.callback = noop2;
       if (self2.errorHandler) {
         errorHandler(err, val);
       }
@@ -41019,7 +40357,7 @@ var require_queue = __commonJS((exports, module) => {
           resolve(result);
         });
       });
-      p.catch(noop4);
+      p.catch(noop2);
       return p;
     }
     function unshift(value) {
@@ -41032,7 +40370,7 @@ var require_queue = __commonJS((exports, module) => {
           resolve(result);
         });
       });
-      p.catch(noop4);
+      p.catch(noop2);
       return p;
     }
     function drained() {
@@ -41844,7 +41182,7 @@ var require_provider = __commonJS((exports) => {
   var error_1 = require_error();
   var entry_2 = require_entry2();
 
-  class Provider2 {
+  class Provider {
     constructor(_settings) {
       this._settings = _settings;
       this.errorFilter = new error_1.default(this._settings);
@@ -41884,7 +41222,7 @@ var require_provider = __commonJS((exports) => {
       };
     }
   }
-  exports.default = Provider2;
+  exports.default = Provider;
 });
 
 // node_modules/fast-glob/out/providers/async.js
@@ -42175,3792 +41513,8 @@ var require_out4 = __commonJS((exports, module) => {
 });
 
 // app/main.ts
-var github = __toESM(require_github(), 1);
 var core5 = __toESM(require_core(), 1);
-
-// app/kitsu.ts
-class Kitsu {
-  provider;
-  platform;
-  constructor(provider, platform) {
-    this.provider = provider;
-    this.platform = platform;
-  }
-  async generatePatchSummary(params) {
-    let rawPatch = await this.platform.fetchRawPatch(params);
-    const { filteredPatch, removedFiles } = this.filterPatch(rawPatch);
-    const finalPatch = removedFiles.length ? `${filteredPatch}
-
-[OMITTED FILE DIFFS: ${removedFiles.join(", ")}]` : filteredPatch;
-    let summary = await this.provider.generateSummary(finalPatch);
-    return {
-      summary,
-      makeComment: async (params2) => this.platform.commentInPr(params2)
-    };
-  }
-  filterPatch(patch) {
-    if (!patch)
-      return { filteredPatch: patch, removedFiles: [] };
-    const chunks = patch.split(/(?=^diff --git )/m);
-    const excludePatterns = [
-      /^package-lock.json$/i,
-      /^yarn.lock$/i,
-      /^pnpm-lock.yaml$/i,
-      /\.lock$/i,
-      /node_modules\//i,
-      /\.(png|jpe?g|gif|svg|ico|zip|tgz|gz|woff2?|ttf|map)$/i
-    ];
-    const MAX_CHUNK_LENGTH = 20000;
-    const MAX_ADDED_LINES = 500;
-    const kept = [];
-    const removed = [];
-    for (const chunk of chunks) {
-      const m = chunk.match(/^diff --git a\/(.+?) b\/(.+?)(?:\s|$)/);
-      const filename = m ? m[2] : null;
-      let shouldExclude = false;
-      if (filename) {
-        for (const p of excludePatterns) {
-          if (p.test(filename)) {
-            shouldExclude = true;
-            break;
-          }
-        }
-      }
-      if (!shouldExclude) {
-        if (chunk.length > MAX_CHUNK_LENGTH)
-          shouldExclude = true;
-        if (!shouldExclude) {
-          const addedLines = (chunk.match(/^\+[^+].*$/gm) || []).length;
-          if (addedLines > MAX_ADDED_LINES)
-            shouldExclude = true;
-        }
-      }
-      if (shouldExclude) {
-        if (filename)
-          removed.push(filename);
-        continue;
-      }
-      kept.push(chunk);
-    }
-    const filteredPatch = kept.join(`
-`).trim();
-    return { filteredPatch, removedFiles: removed };
-  }
-}
-
-// app/models/platform.ts
-class Platform {
-  fetchRawPatch(params) {
-    throw new Error("Method not implemented");
-  }
-  commentInPr(params) {
-    throw new Error("Method not implemented");
-  }
-  async createReviewComment(params) {
-    throw new Error("Method not implemented");
-  }
-}
-
-// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/universal-user-agent/index.js
-function getUserAgent() {
-  if (typeof navigator === "object" && "userAgent" in navigator) {
-    return navigator.userAgent;
-  }
-  if (typeof process === "object" && process.version !== undefined) {
-    return `Node.js/${process.version.substr(1)} (${process.platform}; ${process.arch})`;
-  }
-  return "<environment undetectable>";
-}
-
-// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/before-after-hook/lib/register.js
-function register(state, name, method, options) {
-  if (typeof method !== "function") {
-    throw new Error("method for before hook must be a function");
-  }
-  if (!options) {
-    options = {};
-  }
-  if (Array.isArray(name)) {
-    return name.reverse().reduce((callback, name2) => {
-      return register.bind(null, state, name2, callback, options);
-    }, method)();
-  }
-  return Promise.resolve().then(() => {
-    if (!state.registry[name]) {
-      return method(options);
-    }
-    return state.registry[name].reduce((method2, registered) => {
-      return registered.hook.bind(null, method2, options);
-    }, method)();
-  });
-}
-
-// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/before-after-hook/lib/add.js
-function addHook(state, kind, name, hook) {
-  const orig = hook;
-  if (!state.registry[name]) {
-    state.registry[name] = [];
-  }
-  if (kind === "before") {
-    hook = (method, options) => {
-      return Promise.resolve().then(orig.bind(null, options)).then(method.bind(null, options));
-    };
-  }
-  if (kind === "after") {
-    hook = (method, options) => {
-      let result;
-      return Promise.resolve().then(method.bind(null, options)).then((result_) => {
-        result = result_;
-        return orig(result, options);
-      }).then(() => {
-        return result;
-      });
-    };
-  }
-  if (kind === "error") {
-    hook = (method, options) => {
-      return Promise.resolve().then(method.bind(null, options)).catch((error) => {
-        return orig(error, options);
-      });
-    };
-  }
-  state.registry[name].push({
-    hook,
-    orig
-  });
-}
-
-// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/before-after-hook/lib/remove.js
-function removeHook(state, name, method) {
-  if (!state.registry[name]) {
-    return;
-  }
-  const index = state.registry[name].map((registered) => {
-    return registered.orig;
-  }).indexOf(method);
-  if (index === -1) {
-    return;
-  }
-  state.registry[name].splice(index, 1);
-}
-
-// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/before-after-hook/index.js
-var bind = Function.bind;
-var bindable = bind.bind(bind);
-function bindApi(hook, state, name) {
-  const removeHookRef = bindable(removeHook, null).apply(null, name ? [state, name] : [state]);
-  hook.api = { remove: removeHookRef };
-  hook.remove = removeHookRef;
-  ["before", "error", "after", "wrap"].forEach((kind) => {
-    const args = name ? [state, kind, name] : [state, kind];
-    hook[kind] = hook.api[kind] = bindable(addHook, null).apply(null, args);
-  });
-}
-function Singular() {
-  const singularHookName = Symbol("Singular");
-  const singularHookState = {
-    registry: {}
-  };
-  const singularHook = register.bind(null, singularHookState, singularHookName);
-  bindApi(singularHook, singularHookState, singularHookName);
-  return singularHook;
-}
-function Collection() {
-  const state = {
-    registry: {}
-  };
-  const hook = register.bind(null, state);
-  bindApi(hook, state);
-  return hook;
-}
-var before_after_hook_default = { Singular, Collection };
-
-// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/@octokit/request/node_modules/@octokit/endpoint/dist-bundle/index.js
-var VERSION = "0.0.0-development";
-var userAgent = `octokit-endpoint.js/${VERSION} ${getUserAgent()}`;
-var DEFAULTS = {
-  method: "GET",
-  baseUrl: "https://api.github.com",
-  headers: {
-    accept: "application/vnd.github.v3+json",
-    "user-agent": userAgent
-  },
-  mediaType: {
-    format: ""
-  }
-};
-function lowercaseKeys(object) {
-  if (!object) {
-    return {};
-  }
-  return Object.keys(object).reduce((newObj, key) => {
-    newObj[key.toLowerCase()] = object[key];
-    return newObj;
-  }, {});
-}
-function isPlainObject(value) {
-  if (typeof value !== "object" || value === null)
-    return false;
-  if (Object.prototype.toString.call(value) !== "[object Object]")
-    return false;
-  const proto = Object.getPrototypeOf(value);
-  if (proto === null)
-    return true;
-  const Ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
-  return typeof Ctor === "function" && Ctor instanceof Ctor && Function.prototype.call(Ctor) === Function.prototype.call(value);
-}
-function mergeDeep(defaults, options) {
-  const result = Object.assign({}, defaults);
-  Object.keys(options).forEach((key) => {
-    if (isPlainObject(options[key])) {
-      if (!(key in defaults))
-        Object.assign(result, { [key]: options[key] });
-      else
-        result[key] = mergeDeep(defaults[key], options[key]);
-    } else {
-      Object.assign(result, { [key]: options[key] });
-    }
-  });
-  return result;
-}
-function removeUndefinedProperties(obj) {
-  for (const key in obj) {
-    if (obj[key] === undefined) {
-      delete obj[key];
-    }
-  }
-  return obj;
-}
-function merge(defaults, route, options) {
-  if (typeof route === "string") {
-    let [method, url] = route.split(" ");
-    options = Object.assign(url ? { method, url } : { url: method }, options);
-  } else {
-    options = Object.assign({}, route);
-  }
-  options.headers = lowercaseKeys(options.headers);
-  removeUndefinedProperties(options);
-  removeUndefinedProperties(options.headers);
-  const mergedOptions = mergeDeep(defaults || {}, options);
-  if (options.url === "/graphql") {
-    if (defaults && defaults.mediaType.previews?.length) {
-      mergedOptions.mediaType.previews = defaults.mediaType.previews.filter((preview) => !mergedOptions.mediaType.previews.includes(preview)).concat(mergedOptions.mediaType.previews);
-    }
-    mergedOptions.mediaType.previews = (mergedOptions.mediaType.previews || []).map((preview) => preview.replace(/-preview/, ""));
-  }
-  return mergedOptions;
-}
-function addQueryParameters(url, parameters) {
-  const separator = /\?/.test(url) ? "&" : "?";
-  const names = Object.keys(parameters);
-  if (names.length === 0) {
-    return url;
-  }
-  return url + separator + names.map((name) => {
-    if (name === "q") {
-      return "q=" + parameters.q.split("+").map(encodeURIComponent).join("+");
-    }
-    return `${name}=${encodeURIComponent(parameters[name])}`;
-  }).join("&");
-}
-var urlVariableRegex = /\{[^{}}]+\}/g;
-function removeNonChars(variableName) {
-  return variableName.replace(/(?:^\W+)|(?:(?<!\W)\W+$)/g, "").split(/,/);
-}
-function extractUrlVariableNames(url) {
-  const matches = url.match(urlVariableRegex);
-  if (!matches) {
-    return [];
-  }
-  return matches.map(removeNonChars).reduce((a, b) => a.concat(b), []);
-}
-function omit(object, keysToOmit) {
-  const result = { __proto__: null };
-  for (const key of Object.keys(object)) {
-    if (keysToOmit.indexOf(key) === -1) {
-      result[key] = object[key];
-    }
-  }
-  return result;
-}
-function encodeReserved(str) {
-  return str.split(/(%[0-9A-Fa-f]{2})/g).map(function(part) {
-    if (!/%[0-9A-Fa-f]/.test(part)) {
-      part = encodeURI(part).replace(/%5B/g, "[").replace(/%5D/g, "]");
-    }
-    return part;
-  }).join("");
-}
-function encodeUnreserved(str) {
-  return encodeURIComponent(str).replace(/[!'()*]/g, function(c) {
-    return "%" + c.charCodeAt(0).toString(16).toUpperCase();
-  });
-}
-function encodeValue(operator, value, key) {
-  value = operator === "+" || operator === "#" ? encodeReserved(value) : encodeUnreserved(value);
-  if (key) {
-    return encodeUnreserved(key) + "=" + value;
-  } else {
-    return value;
-  }
-}
-function isDefined(value) {
-  return value !== undefined && value !== null;
-}
-function isKeyOperator(operator) {
-  return operator === ";" || operator === "&" || operator === "?";
-}
-function getValues(context, operator, key, modifier) {
-  var value = context[key], result = [];
-  if (isDefined(value) && value !== "") {
-    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-      value = value.toString();
-      if (modifier && modifier !== "*") {
-        value = value.substring(0, parseInt(modifier, 10));
-      }
-      result.push(encodeValue(operator, value, isKeyOperator(operator) ? key : ""));
-    } else {
-      if (modifier === "*") {
-        if (Array.isArray(value)) {
-          value.filter(isDefined).forEach(function(value2) {
-            result.push(encodeValue(operator, value2, isKeyOperator(operator) ? key : ""));
-          });
-        } else {
-          Object.keys(value).forEach(function(k) {
-            if (isDefined(value[k])) {
-              result.push(encodeValue(operator, value[k], k));
-            }
-          });
-        }
-      } else {
-        const tmp = [];
-        if (Array.isArray(value)) {
-          value.filter(isDefined).forEach(function(value2) {
-            tmp.push(encodeValue(operator, value2));
-          });
-        } else {
-          Object.keys(value).forEach(function(k) {
-            if (isDefined(value[k])) {
-              tmp.push(encodeUnreserved(k));
-              tmp.push(encodeValue(operator, value[k].toString()));
-            }
-          });
-        }
-        if (isKeyOperator(operator)) {
-          result.push(encodeUnreserved(key) + "=" + tmp.join(","));
-        } else if (tmp.length !== 0) {
-          result.push(tmp.join(","));
-        }
-      }
-    }
-  } else {
-    if (operator === ";") {
-      if (isDefined(value)) {
-        result.push(encodeUnreserved(key));
-      }
-    } else if (value === "" && (operator === "&" || operator === "?")) {
-      result.push(encodeUnreserved(key) + "=");
-    } else if (value === "") {
-      result.push("");
-    }
-  }
-  return result;
-}
-function parseUrl(template) {
-  return {
-    expand: expand.bind(null, template)
-  };
-}
-function expand(template, context) {
-  var operators = ["+", "#", ".", "/", ";", "?", "&"];
-  template = template.replace(/\{([^\{\}]+)\}|([^\{\}]+)/g, function(_, expression, literal) {
-    if (expression) {
-      let operator = "";
-      const values = [];
-      if (operators.indexOf(expression.charAt(0)) !== -1) {
-        operator = expression.charAt(0);
-        expression = expression.substr(1);
-      }
-      expression.split(/,/g).forEach(function(variable) {
-        var tmp = /([^:\*]*)(?::(\d+)|(\*))?/.exec(variable);
-        values.push(getValues(context, operator, tmp[1], tmp[2] || tmp[3]));
-      });
-      if (operator && operator !== "+") {
-        var separator = ",";
-        if (operator === "?") {
-          separator = "&";
-        } else if (operator !== "#") {
-          separator = operator;
-        }
-        return (values.length !== 0 ? operator : "") + values.join(separator);
-      } else {
-        return values.join(",");
-      }
-    } else {
-      return encodeReserved(literal);
-    }
-  });
-  if (template === "/") {
-    return template;
-  } else {
-    return template.replace(/\/$/, "");
-  }
-}
-function parse(options) {
-  let method = options.method.toUpperCase();
-  let url = (options.url || "/").replace(/:([a-z]\w+)/g, "{$1}");
-  let headers = Object.assign({}, options.headers);
-  let body;
-  let parameters = omit(options, [
-    "method",
-    "baseUrl",
-    "url",
-    "headers",
-    "request",
-    "mediaType"
-  ]);
-  const urlVariableNames = extractUrlVariableNames(url);
-  url = parseUrl(url).expand(parameters);
-  if (!/^http/.test(url)) {
-    url = options.baseUrl + url;
-  }
-  const omittedParameters = Object.keys(options).filter((option) => urlVariableNames.includes(option)).concat("baseUrl");
-  const remainingParameters = omit(parameters, omittedParameters);
-  const isBinaryRequest = /application\/octet-stream/i.test(headers.accept);
-  if (!isBinaryRequest) {
-    if (options.mediaType.format) {
-      headers.accept = headers.accept.split(/,/).map((format) => format.replace(/application\/vnd(\.\w+)(\.v3)?(\.\w+)?(\+json)?$/, `application/vnd$1$2.${options.mediaType.format}`)).join(",");
-    }
-    if (url.endsWith("/graphql")) {
-      if (options.mediaType.previews?.length) {
-        const previewsFromAcceptHeader = headers.accept.match(/(?<![\w-])[\w-]+(?=-preview)/g) || [];
-        headers.accept = previewsFromAcceptHeader.concat(options.mediaType.previews).map((preview) => {
-          const format = options.mediaType.format ? `.${options.mediaType.format}` : "+json";
-          return `application/vnd.github.${preview}-preview${format}`;
-        }).join(",");
-      }
-    }
-  }
-  if (["GET", "HEAD"].includes(method)) {
-    url = addQueryParameters(url, remainingParameters);
-  } else {
-    if ("data" in remainingParameters) {
-      body = remainingParameters.data;
-    } else {
-      if (Object.keys(remainingParameters).length) {
-        body = remainingParameters;
-      }
-    }
-  }
-  if (!headers["content-type"] && typeof body !== "undefined") {
-    headers["content-type"] = "application/json; charset=utf-8";
-  }
-  if (["PATCH", "PUT"].includes(method) && typeof body === "undefined") {
-    body = "";
-  }
-  return Object.assign({ method, url, headers }, typeof body !== "undefined" ? { body } : null, options.request ? { request: options.request } : null);
-}
-function endpointWithDefaults(defaults, route, options) {
-  return parse(merge(defaults, route, options));
-}
-function withDefaults(oldDefaults, newDefaults) {
-  const DEFAULTS2 = merge(oldDefaults, newDefaults);
-  const endpoint2 = endpointWithDefaults.bind(null, DEFAULTS2);
-  return Object.assign(endpoint2, {
-    DEFAULTS: DEFAULTS2,
-    defaults: withDefaults.bind(null, DEFAULTS2),
-    merge: merge.bind(null, DEFAULTS2),
-    parse
-  });
-}
-var endpoint = withDefaults(null, DEFAULTS);
-
-// node_modules/fast-content-type-parse/index.js
-var NullObject = function NullObject2() {};
-NullObject.prototype = Object.create(null);
-var paramRE = /; *([!#$%&'*+.^\w`|~-]+)=("(?:[\v\u0020\u0021\u0023-\u005b\u005d-\u007e\u0080-\u00ff]|\\[\v\u0020-\u00ff])*"|[!#$%&'*+.^\w`|~-]+) */gu;
-var quotedPairRE = /\\([\v\u0020-\u00ff])/gu;
-var mediaTypeRE = /^[!#$%&'*+.^\w|~-]+\/[!#$%&'*+.^\w|~-]+$/u;
-var defaultContentType = { type: "", parameters: new NullObject };
-Object.freeze(defaultContentType.parameters);
-Object.freeze(defaultContentType);
-function safeParse(header) {
-  if (typeof header !== "string") {
-    return defaultContentType;
-  }
-  let index = header.indexOf(";");
-  const type = index !== -1 ? header.slice(0, index).trim() : header.trim();
-  if (mediaTypeRE.test(type) === false) {
-    return defaultContentType;
-  }
-  const result = {
-    type: type.toLowerCase(),
-    parameters: new NullObject
-  };
-  if (index === -1) {
-    return result;
-  }
-  let key;
-  let match;
-  let value;
-  paramRE.lastIndex = index;
-  while (match = paramRE.exec(header)) {
-    if (match.index !== index) {
-      return defaultContentType;
-    }
-    index += match[0].length;
-    key = match[1].toLowerCase();
-    value = match[2];
-    if (value[0] === '"') {
-      value = value.slice(1, value.length - 1);
-      quotedPairRE.test(value) && (value = value.replace(quotedPairRE, "$1"));
-    }
-    result.parameters[key] = value;
-  }
-  if (index !== header.length) {
-    return defaultContentType;
-  }
-  return result;
-}
-var $safeParse = safeParse;
-
-// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/@octokit/request-error/dist-src/index.js
-class RequestError extends Error {
-  name;
-  status;
-  request;
-  response;
-  constructor(message, statusCode, options) {
-    super(message, { cause: options.cause });
-    this.name = "HttpError";
-    this.status = Number.parseInt(statusCode);
-    if (Number.isNaN(this.status)) {
-      this.status = 0;
-    }
-    if ("response" in options) {
-      this.response = options.response;
-    }
-    const requestCopy = Object.assign({}, options.request);
-    if (options.request.headers.authorization) {
-      requestCopy.headers = Object.assign({}, options.request.headers, {
-        authorization: options.request.headers.authorization.replace(/(?<! ) .*$/, " [REDACTED]")
-      });
-    }
-    requestCopy.url = requestCopy.url.replace(/\bclient_secret=\w+/g, "client_secret=[REDACTED]").replace(/\baccess_token=\w+/g, "access_token=[REDACTED]");
-    this.request = requestCopy;
-  }
-}
-
-// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/@octokit/request/dist-bundle/index.js
-var VERSION2 = "10.0.7";
-var defaults_default = {
-  headers: {
-    "user-agent": `octokit-request.js/${VERSION2} ${getUserAgent()}`
-  }
-};
-function isPlainObject2(value) {
-  if (typeof value !== "object" || value === null)
-    return false;
-  if (Object.prototype.toString.call(value) !== "[object Object]")
-    return false;
-  const proto = Object.getPrototypeOf(value);
-  if (proto === null)
-    return true;
-  const Ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
-  return typeof Ctor === "function" && Ctor instanceof Ctor && Function.prototype.call(Ctor) === Function.prototype.call(value);
-}
-var noop = () => "";
-async function fetchWrapper(requestOptions) {
-  const fetch2 = requestOptions.request?.fetch || globalThis.fetch;
-  if (!fetch2) {
-    throw new Error("fetch is not set. Please pass a fetch implementation as new Octokit({ request: { fetch }}). Learn more at https://github.com/octokit/octokit.js/#fetch-missing");
-  }
-  const log = requestOptions.request?.log || console;
-  const parseSuccessResponseBody = requestOptions.request?.parseSuccessResponseBody !== false;
-  const body = isPlainObject2(requestOptions.body) || Array.isArray(requestOptions.body) ? JSON.stringify(requestOptions.body) : requestOptions.body;
-  const requestHeaders = Object.fromEntries(Object.entries(requestOptions.headers).map(([name, value]) => [
-    name,
-    String(value)
-  ]));
-  let fetchResponse;
-  try {
-    fetchResponse = await fetch2(requestOptions.url, {
-      method: requestOptions.method,
-      body,
-      redirect: requestOptions.request?.redirect,
-      headers: requestHeaders,
-      signal: requestOptions.request?.signal,
-      ...requestOptions.body && { duplex: "half" }
-    });
-  } catch (error) {
-    let message = "Unknown Error";
-    if (error instanceof Error) {
-      if (error.name === "AbortError") {
-        error.status = 500;
-        throw error;
-      }
-      message = error.message;
-      if (error.name === "TypeError" && "cause" in error) {
-        if (error.cause instanceof Error) {
-          message = error.cause.message;
-        } else if (typeof error.cause === "string") {
-          message = error.cause;
-        }
-      }
-    }
-    const requestError = new RequestError(message, 500, {
-      request: requestOptions
-    });
-    requestError.cause = error;
-    throw requestError;
-  }
-  const status = fetchResponse.status;
-  const url = fetchResponse.url;
-  const responseHeaders = {};
-  for (const [key, value] of fetchResponse.headers) {
-    responseHeaders[key] = value;
-  }
-  const octokitResponse = {
-    url,
-    status,
-    headers: responseHeaders,
-    data: ""
-  };
-  if ("deprecation" in responseHeaders) {
-    const matches = responseHeaders.link && responseHeaders.link.match(/<([^<>]+)>; rel="deprecation"/);
-    const deprecationLink = matches && matches.pop();
-    log.warn(`[@octokit/request] "${requestOptions.method} ${requestOptions.url}" is deprecated. It is scheduled to be removed on ${responseHeaders.sunset}${deprecationLink ? `. See ${deprecationLink}` : ""}`);
-  }
-  if (status === 204 || status === 205) {
-    return octokitResponse;
-  }
-  if (requestOptions.method === "HEAD") {
-    if (status < 400) {
-      return octokitResponse;
-    }
-    throw new RequestError(fetchResponse.statusText, status, {
-      response: octokitResponse,
-      request: requestOptions
-    });
-  }
-  if (status === 304) {
-    octokitResponse.data = await getResponseData(fetchResponse);
-    throw new RequestError("Not modified", status, {
-      response: octokitResponse,
-      request: requestOptions
-    });
-  }
-  if (status >= 400) {
-    octokitResponse.data = await getResponseData(fetchResponse);
-    throw new RequestError(toErrorMessage(octokitResponse.data), status, {
-      response: octokitResponse,
-      request: requestOptions
-    });
-  }
-  octokitResponse.data = parseSuccessResponseBody ? await getResponseData(fetchResponse) : fetchResponse.body;
-  return octokitResponse;
-}
-async function getResponseData(response) {
-  const contentType = response.headers.get("content-type");
-  if (!contentType) {
-    return response.text().catch(noop);
-  }
-  const mimetype = $safeParse(contentType);
-  if (isJSONResponse(mimetype)) {
-    let text = "";
-    try {
-      text = await response.text();
-      return JSON.parse(text);
-    } catch (err) {
-      return text;
-    }
-  } else if (mimetype.type.startsWith("text/") || mimetype.parameters.charset?.toLowerCase() === "utf-8") {
-    return response.text().catch(noop);
-  } else {
-    return response.arrayBuffer().catch(() => new ArrayBuffer(0));
-  }
-}
-function isJSONResponse(mimetype) {
-  return mimetype.type === "application/json" || mimetype.type === "application/scim+json";
-}
-function toErrorMessage(data) {
-  if (typeof data === "string") {
-    return data;
-  }
-  if (data instanceof ArrayBuffer) {
-    return "Unknown error";
-  }
-  if ("message" in data) {
-    const suffix = "documentation_url" in data ? ` - ${data.documentation_url}` : "";
-    return Array.isArray(data.errors) ? `${data.message}: ${data.errors.map((v) => JSON.stringify(v)).join(", ")}${suffix}` : `${data.message}${suffix}`;
-  }
-  return `Unknown error: ${JSON.stringify(data)}`;
-}
-function withDefaults2(oldEndpoint, newDefaults) {
-  const endpoint2 = oldEndpoint.defaults(newDefaults);
-  const newApi = function(route, parameters) {
-    const endpointOptions = endpoint2.merge(route, parameters);
-    if (!endpointOptions.request || !endpointOptions.request.hook) {
-      return fetchWrapper(endpoint2.parse(endpointOptions));
-    }
-    const request2 = (route2, parameters2) => {
-      return fetchWrapper(endpoint2.parse(endpoint2.merge(route2, parameters2)));
-    };
-    Object.assign(request2, {
-      endpoint: endpoint2,
-      defaults: withDefaults2.bind(null, endpoint2)
-    });
-    return endpointOptions.request.hook(request2, endpointOptions);
-  };
-  return Object.assign(newApi, {
-    endpoint: endpoint2,
-    defaults: withDefaults2.bind(null, endpoint2)
-  });
-}
-var request = withDefaults2(endpoint, defaults_default);
-
-// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/@octokit/graphql/dist-bundle/index.js
-var VERSION3 = "0.0.0-development";
-function _buildMessageForResponseErrors(data) {
-  return `Request failed due to following response errors:
-` + data.errors.map((e) => ` - ${e.message}`).join(`
-`);
-}
-var GraphqlResponseError = class extends Error {
-  constructor(request2, headers, response) {
-    super(_buildMessageForResponseErrors(response));
-    this.request = request2;
-    this.headers = headers;
-    this.response = response;
-    this.errors = response.errors;
-    this.data = response.data;
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, this.constructor);
-    }
-  }
-  name = "GraphqlResponseError";
-  errors;
-  data;
-};
-var NON_VARIABLE_OPTIONS = [
-  "method",
-  "baseUrl",
-  "url",
-  "headers",
-  "request",
-  "query",
-  "mediaType",
-  "operationName"
-];
-var FORBIDDEN_VARIABLE_OPTIONS = ["query", "method", "url"];
-var GHES_V3_SUFFIX_REGEX = /\/api\/v3\/?$/;
-function graphql(request2, query, options) {
-  if (options) {
-    if (typeof query === "string" && "query" in options) {
-      return Promise.reject(new Error(`[@octokit/graphql] "query" cannot be used as variable name`));
-    }
-    for (const key in options) {
-      if (!FORBIDDEN_VARIABLE_OPTIONS.includes(key))
-        continue;
-      return Promise.reject(new Error(`[@octokit/graphql] "${key}" cannot be used as variable name`));
-    }
-  }
-  const parsedOptions = typeof query === "string" ? Object.assign({ query }, options) : query;
-  const requestOptions = Object.keys(parsedOptions).reduce((result, key) => {
-    if (NON_VARIABLE_OPTIONS.includes(key)) {
-      result[key] = parsedOptions[key];
-      return result;
-    }
-    if (!result.variables) {
-      result.variables = {};
-    }
-    result.variables[key] = parsedOptions[key];
-    return result;
-  }, {});
-  const baseUrl = parsedOptions.baseUrl || request2.endpoint.DEFAULTS.baseUrl;
-  if (GHES_V3_SUFFIX_REGEX.test(baseUrl)) {
-    requestOptions.url = baseUrl.replace(GHES_V3_SUFFIX_REGEX, "/api/graphql");
-  }
-  return request2(requestOptions).then((response) => {
-    if (response.data.errors) {
-      const headers = {};
-      for (const key of Object.keys(response.headers)) {
-        headers[key] = response.headers[key];
-      }
-      throw new GraphqlResponseError(requestOptions, headers, response.data);
-    }
-    return response.data.data;
-  });
-}
-function withDefaults3(request2, newDefaults) {
-  const newRequest = request2.defaults(newDefaults);
-  const newApi = (query, options) => {
-    return graphql(newRequest, query, options);
-  };
-  return Object.assign(newApi, {
-    defaults: withDefaults3.bind(null, newRequest),
-    endpoint: newRequest.endpoint
-  });
-}
-var graphql2 = withDefaults3(request, {
-  headers: {
-    "user-agent": `octokit-graphql.js/${VERSION3} ${getUserAgent()}`
-  },
-  method: "POST",
-  url: "/graphql"
-});
-function withCustomRequest(customRequest) {
-  return withDefaults3(customRequest, {
-    method: "POST",
-    url: "/graphql"
-  });
-}
-
-// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/@octokit/auth-token/dist-bundle/index.js
-var b64url = "(?:[a-zA-Z0-9_-]+)";
-var sep = "\\.";
-var jwtRE = new RegExp(`^${b64url}${sep}${b64url}${sep}${b64url}$`);
-var isJWT = jwtRE.test.bind(jwtRE);
-async function auth(token) {
-  const isApp = isJWT(token);
-  const isInstallation = token.startsWith("v1.") || token.startsWith("ghs_");
-  const isUserToServer = token.startsWith("ghu_");
-  const tokenType = isApp ? "app" : isInstallation ? "installation" : isUserToServer ? "user-to-server" : "oauth";
-  return {
-    type: "token",
-    token,
-    tokenType
-  };
-}
-function withAuthorizationPrefix(token) {
-  if (token.split(/\./).length === 3) {
-    return `bearer ${token}`;
-  }
-  return `token ${token}`;
-}
-async function hook(token, request2, route, parameters) {
-  const endpoint2 = request2.endpoint.merge(route, parameters);
-  endpoint2.headers.authorization = withAuthorizationPrefix(token);
-  return request2(endpoint2);
-}
-var createTokenAuth = function createTokenAuth2(token) {
-  if (!token) {
-    throw new Error("[@octokit/auth-token] No token passed to createTokenAuth");
-  }
-  if (typeof token !== "string") {
-    throw new Error("[@octokit/auth-token] Token passed to createTokenAuth is not a string");
-  }
-  token = token.replace(/^(token|bearer) +/i, "");
-  return Object.assign(auth.bind(null, token), {
-    hook: hook.bind(null, token)
-  });
-};
-
-// node_modules/@octokit/rest/node_modules/@octokit/core/dist-src/version.js
-var VERSION4 = "7.0.6";
-
-// node_modules/@octokit/rest/node_modules/@octokit/core/dist-src/index.js
-var noop2 = () => {};
-var consoleWarn = console.warn.bind(console);
-var consoleError = console.error.bind(console);
-function createLogger(logger = {}) {
-  if (typeof logger.debug !== "function") {
-    logger.debug = noop2;
-  }
-  if (typeof logger.info !== "function") {
-    logger.info = noop2;
-  }
-  if (typeof logger.warn !== "function") {
-    logger.warn = consoleWarn;
-  }
-  if (typeof logger.error !== "function") {
-    logger.error = consoleError;
-  }
-  return logger;
-}
-var userAgentTrail = `octokit-core.js/${VERSION4} ${getUserAgent()}`;
-
-class Octokit {
-  static VERSION = VERSION4;
-  static defaults(defaults) {
-    const OctokitWithDefaults = class extends this {
-      constructor(...args) {
-        const options = args[0] || {};
-        if (typeof defaults === "function") {
-          super(defaults(options));
-          return;
-        }
-        super(Object.assign({}, defaults, options, options.userAgent && defaults.userAgent ? {
-          userAgent: `${options.userAgent} ${defaults.userAgent}`
-        } : null));
-      }
-    };
-    return OctokitWithDefaults;
-  }
-  static plugins = [];
-  static plugin(...newPlugins) {
-    const currentPlugins = this.plugins;
-    const NewOctokit = class extends this {
-      static plugins = currentPlugins.concat(newPlugins.filter((plugin) => !currentPlugins.includes(plugin)));
-    };
-    return NewOctokit;
-  }
-  constructor(options = {}) {
-    const hook2 = new before_after_hook_default.Collection;
-    const requestDefaults = {
-      baseUrl: request.endpoint.DEFAULTS.baseUrl,
-      headers: {},
-      request: Object.assign({}, options.request, {
-        hook: hook2.bind(null, "request")
-      }),
-      mediaType: {
-        previews: [],
-        format: ""
-      }
-    };
-    requestDefaults.headers["user-agent"] = options.userAgent ? `${options.userAgent} ${userAgentTrail}` : userAgentTrail;
-    if (options.baseUrl) {
-      requestDefaults.baseUrl = options.baseUrl;
-    }
-    if (options.previews) {
-      requestDefaults.mediaType.previews = options.previews;
-    }
-    if (options.timeZone) {
-      requestDefaults.headers["time-zone"] = options.timeZone;
-    }
-    this.request = request.defaults(requestDefaults);
-    this.graphql = withCustomRequest(this.request).defaults(requestDefaults);
-    this.log = createLogger(options.log);
-    this.hook = hook2;
-    if (!options.authStrategy) {
-      if (!options.auth) {
-        this.auth = async () => ({
-          type: "unauthenticated"
-        });
-      } else {
-        const auth2 = createTokenAuth(options.auth);
-        hook2.wrap("request", auth2.hook);
-        this.auth = auth2;
-      }
-    } else {
-      const { authStrategy, ...otherOptions } = options;
-      const auth2 = authStrategy(Object.assign({
-        request: this.request,
-        log: this.log,
-        octokit: this,
-        octokitOptions: otherOptions
-      }, options.auth));
-      hook2.wrap("request", auth2.hook);
-      this.auth = auth2;
-    }
-    const classConstructor = this.constructor;
-    for (let i = 0;i < classConstructor.plugins.length; ++i) {
-      Object.assign(this, classConstructor.plugins[i](this, options));
-    }
-  }
-  request;
-  graphql;
-  log;
-  hook;
-  auth;
-}
-
-// node_modules/@octokit/plugin-request-log/dist-src/version.js
-var VERSION5 = "6.0.0";
-
-// node_modules/@octokit/plugin-request-log/dist-src/index.js
-function requestLog(octokit) {
-  octokit.hook.wrap("request", (request2, options) => {
-    octokit.log.debug("request", options);
-    const start = Date.now();
-    const requestOptions = octokit.request.endpoint.parse(options);
-    const path = requestOptions.url.replace(options.baseUrl, "");
-    return request2(options).then((response) => {
-      const requestId = response.headers["x-github-request-id"];
-      octokit.log.info(`${requestOptions.method} ${path} - ${response.status} with id ${requestId} in ${Date.now() - start}ms`);
-      return response;
-    }).catch((error) => {
-      const requestId = error.response?.headers["x-github-request-id"] || "UNKNOWN";
-      octokit.log.error(`${requestOptions.method} ${path} - ${error.status} with id ${requestId} in ${Date.now() - start}ms`);
-      throw error;
-    });
-  });
-}
-requestLog.VERSION = VERSION5;
-
-// node_modules/@octokit/rest/node_modules/@octokit/plugin-paginate-rest/dist-bundle/index.js
-var VERSION6 = "0.0.0-development";
-function normalizePaginatedListResponse(response) {
-  if (!response.data) {
-    return {
-      ...response,
-      data: []
-    };
-  }
-  const responseNeedsNormalization = (("total_count" in response.data) || ("total_commits" in response.data)) && !("url" in response.data);
-  if (!responseNeedsNormalization)
-    return response;
-  const incompleteResults = response.data.incomplete_results;
-  const repositorySelection = response.data.repository_selection;
-  const totalCount = response.data.total_count;
-  const totalCommits = response.data.total_commits;
-  delete response.data.incomplete_results;
-  delete response.data.repository_selection;
-  delete response.data.total_count;
-  delete response.data.total_commits;
-  const namespaceKey = Object.keys(response.data)[0];
-  const data = response.data[namespaceKey];
-  response.data = data;
-  if (typeof incompleteResults !== "undefined") {
-    response.data.incomplete_results = incompleteResults;
-  }
-  if (typeof repositorySelection !== "undefined") {
-    response.data.repository_selection = repositorySelection;
-  }
-  response.data.total_count = totalCount;
-  response.data.total_commits = totalCommits;
-  return response;
-}
-function iterator(octokit, route, parameters) {
-  const options = typeof route === "function" ? route.endpoint(parameters) : octokit.request.endpoint(route, parameters);
-  const requestMethod = typeof route === "function" ? route : octokit.request;
-  const method = options.method;
-  const headers = options.headers;
-  let url = options.url;
-  return {
-    [Symbol.asyncIterator]: () => ({
-      async next() {
-        if (!url)
-          return { done: true };
-        try {
-          const response = await requestMethod({ method, url, headers });
-          const normalizedResponse = normalizePaginatedListResponse(response);
-          url = ((normalizedResponse.headers.link || "").match(/<([^<>]+)>;\s*rel="next"/) || [])[1];
-          if (!url && "total_commits" in normalizedResponse.data) {
-            const parsedUrl = new URL(normalizedResponse.url);
-            const params = parsedUrl.searchParams;
-            const page = parseInt(params.get("page") || "1", 10);
-            const per_page = parseInt(params.get("per_page") || "250", 10);
-            if (page * per_page < normalizedResponse.data.total_commits) {
-              params.set("page", String(page + 1));
-              url = parsedUrl.toString();
-            }
-          }
-          return { value: normalizedResponse };
-        } catch (error) {
-          if (error.status !== 409)
-            throw error;
-          url = "";
-          return {
-            value: {
-              status: 200,
-              headers: {},
-              data: []
-            }
-          };
-        }
-      }
-    })
-  };
-}
-function paginate(octokit, route, parameters, mapFn) {
-  if (typeof parameters === "function") {
-    mapFn = parameters;
-    parameters = undefined;
-  }
-  return gather(octokit, [], iterator(octokit, route, parameters)[Symbol.asyncIterator](), mapFn);
-}
-function gather(octokit, results, iterator2, mapFn) {
-  return iterator2.next().then((result) => {
-    if (result.done) {
-      return results;
-    }
-    let earlyExit = false;
-    function done() {
-      earlyExit = true;
-    }
-    results = results.concat(mapFn ? mapFn(result.value, done) : result.value.data);
-    if (earlyExit) {
-      return results;
-    }
-    return gather(octokit, results, iterator2, mapFn);
-  });
-}
-var composePaginateRest = Object.assign(paginate, {
-  iterator
-});
-function paginateRest(octokit) {
-  return {
-    paginate: Object.assign(paginate.bind(null, octokit), {
-      iterator: iterator.bind(null, octokit)
-    })
-  };
-}
-paginateRest.VERSION = VERSION6;
-
-// node_modules/@octokit/rest/node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/version.js
-var VERSION7 = "17.0.0";
-
-// node_modules/@octokit/rest/node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/generated/endpoints.js
-var Endpoints = {
-  actions: {
-    addCustomLabelsToSelfHostedRunnerForOrg: [
-      "POST /orgs/{org}/actions/runners/{runner_id}/labels"
-    ],
-    addCustomLabelsToSelfHostedRunnerForRepo: [
-      "POST /repos/{owner}/{repo}/actions/runners/{runner_id}/labels"
-    ],
-    addRepoAccessToSelfHostedRunnerGroupInOrg: [
-      "PUT /orgs/{org}/actions/runner-groups/{runner_group_id}/repositories/{repository_id}"
-    ],
-    addSelectedRepoToOrgSecret: [
-      "PUT /orgs/{org}/actions/secrets/{secret_name}/repositories/{repository_id}"
-    ],
-    addSelectedRepoToOrgVariable: [
-      "PUT /orgs/{org}/actions/variables/{name}/repositories/{repository_id}"
-    ],
-    approveWorkflowRun: [
-      "POST /repos/{owner}/{repo}/actions/runs/{run_id}/approve"
-    ],
-    cancelWorkflowRun: [
-      "POST /repos/{owner}/{repo}/actions/runs/{run_id}/cancel"
-    ],
-    createEnvironmentVariable: [
-      "POST /repos/{owner}/{repo}/environments/{environment_name}/variables"
-    ],
-    createHostedRunnerForOrg: ["POST /orgs/{org}/actions/hosted-runners"],
-    createOrUpdateEnvironmentSecret: [
-      "PUT /repos/{owner}/{repo}/environments/{environment_name}/secrets/{secret_name}"
-    ],
-    createOrUpdateOrgSecret: ["PUT /orgs/{org}/actions/secrets/{secret_name}"],
-    createOrUpdateRepoSecret: [
-      "PUT /repos/{owner}/{repo}/actions/secrets/{secret_name}"
-    ],
-    createOrgVariable: ["POST /orgs/{org}/actions/variables"],
-    createRegistrationTokenForOrg: [
-      "POST /orgs/{org}/actions/runners/registration-token"
-    ],
-    createRegistrationTokenForRepo: [
-      "POST /repos/{owner}/{repo}/actions/runners/registration-token"
-    ],
-    createRemoveTokenForOrg: ["POST /orgs/{org}/actions/runners/remove-token"],
-    createRemoveTokenForRepo: [
-      "POST /repos/{owner}/{repo}/actions/runners/remove-token"
-    ],
-    createRepoVariable: ["POST /repos/{owner}/{repo}/actions/variables"],
-    createWorkflowDispatch: [
-      "POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches"
-    ],
-    deleteActionsCacheById: [
-      "DELETE /repos/{owner}/{repo}/actions/caches/{cache_id}"
-    ],
-    deleteActionsCacheByKey: [
-      "DELETE /repos/{owner}/{repo}/actions/caches{?key,ref}"
-    ],
-    deleteArtifact: [
-      "DELETE /repos/{owner}/{repo}/actions/artifacts/{artifact_id}"
-    ],
-    deleteCustomImageFromOrg: [
-      "DELETE /orgs/{org}/actions/hosted-runners/images/custom/{image_definition_id}"
-    ],
-    deleteCustomImageVersionFromOrg: [
-      "DELETE /orgs/{org}/actions/hosted-runners/images/custom/{image_definition_id}/versions/{version}"
-    ],
-    deleteEnvironmentSecret: [
-      "DELETE /repos/{owner}/{repo}/environments/{environment_name}/secrets/{secret_name}"
-    ],
-    deleteEnvironmentVariable: [
-      "DELETE /repos/{owner}/{repo}/environments/{environment_name}/variables/{name}"
-    ],
-    deleteHostedRunnerForOrg: [
-      "DELETE /orgs/{org}/actions/hosted-runners/{hosted_runner_id}"
-    ],
-    deleteOrgSecret: ["DELETE /orgs/{org}/actions/secrets/{secret_name}"],
-    deleteOrgVariable: ["DELETE /orgs/{org}/actions/variables/{name}"],
-    deleteRepoSecret: [
-      "DELETE /repos/{owner}/{repo}/actions/secrets/{secret_name}"
-    ],
-    deleteRepoVariable: [
-      "DELETE /repos/{owner}/{repo}/actions/variables/{name}"
-    ],
-    deleteSelfHostedRunnerFromOrg: [
-      "DELETE /orgs/{org}/actions/runners/{runner_id}"
-    ],
-    deleteSelfHostedRunnerFromRepo: [
-      "DELETE /repos/{owner}/{repo}/actions/runners/{runner_id}"
-    ],
-    deleteWorkflowRun: ["DELETE /repos/{owner}/{repo}/actions/runs/{run_id}"],
-    deleteWorkflowRunLogs: [
-      "DELETE /repos/{owner}/{repo}/actions/runs/{run_id}/logs"
-    ],
-    disableSelectedRepositoryGithubActionsOrganization: [
-      "DELETE /orgs/{org}/actions/permissions/repositories/{repository_id}"
-    ],
-    disableWorkflow: [
-      "PUT /repos/{owner}/{repo}/actions/workflows/{workflow_id}/disable"
-    ],
-    downloadArtifact: [
-      "GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/{archive_format}"
-    ],
-    downloadJobLogsForWorkflowRun: [
-      "GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs"
-    ],
-    downloadWorkflowRunAttemptLogs: [
-      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}/logs"
-    ],
-    downloadWorkflowRunLogs: [
-      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/logs"
-    ],
-    enableSelectedRepositoryGithubActionsOrganization: [
-      "PUT /orgs/{org}/actions/permissions/repositories/{repository_id}"
-    ],
-    enableWorkflow: [
-      "PUT /repos/{owner}/{repo}/actions/workflows/{workflow_id}/enable"
-    ],
-    forceCancelWorkflowRun: [
-      "POST /repos/{owner}/{repo}/actions/runs/{run_id}/force-cancel"
-    ],
-    generateRunnerJitconfigForOrg: [
-      "POST /orgs/{org}/actions/runners/generate-jitconfig"
-    ],
-    generateRunnerJitconfigForRepo: [
-      "POST /repos/{owner}/{repo}/actions/runners/generate-jitconfig"
-    ],
-    getActionsCacheList: ["GET /repos/{owner}/{repo}/actions/caches"],
-    getActionsCacheUsage: ["GET /repos/{owner}/{repo}/actions/cache/usage"],
-    getActionsCacheUsageByRepoForOrg: [
-      "GET /orgs/{org}/actions/cache/usage-by-repository"
-    ],
-    getActionsCacheUsageForOrg: ["GET /orgs/{org}/actions/cache/usage"],
-    getAllowedActionsOrganization: [
-      "GET /orgs/{org}/actions/permissions/selected-actions"
-    ],
-    getAllowedActionsRepository: [
-      "GET /repos/{owner}/{repo}/actions/permissions/selected-actions"
-    ],
-    getArtifact: ["GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}"],
-    getCustomImageForOrg: [
-      "GET /orgs/{org}/actions/hosted-runners/images/custom/{image_definition_id}"
-    ],
-    getCustomImageVersionForOrg: [
-      "GET /orgs/{org}/actions/hosted-runners/images/custom/{image_definition_id}/versions/{version}"
-    ],
-    getCustomOidcSubClaimForRepo: [
-      "GET /repos/{owner}/{repo}/actions/oidc/customization/sub"
-    ],
-    getEnvironmentPublicKey: [
-      "GET /repos/{owner}/{repo}/environments/{environment_name}/secrets/public-key"
-    ],
-    getEnvironmentSecret: [
-      "GET /repos/{owner}/{repo}/environments/{environment_name}/secrets/{secret_name}"
-    ],
-    getEnvironmentVariable: [
-      "GET /repos/{owner}/{repo}/environments/{environment_name}/variables/{name}"
-    ],
-    getGithubActionsDefaultWorkflowPermissionsOrganization: [
-      "GET /orgs/{org}/actions/permissions/workflow"
-    ],
-    getGithubActionsDefaultWorkflowPermissionsRepository: [
-      "GET /repos/{owner}/{repo}/actions/permissions/workflow"
-    ],
-    getGithubActionsPermissionsOrganization: [
-      "GET /orgs/{org}/actions/permissions"
-    ],
-    getGithubActionsPermissionsRepository: [
-      "GET /repos/{owner}/{repo}/actions/permissions"
-    ],
-    getHostedRunnerForOrg: [
-      "GET /orgs/{org}/actions/hosted-runners/{hosted_runner_id}"
-    ],
-    getHostedRunnersGithubOwnedImagesForOrg: [
-      "GET /orgs/{org}/actions/hosted-runners/images/github-owned"
-    ],
-    getHostedRunnersLimitsForOrg: [
-      "GET /orgs/{org}/actions/hosted-runners/limits"
-    ],
-    getHostedRunnersMachineSpecsForOrg: [
-      "GET /orgs/{org}/actions/hosted-runners/machine-sizes"
-    ],
-    getHostedRunnersPartnerImagesForOrg: [
-      "GET /orgs/{org}/actions/hosted-runners/images/partner"
-    ],
-    getHostedRunnersPlatformsForOrg: [
-      "GET /orgs/{org}/actions/hosted-runners/platforms"
-    ],
-    getJobForWorkflowRun: ["GET /repos/{owner}/{repo}/actions/jobs/{job_id}"],
-    getOrgPublicKey: ["GET /orgs/{org}/actions/secrets/public-key"],
-    getOrgSecret: ["GET /orgs/{org}/actions/secrets/{secret_name}"],
-    getOrgVariable: ["GET /orgs/{org}/actions/variables/{name}"],
-    getPendingDeploymentsForRun: [
-      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/pending_deployments"
-    ],
-    getRepoPermissions: [
-      "GET /repos/{owner}/{repo}/actions/permissions",
-      {},
-      { renamed: ["actions", "getGithubActionsPermissionsRepository"] }
-    ],
-    getRepoPublicKey: ["GET /repos/{owner}/{repo}/actions/secrets/public-key"],
-    getRepoSecret: ["GET /repos/{owner}/{repo}/actions/secrets/{secret_name}"],
-    getRepoVariable: ["GET /repos/{owner}/{repo}/actions/variables/{name}"],
-    getReviewsForRun: [
-      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/approvals"
-    ],
-    getSelfHostedRunnerForOrg: ["GET /orgs/{org}/actions/runners/{runner_id}"],
-    getSelfHostedRunnerForRepo: [
-      "GET /repos/{owner}/{repo}/actions/runners/{runner_id}"
-    ],
-    getWorkflow: ["GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}"],
-    getWorkflowAccessToRepository: [
-      "GET /repos/{owner}/{repo}/actions/permissions/access"
-    ],
-    getWorkflowRun: ["GET /repos/{owner}/{repo}/actions/runs/{run_id}"],
-    getWorkflowRunAttempt: [
-      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}"
-    ],
-    getWorkflowRunUsage: [
-      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/timing"
-    ],
-    getWorkflowUsage: [
-      "GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/timing"
-    ],
-    listArtifactsForRepo: ["GET /repos/{owner}/{repo}/actions/artifacts"],
-    listCustomImageVersionsForOrg: [
-      "GET /orgs/{org}/actions/hosted-runners/images/custom/{image_definition_id}/versions"
-    ],
-    listCustomImagesForOrg: [
-      "GET /orgs/{org}/actions/hosted-runners/images/custom"
-    ],
-    listEnvironmentSecrets: [
-      "GET /repos/{owner}/{repo}/environments/{environment_name}/secrets"
-    ],
-    listEnvironmentVariables: [
-      "GET /repos/{owner}/{repo}/environments/{environment_name}/variables"
-    ],
-    listGithubHostedRunnersInGroupForOrg: [
-      "GET /orgs/{org}/actions/runner-groups/{runner_group_id}/hosted-runners"
-    ],
-    listHostedRunnersForOrg: ["GET /orgs/{org}/actions/hosted-runners"],
-    listJobsForWorkflowRun: [
-      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs"
-    ],
-    listJobsForWorkflowRunAttempt: [
-      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}/jobs"
-    ],
-    listLabelsForSelfHostedRunnerForOrg: [
-      "GET /orgs/{org}/actions/runners/{runner_id}/labels"
-    ],
-    listLabelsForSelfHostedRunnerForRepo: [
-      "GET /repos/{owner}/{repo}/actions/runners/{runner_id}/labels"
-    ],
-    listOrgSecrets: ["GET /orgs/{org}/actions/secrets"],
-    listOrgVariables: ["GET /orgs/{org}/actions/variables"],
-    listRepoOrganizationSecrets: [
-      "GET /repos/{owner}/{repo}/actions/organization-secrets"
-    ],
-    listRepoOrganizationVariables: [
-      "GET /repos/{owner}/{repo}/actions/organization-variables"
-    ],
-    listRepoSecrets: ["GET /repos/{owner}/{repo}/actions/secrets"],
-    listRepoVariables: ["GET /repos/{owner}/{repo}/actions/variables"],
-    listRepoWorkflows: ["GET /repos/{owner}/{repo}/actions/workflows"],
-    listRunnerApplicationsForOrg: ["GET /orgs/{org}/actions/runners/downloads"],
-    listRunnerApplicationsForRepo: [
-      "GET /repos/{owner}/{repo}/actions/runners/downloads"
-    ],
-    listSelectedReposForOrgSecret: [
-      "GET /orgs/{org}/actions/secrets/{secret_name}/repositories"
-    ],
-    listSelectedReposForOrgVariable: [
-      "GET /orgs/{org}/actions/variables/{name}/repositories"
-    ],
-    listSelectedRepositoriesEnabledGithubActionsOrganization: [
-      "GET /orgs/{org}/actions/permissions/repositories"
-    ],
-    listSelfHostedRunnersForOrg: ["GET /orgs/{org}/actions/runners"],
-    listSelfHostedRunnersForRepo: ["GET /repos/{owner}/{repo}/actions/runners"],
-    listWorkflowRunArtifacts: [
-      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/artifacts"
-    ],
-    listWorkflowRuns: [
-      "GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs"
-    ],
-    listWorkflowRunsForRepo: ["GET /repos/{owner}/{repo}/actions/runs"],
-    reRunJobForWorkflowRun: [
-      "POST /repos/{owner}/{repo}/actions/jobs/{job_id}/rerun"
-    ],
-    reRunWorkflow: ["POST /repos/{owner}/{repo}/actions/runs/{run_id}/rerun"],
-    reRunWorkflowFailedJobs: [
-      "POST /repos/{owner}/{repo}/actions/runs/{run_id}/rerun-failed-jobs"
-    ],
-    removeAllCustomLabelsFromSelfHostedRunnerForOrg: [
-      "DELETE /orgs/{org}/actions/runners/{runner_id}/labels"
-    ],
-    removeAllCustomLabelsFromSelfHostedRunnerForRepo: [
-      "DELETE /repos/{owner}/{repo}/actions/runners/{runner_id}/labels"
-    ],
-    removeCustomLabelFromSelfHostedRunnerForOrg: [
-      "DELETE /orgs/{org}/actions/runners/{runner_id}/labels/{name}"
-    ],
-    removeCustomLabelFromSelfHostedRunnerForRepo: [
-      "DELETE /repos/{owner}/{repo}/actions/runners/{runner_id}/labels/{name}"
-    ],
-    removeSelectedRepoFromOrgSecret: [
-      "DELETE /orgs/{org}/actions/secrets/{secret_name}/repositories/{repository_id}"
-    ],
-    removeSelectedRepoFromOrgVariable: [
-      "DELETE /orgs/{org}/actions/variables/{name}/repositories/{repository_id}"
-    ],
-    reviewCustomGatesForRun: [
-      "POST /repos/{owner}/{repo}/actions/runs/{run_id}/deployment_protection_rule"
-    ],
-    reviewPendingDeploymentsForRun: [
-      "POST /repos/{owner}/{repo}/actions/runs/{run_id}/pending_deployments"
-    ],
-    setAllowedActionsOrganization: [
-      "PUT /orgs/{org}/actions/permissions/selected-actions"
-    ],
-    setAllowedActionsRepository: [
-      "PUT /repos/{owner}/{repo}/actions/permissions/selected-actions"
-    ],
-    setCustomLabelsForSelfHostedRunnerForOrg: [
-      "PUT /orgs/{org}/actions/runners/{runner_id}/labels"
-    ],
-    setCustomLabelsForSelfHostedRunnerForRepo: [
-      "PUT /repos/{owner}/{repo}/actions/runners/{runner_id}/labels"
-    ],
-    setCustomOidcSubClaimForRepo: [
-      "PUT /repos/{owner}/{repo}/actions/oidc/customization/sub"
-    ],
-    setGithubActionsDefaultWorkflowPermissionsOrganization: [
-      "PUT /orgs/{org}/actions/permissions/workflow"
-    ],
-    setGithubActionsDefaultWorkflowPermissionsRepository: [
-      "PUT /repos/{owner}/{repo}/actions/permissions/workflow"
-    ],
-    setGithubActionsPermissionsOrganization: [
-      "PUT /orgs/{org}/actions/permissions"
-    ],
-    setGithubActionsPermissionsRepository: [
-      "PUT /repos/{owner}/{repo}/actions/permissions"
-    ],
-    setSelectedReposForOrgSecret: [
-      "PUT /orgs/{org}/actions/secrets/{secret_name}/repositories"
-    ],
-    setSelectedReposForOrgVariable: [
-      "PUT /orgs/{org}/actions/variables/{name}/repositories"
-    ],
-    setSelectedRepositoriesEnabledGithubActionsOrganization: [
-      "PUT /orgs/{org}/actions/permissions/repositories"
-    ],
-    setWorkflowAccessToRepository: [
-      "PUT /repos/{owner}/{repo}/actions/permissions/access"
-    ],
-    updateEnvironmentVariable: [
-      "PATCH /repos/{owner}/{repo}/environments/{environment_name}/variables/{name}"
-    ],
-    updateHostedRunnerForOrg: [
-      "PATCH /orgs/{org}/actions/hosted-runners/{hosted_runner_id}"
-    ],
-    updateOrgVariable: ["PATCH /orgs/{org}/actions/variables/{name}"],
-    updateRepoVariable: [
-      "PATCH /repos/{owner}/{repo}/actions/variables/{name}"
-    ]
-  },
-  activity: {
-    checkRepoIsStarredByAuthenticatedUser: ["GET /user/starred/{owner}/{repo}"],
-    deleteRepoSubscription: ["DELETE /repos/{owner}/{repo}/subscription"],
-    deleteThreadSubscription: [
-      "DELETE /notifications/threads/{thread_id}/subscription"
-    ],
-    getFeeds: ["GET /feeds"],
-    getRepoSubscription: ["GET /repos/{owner}/{repo}/subscription"],
-    getThread: ["GET /notifications/threads/{thread_id}"],
-    getThreadSubscriptionForAuthenticatedUser: [
-      "GET /notifications/threads/{thread_id}/subscription"
-    ],
-    listEventsForAuthenticatedUser: ["GET /users/{username}/events"],
-    listNotificationsForAuthenticatedUser: ["GET /notifications"],
-    listOrgEventsForAuthenticatedUser: [
-      "GET /users/{username}/events/orgs/{org}"
-    ],
-    listPublicEvents: ["GET /events"],
-    listPublicEventsForRepoNetwork: ["GET /networks/{owner}/{repo}/events"],
-    listPublicEventsForUser: ["GET /users/{username}/events/public"],
-    listPublicOrgEvents: ["GET /orgs/{org}/events"],
-    listReceivedEventsForUser: ["GET /users/{username}/received_events"],
-    listReceivedPublicEventsForUser: [
-      "GET /users/{username}/received_events/public"
-    ],
-    listRepoEvents: ["GET /repos/{owner}/{repo}/events"],
-    listRepoNotificationsForAuthenticatedUser: [
-      "GET /repos/{owner}/{repo}/notifications"
-    ],
-    listReposStarredByAuthenticatedUser: ["GET /user/starred"],
-    listReposStarredByUser: ["GET /users/{username}/starred"],
-    listReposWatchedByUser: ["GET /users/{username}/subscriptions"],
-    listStargazersForRepo: ["GET /repos/{owner}/{repo}/stargazers"],
-    listWatchedReposForAuthenticatedUser: ["GET /user/subscriptions"],
-    listWatchersForRepo: ["GET /repos/{owner}/{repo}/subscribers"],
-    markNotificationsAsRead: ["PUT /notifications"],
-    markRepoNotificationsAsRead: ["PUT /repos/{owner}/{repo}/notifications"],
-    markThreadAsDone: ["DELETE /notifications/threads/{thread_id}"],
-    markThreadAsRead: ["PATCH /notifications/threads/{thread_id}"],
-    setRepoSubscription: ["PUT /repos/{owner}/{repo}/subscription"],
-    setThreadSubscription: [
-      "PUT /notifications/threads/{thread_id}/subscription"
-    ],
-    starRepoForAuthenticatedUser: ["PUT /user/starred/{owner}/{repo}"],
-    unstarRepoForAuthenticatedUser: ["DELETE /user/starred/{owner}/{repo}"]
-  },
-  apps: {
-    addRepoToInstallation: [
-      "PUT /user/installations/{installation_id}/repositories/{repository_id}",
-      {},
-      { renamed: ["apps", "addRepoToInstallationForAuthenticatedUser"] }
-    ],
-    addRepoToInstallationForAuthenticatedUser: [
-      "PUT /user/installations/{installation_id}/repositories/{repository_id}"
-    ],
-    checkToken: ["POST /applications/{client_id}/token"],
-    createFromManifest: ["POST /app-manifests/{code}/conversions"],
-    createInstallationAccessToken: [
-      "POST /app/installations/{installation_id}/access_tokens"
-    ],
-    deleteAuthorization: ["DELETE /applications/{client_id}/grant"],
-    deleteInstallation: ["DELETE /app/installations/{installation_id}"],
-    deleteToken: ["DELETE /applications/{client_id}/token"],
-    getAuthenticated: ["GET /app"],
-    getBySlug: ["GET /apps/{app_slug}"],
-    getInstallation: ["GET /app/installations/{installation_id}"],
-    getOrgInstallation: ["GET /orgs/{org}/installation"],
-    getRepoInstallation: ["GET /repos/{owner}/{repo}/installation"],
-    getSubscriptionPlanForAccount: [
-      "GET /marketplace_listing/accounts/{account_id}"
-    ],
-    getSubscriptionPlanForAccountStubbed: [
-      "GET /marketplace_listing/stubbed/accounts/{account_id}"
-    ],
-    getUserInstallation: ["GET /users/{username}/installation"],
-    getWebhookConfigForApp: ["GET /app/hook/config"],
-    getWebhookDelivery: ["GET /app/hook/deliveries/{delivery_id}"],
-    listAccountsForPlan: ["GET /marketplace_listing/plans/{plan_id}/accounts"],
-    listAccountsForPlanStubbed: [
-      "GET /marketplace_listing/stubbed/plans/{plan_id}/accounts"
-    ],
-    listInstallationReposForAuthenticatedUser: [
-      "GET /user/installations/{installation_id}/repositories"
-    ],
-    listInstallationRequestsForAuthenticatedApp: [
-      "GET /app/installation-requests"
-    ],
-    listInstallations: ["GET /app/installations"],
-    listInstallationsForAuthenticatedUser: ["GET /user/installations"],
-    listPlans: ["GET /marketplace_listing/plans"],
-    listPlansStubbed: ["GET /marketplace_listing/stubbed/plans"],
-    listReposAccessibleToInstallation: ["GET /installation/repositories"],
-    listSubscriptionsForAuthenticatedUser: ["GET /user/marketplace_purchases"],
-    listSubscriptionsForAuthenticatedUserStubbed: [
-      "GET /user/marketplace_purchases/stubbed"
-    ],
-    listWebhookDeliveries: ["GET /app/hook/deliveries"],
-    redeliverWebhookDelivery: [
-      "POST /app/hook/deliveries/{delivery_id}/attempts"
-    ],
-    removeRepoFromInstallation: [
-      "DELETE /user/installations/{installation_id}/repositories/{repository_id}",
-      {},
-      { renamed: ["apps", "removeRepoFromInstallationForAuthenticatedUser"] }
-    ],
-    removeRepoFromInstallationForAuthenticatedUser: [
-      "DELETE /user/installations/{installation_id}/repositories/{repository_id}"
-    ],
-    resetToken: ["PATCH /applications/{client_id}/token"],
-    revokeInstallationAccessToken: ["DELETE /installation/token"],
-    scopeToken: ["POST /applications/{client_id}/token/scoped"],
-    suspendInstallation: ["PUT /app/installations/{installation_id}/suspended"],
-    unsuspendInstallation: [
-      "DELETE /app/installations/{installation_id}/suspended"
-    ],
-    updateWebhookConfigForApp: ["PATCH /app/hook/config"]
-  },
-  billing: {
-    getGithubActionsBillingOrg: ["GET /orgs/{org}/settings/billing/actions"],
-    getGithubActionsBillingUser: [
-      "GET /users/{username}/settings/billing/actions"
-    ],
-    getGithubBillingPremiumRequestUsageReportOrg: [
-      "GET /organizations/{org}/settings/billing/premium_request/usage"
-    ],
-    getGithubBillingPremiumRequestUsageReportUser: [
-      "GET /users/{username}/settings/billing/premium_request/usage"
-    ],
-    getGithubBillingUsageReportOrg: [
-      "GET /organizations/{org}/settings/billing/usage"
-    ],
-    getGithubBillingUsageReportUser: [
-      "GET /users/{username}/settings/billing/usage"
-    ],
-    getGithubPackagesBillingOrg: ["GET /orgs/{org}/settings/billing/packages"],
-    getGithubPackagesBillingUser: [
-      "GET /users/{username}/settings/billing/packages"
-    ],
-    getSharedStorageBillingOrg: [
-      "GET /orgs/{org}/settings/billing/shared-storage"
-    ],
-    getSharedStorageBillingUser: [
-      "GET /users/{username}/settings/billing/shared-storage"
-    ]
-  },
-  campaigns: {
-    createCampaign: ["POST /orgs/{org}/campaigns"],
-    deleteCampaign: ["DELETE /orgs/{org}/campaigns/{campaign_number}"],
-    getCampaignSummary: ["GET /orgs/{org}/campaigns/{campaign_number}"],
-    listOrgCampaigns: ["GET /orgs/{org}/campaigns"],
-    updateCampaign: ["PATCH /orgs/{org}/campaigns/{campaign_number}"]
-  },
-  checks: {
-    create: ["POST /repos/{owner}/{repo}/check-runs"],
-    createSuite: ["POST /repos/{owner}/{repo}/check-suites"],
-    get: ["GET /repos/{owner}/{repo}/check-runs/{check_run_id}"],
-    getSuite: ["GET /repos/{owner}/{repo}/check-suites/{check_suite_id}"],
-    listAnnotations: [
-      "GET /repos/{owner}/{repo}/check-runs/{check_run_id}/annotations"
-    ],
-    listForRef: ["GET /repos/{owner}/{repo}/commits/{ref}/check-runs"],
-    listForSuite: [
-      "GET /repos/{owner}/{repo}/check-suites/{check_suite_id}/check-runs"
-    ],
-    listSuitesForRef: ["GET /repos/{owner}/{repo}/commits/{ref}/check-suites"],
-    rerequestRun: [
-      "POST /repos/{owner}/{repo}/check-runs/{check_run_id}/rerequest"
-    ],
-    rerequestSuite: [
-      "POST /repos/{owner}/{repo}/check-suites/{check_suite_id}/rerequest"
-    ],
-    setSuitesPreferences: [
-      "PATCH /repos/{owner}/{repo}/check-suites/preferences"
-    ],
-    update: ["PATCH /repos/{owner}/{repo}/check-runs/{check_run_id}"]
-  },
-  codeScanning: {
-    commitAutofix: [
-      "POST /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}/autofix/commits"
-    ],
-    createAutofix: [
-      "POST /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}/autofix"
-    ],
-    createVariantAnalysis: [
-      "POST /repos/{owner}/{repo}/code-scanning/codeql/variant-analyses"
-    ],
-    deleteAnalysis: [
-      "DELETE /repos/{owner}/{repo}/code-scanning/analyses/{analysis_id}{?confirm_delete}"
-    ],
-    deleteCodeqlDatabase: [
-      "DELETE /repos/{owner}/{repo}/code-scanning/codeql/databases/{language}"
-    ],
-    getAlert: [
-      "GET /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}",
-      {},
-      { renamedParameters: { alert_id: "alert_number" } }
-    ],
-    getAnalysis: [
-      "GET /repos/{owner}/{repo}/code-scanning/analyses/{analysis_id}"
-    ],
-    getAutofix: [
-      "GET /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}/autofix"
-    ],
-    getCodeqlDatabase: [
-      "GET /repos/{owner}/{repo}/code-scanning/codeql/databases/{language}"
-    ],
-    getDefaultSetup: ["GET /repos/{owner}/{repo}/code-scanning/default-setup"],
-    getSarif: ["GET /repos/{owner}/{repo}/code-scanning/sarifs/{sarif_id}"],
-    getVariantAnalysis: [
-      "GET /repos/{owner}/{repo}/code-scanning/codeql/variant-analyses/{codeql_variant_analysis_id}"
-    ],
-    getVariantAnalysisRepoTask: [
-      "GET /repos/{owner}/{repo}/code-scanning/codeql/variant-analyses/{codeql_variant_analysis_id}/repos/{repo_owner}/{repo_name}"
-    ],
-    listAlertInstances: [
-      "GET /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}/instances"
-    ],
-    listAlertsForOrg: ["GET /orgs/{org}/code-scanning/alerts"],
-    listAlertsForRepo: ["GET /repos/{owner}/{repo}/code-scanning/alerts"],
-    listAlertsInstances: [
-      "GET /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}/instances",
-      {},
-      { renamed: ["codeScanning", "listAlertInstances"] }
-    ],
-    listCodeqlDatabases: [
-      "GET /repos/{owner}/{repo}/code-scanning/codeql/databases"
-    ],
-    listRecentAnalyses: ["GET /repos/{owner}/{repo}/code-scanning/analyses"],
-    updateAlert: [
-      "PATCH /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}"
-    ],
-    updateDefaultSetup: [
-      "PATCH /repos/{owner}/{repo}/code-scanning/default-setup"
-    ],
-    uploadSarif: ["POST /repos/{owner}/{repo}/code-scanning/sarifs"]
-  },
-  codeSecurity: {
-    attachConfiguration: [
-      "POST /orgs/{org}/code-security/configurations/{configuration_id}/attach"
-    ],
-    attachEnterpriseConfiguration: [
-      "POST /enterprises/{enterprise}/code-security/configurations/{configuration_id}/attach"
-    ],
-    createConfiguration: ["POST /orgs/{org}/code-security/configurations"],
-    createConfigurationForEnterprise: [
-      "POST /enterprises/{enterprise}/code-security/configurations"
-    ],
-    deleteConfiguration: [
-      "DELETE /orgs/{org}/code-security/configurations/{configuration_id}"
-    ],
-    deleteConfigurationForEnterprise: [
-      "DELETE /enterprises/{enterprise}/code-security/configurations/{configuration_id}"
-    ],
-    detachConfiguration: [
-      "DELETE /orgs/{org}/code-security/configurations/detach"
-    ],
-    getConfiguration: [
-      "GET /orgs/{org}/code-security/configurations/{configuration_id}"
-    ],
-    getConfigurationForRepository: [
-      "GET /repos/{owner}/{repo}/code-security-configuration"
-    ],
-    getConfigurationsForEnterprise: [
-      "GET /enterprises/{enterprise}/code-security/configurations"
-    ],
-    getConfigurationsForOrg: ["GET /orgs/{org}/code-security/configurations"],
-    getDefaultConfigurations: [
-      "GET /orgs/{org}/code-security/configurations/defaults"
-    ],
-    getDefaultConfigurationsForEnterprise: [
-      "GET /enterprises/{enterprise}/code-security/configurations/defaults"
-    ],
-    getRepositoriesForConfiguration: [
-      "GET /orgs/{org}/code-security/configurations/{configuration_id}/repositories"
-    ],
-    getRepositoriesForEnterpriseConfiguration: [
-      "GET /enterprises/{enterprise}/code-security/configurations/{configuration_id}/repositories"
-    ],
-    getSingleConfigurationForEnterprise: [
-      "GET /enterprises/{enterprise}/code-security/configurations/{configuration_id}"
-    ],
-    setConfigurationAsDefault: [
-      "PUT /orgs/{org}/code-security/configurations/{configuration_id}/defaults"
-    ],
-    setConfigurationAsDefaultForEnterprise: [
-      "PUT /enterprises/{enterprise}/code-security/configurations/{configuration_id}/defaults"
-    ],
-    updateConfiguration: [
-      "PATCH /orgs/{org}/code-security/configurations/{configuration_id}"
-    ],
-    updateEnterpriseConfiguration: [
-      "PATCH /enterprises/{enterprise}/code-security/configurations/{configuration_id}"
-    ]
-  },
-  codesOfConduct: {
-    getAllCodesOfConduct: ["GET /codes_of_conduct"],
-    getConductCode: ["GET /codes_of_conduct/{key}"]
-  },
-  codespaces: {
-    addRepositoryForSecretForAuthenticatedUser: [
-      "PUT /user/codespaces/secrets/{secret_name}/repositories/{repository_id}"
-    ],
-    addSelectedRepoToOrgSecret: [
-      "PUT /orgs/{org}/codespaces/secrets/{secret_name}/repositories/{repository_id}"
-    ],
-    checkPermissionsForDevcontainer: [
-      "GET /repos/{owner}/{repo}/codespaces/permissions_check"
-    ],
-    codespaceMachinesForAuthenticatedUser: [
-      "GET /user/codespaces/{codespace_name}/machines"
-    ],
-    createForAuthenticatedUser: ["POST /user/codespaces"],
-    createOrUpdateOrgSecret: [
-      "PUT /orgs/{org}/codespaces/secrets/{secret_name}"
-    ],
-    createOrUpdateRepoSecret: [
-      "PUT /repos/{owner}/{repo}/codespaces/secrets/{secret_name}"
-    ],
-    createOrUpdateSecretForAuthenticatedUser: [
-      "PUT /user/codespaces/secrets/{secret_name}"
-    ],
-    createWithPrForAuthenticatedUser: [
-      "POST /repos/{owner}/{repo}/pulls/{pull_number}/codespaces"
-    ],
-    createWithRepoForAuthenticatedUser: [
-      "POST /repos/{owner}/{repo}/codespaces"
-    ],
-    deleteForAuthenticatedUser: ["DELETE /user/codespaces/{codespace_name}"],
-    deleteFromOrganization: [
-      "DELETE /orgs/{org}/members/{username}/codespaces/{codespace_name}"
-    ],
-    deleteOrgSecret: ["DELETE /orgs/{org}/codespaces/secrets/{secret_name}"],
-    deleteRepoSecret: [
-      "DELETE /repos/{owner}/{repo}/codespaces/secrets/{secret_name}"
-    ],
-    deleteSecretForAuthenticatedUser: [
-      "DELETE /user/codespaces/secrets/{secret_name}"
-    ],
-    exportForAuthenticatedUser: [
-      "POST /user/codespaces/{codespace_name}/exports"
-    ],
-    getCodespacesForUserInOrg: [
-      "GET /orgs/{org}/members/{username}/codespaces"
-    ],
-    getExportDetailsForAuthenticatedUser: [
-      "GET /user/codespaces/{codespace_name}/exports/{export_id}"
-    ],
-    getForAuthenticatedUser: ["GET /user/codespaces/{codespace_name}"],
-    getOrgPublicKey: ["GET /orgs/{org}/codespaces/secrets/public-key"],
-    getOrgSecret: ["GET /orgs/{org}/codespaces/secrets/{secret_name}"],
-    getPublicKeyForAuthenticatedUser: [
-      "GET /user/codespaces/secrets/public-key"
-    ],
-    getRepoPublicKey: [
-      "GET /repos/{owner}/{repo}/codespaces/secrets/public-key"
-    ],
-    getRepoSecret: [
-      "GET /repos/{owner}/{repo}/codespaces/secrets/{secret_name}"
-    ],
-    getSecretForAuthenticatedUser: [
-      "GET /user/codespaces/secrets/{secret_name}"
-    ],
-    listDevcontainersInRepositoryForAuthenticatedUser: [
-      "GET /repos/{owner}/{repo}/codespaces/devcontainers"
-    ],
-    listForAuthenticatedUser: ["GET /user/codespaces"],
-    listInOrganization: [
-      "GET /orgs/{org}/codespaces",
-      {},
-      { renamedParameters: { org_id: "org" } }
-    ],
-    listInRepositoryForAuthenticatedUser: [
-      "GET /repos/{owner}/{repo}/codespaces"
-    ],
-    listOrgSecrets: ["GET /orgs/{org}/codespaces/secrets"],
-    listRepoSecrets: ["GET /repos/{owner}/{repo}/codespaces/secrets"],
-    listRepositoriesForSecretForAuthenticatedUser: [
-      "GET /user/codespaces/secrets/{secret_name}/repositories"
-    ],
-    listSecretsForAuthenticatedUser: ["GET /user/codespaces/secrets"],
-    listSelectedReposForOrgSecret: [
-      "GET /orgs/{org}/codespaces/secrets/{secret_name}/repositories"
-    ],
-    preFlightWithRepoForAuthenticatedUser: [
-      "GET /repos/{owner}/{repo}/codespaces/new"
-    ],
-    publishForAuthenticatedUser: [
-      "POST /user/codespaces/{codespace_name}/publish"
-    ],
-    removeRepositoryForSecretForAuthenticatedUser: [
-      "DELETE /user/codespaces/secrets/{secret_name}/repositories/{repository_id}"
-    ],
-    removeSelectedRepoFromOrgSecret: [
-      "DELETE /orgs/{org}/codespaces/secrets/{secret_name}/repositories/{repository_id}"
-    ],
-    repoMachinesForAuthenticatedUser: [
-      "GET /repos/{owner}/{repo}/codespaces/machines"
-    ],
-    setRepositoriesForSecretForAuthenticatedUser: [
-      "PUT /user/codespaces/secrets/{secret_name}/repositories"
-    ],
-    setSelectedReposForOrgSecret: [
-      "PUT /orgs/{org}/codespaces/secrets/{secret_name}/repositories"
-    ],
-    startForAuthenticatedUser: ["POST /user/codespaces/{codespace_name}/start"],
-    stopForAuthenticatedUser: ["POST /user/codespaces/{codespace_name}/stop"],
-    stopInOrganization: [
-      "POST /orgs/{org}/members/{username}/codespaces/{codespace_name}/stop"
-    ],
-    updateForAuthenticatedUser: ["PATCH /user/codespaces/{codespace_name}"]
-  },
-  copilot: {
-    addCopilotSeatsForTeams: [
-      "POST /orgs/{org}/copilot/billing/selected_teams"
-    ],
-    addCopilotSeatsForUsers: [
-      "POST /orgs/{org}/copilot/billing/selected_users"
-    ],
-    cancelCopilotSeatAssignmentForTeams: [
-      "DELETE /orgs/{org}/copilot/billing/selected_teams"
-    ],
-    cancelCopilotSeatAssignmentForUsers: [
-      "DELETE /orgs/{org}/copilot/billing/selected_users"
-    ],
-    copilotMetricsForOrganization: ["GET /orgs/{org}/copilot/metrics"],
-    copilotMetricsForTeam: ["GET /orgs/{org}/team/{team_slug}/copilot/metrics"],
-    getCopilotOrganizationDetails: ["GET /orgs/{org}/copilot/billing"],
-    getCopilotSeatDetailsForUser: [
-      "GET /orgs/{org}/members/{username}/copilot"
-    ],
-    listCopilotSeats: ["GET /orgs/{org}/copilot/billing/seats"]
-  },
-  credentials: { revoke: ["POST /credentials/revoke"] },
-  dependabot: {
-    addSelectedRepoToOrgSecret: [
-      "PUT /orgs/{org}/dependabot/secrets/{secret_name}/repositories/{repository_id}"
-    ],
-    createOrUpdateOrgSecret: [
-      "PUT /orgs/{org}/dependabot/secrets/{secret_name}"
-    ],
-    createOrUpdateRepoSecret: [
-      "PUT /repos/{owner}/{repo}/dependabot/secrets/{secret_name}"
-    ],
-    deleteOrgSecret: ["DELETE /orgs/{org}/dependabot/secrets/{secret_name}"],
-    deleteRepoSecret: [
-      "DELETE /repos/{owner}/{repo}/dependabot/secrets/{secret_name}"
-    ],
-    getAlert: ["GET /repos/{owner}/{repo}/dependabot/alerts/{alert_number}"],
-    getOrgPublicKey: ["GET /orgs/{org}/dependabot/secrets/public-key"],
-    getOrgSecret: ["GET /orgs/{org}/dependabot/secrets/{secret_name}"],
-    getRepoPublicKey: [
-      "GET /repos/{owner}/{repo}/dependabot/secrets/public-key"
-    ],
-    getRepoSecret: [
-      "GET /repos/{owner}/{repo}/dependabot/secrets/{secret_name}"
-    ],
-    listAlertsForEnterprise: [
-      "GET /enterprises/{enterprise}/dependabot/alerts"
-    ],
-    listAlertsForOrg: ["GET /orgs/{org}/dependabot/alerts"],
-    listAlertsForRepo: ["GET /repos/{owner}/{repo}/dependabot/alerts"],
-    listOrgSecrets: ["GET /orgs/{org}/dependabot/secrets"],
-    listRepoSecrets: ["GET /repos/{owner}/{repo}/dependabot/secrets"],
-    listSelectedReposForOrgSecret: [
-      "GET /orgs/{org}/dependabot/secrets/{secret_name}/repositories"
-    ],
-    removeSelectedRepoFromOrgSecret: [
-      "DELETE /orgs/{org}/dependabot/secrets/{secret_name}/repositories/{repository_id}"
-    ],
-    repositoryAccessForOrg: [
-      "GET /organizations/{org}/dependabot/repository-access"
-    ],
-    setRepositoryAccessDefaultLevel: [
-      "PUT /organizations/{org}/dependabot/repository-access/default-level"
-    ],
-    setSelectedReposForOrgSecret: [
-      "PUT /orgs/{org}/dependabot/secrets/{secret_name}/repositories"
-    ],
-    updateAlert: [
-      "PATCH /repos/{owner}/{repo}/dependabot/alerts/{alert_number}"
-    ],
-    updateRepositoryAccessForOrg: [
-      "PATCH /organizations/{org}/dependabot/repository-access"
-    ]
-  },
-  dependencyGraph: {
-    createRepositorySnapshot: [
-      "POST /repos/{owner}/{repo}/dependency-graph/snapshots"
-    ],
-    diffRange: [
-      "GET /repos/{owner}/{repo}/dependency-graph/compare/{basehead}"
-    ],
-    exportSbom: ["GET /repos/{owner}/{repo}/dependency-graph/sbom"]
-  },
-  emojis: { get: ["GET /emojis"] },
-  enterpriseTeamMemberships: {
-    add: [
-      "PUT /enterprises/{enterprise}/teams/{enterprise-team}/memberships/{username}"
-    ],
-    bulkAdd: [
-      "POST /enterprises/{enterprise}/teams/{enterprise-team}/memberships/add"
-    ],
-    bulkRemove: [
-      "POST /enterprises/{enterprise}/teams/{enterprise-team}/memberships/remove"
-    ],
-    get: [
-      "GET /enterprises/{enterprise}/teams/{enterprise-team}/memberships/{username}"
-    ],
-    list: ["GET /enterprises/{enterprise}/teams/{enterprise-team}/memberships"],
-    remove: [
-      "DELETE /enterprises/{enterprise}/teams/{enterprise-team}/memberships/{username}"
-    ]
-  },
-  enterpriseTeamOrganizations: {
-    add: [
-      "PUT /enterprises/{enterprise}/teams/{enterprise-team}/organizations/{org}"
-    ],
-    bulkAdd: [
-      "POST /enterprises/{enterprise}/teams/{enterprise-team}/organizations/add"
-    ],
-    bulkRemove: [
-      "POST /enterprises/{enterprise}/teams/{enterprise-team}/organizations/remove"
-    ],
-    delete: [
-      "DELETE /enterprises/{enterprise}/teams/{enterprise-team}/organizations/{org}"
-    ],
-    getAssignment: [
-      "GET /enterprises/{enterprise}/teams/{enterprise-team}/organizations/{org}"
-    ],
-    getAssignments: [
-      "GET /enterprises/{enterprise}/teams/{enterprise-team}/organizations"
-    ]
-  },
-  enterpriseTeams: {
-    create: ["POST /enterprises/{enterprise}/teams"],
-    delete: ["DELETE /enterprises/{enterprise}/teams/{team_slug}"],
-    get: ["GET /enterprises/{enterprise}/teams/{team_slug}"],
-    list: ["GET /enterprises/{enterprise}/teams"],
-    update: ["PATCH /enterprises/{enterprise}/teams/{team_slug}"]
-  },
-  gists: {
-    checkIsStarred: ["GET /gists/{gist_id}/star"],
-    create: ["POST /gists"],
-    createComment: ["POST /gists/{gist_id}/comments"],
-    delete: ["DELETE /gists/{gist_id}"],
-    deleteComment: ["DELETE /gists/{gist_id}/comments/{comment_id}"],
-    fork: ["POST /gists/{gist_id}/forks"],
-    get: ["GET /gists/{gist_id}"],
-    getComment: ["GET /gists/{gist_id}/comments/{comment_id}"],
-    getRevision: ["GET /gists/{gist_id}/{sha}"],
-    list: ["GET /gists"],
-    listComments: ["GET /gists/{gist_id}/comments"],
-    listCommits: ["GET /gists/{gist_id}/commits"],
-    listForUser: ["GET /users/{username}/gists"],
-    listForks: ["GET /gists/{gist_id}/forks"],
-    listPublic: ["GET /gists/public"],
-    listStarred: ["GET /gists/starred"],
-    star: ["PUT /gists/{gist_id}/star"],
-    unstar: ["DELETE /gists/{gist_id}/star"],
-    update: ["PATCH /gists/{gist_id}"],
-    updateComment: ["PATCH /gists/{gist_id}/comments/{comment_id}"]
-  },
-  git: {
-    createBlob: ["POST /repos/{owner}/{repo}/git/blobs"],
-    createCommit: ["POST /repos/{owner}/{repo}/git/commits"],
-    createRef: ["POST /repos/{owner}/{repo}/git/refs"],
-    createTag: ["POST /repos/{owner}/{repo}/git/tags"],
-    createTree: ["POST /repos/{owner}/{repo}/git/trees"],
-    deleteRef: ["DELETE /repos/{owner}/{repo}/git/refs/{ref}"],
-    getBlob: ["GET /repos/{owner}/{repo}/git/blobs/{file_sha}"],
-    getCommit: ["GET /repos/{owner}/{repo}/git/commits/{commit_sha}"],
-    getRef: ["GET /repos/{owner}/{repo}/git/ref/{ref}"],
-    getTag: ["GET /repos/{owner}/{repo}/git/tags/{tag_sha}"],
-    getTree: ["GET /repos/{owner}/{repo}/git/trees/{tree_sha}"],
-    listMatchingRefs: ["GET /repos/{owner}/{repo}/git/matching-refs/{ref}"],
-    updateRef: ["PATCH /repos/{owner}/{repo}/git/refs/{ref}"]
-  },
-  gitignore: {
-    getAllTemplates: ["GET /gitignore/templates"],
-    getTemplate: ["GET /gitignore/templates/{name}"]
-  },
-  hostedCompute: {
-    createNetworkConfigurationForOrg: [
-      "POST /orgs/{org}/settings/network-configurations"
-    ],
-    deleteNetworkConfigurationFromOrg: [
-      "DELETE /orgs/{org}/settings/network-configurations/{network_configuration_id}"
-    ],
-    getNetworkConfigurationForOrg: [
-      "GET /orgs/{org}/settings/network-configurations/{network_configuration_id}"
-    ],
-    getNetworkSettingsForOrg: [
-      "GET /orgs/{org}/settings/network-settings/{network_settings_id}"
-    ],
-    listNetworkConfigurationsForOrg: [
-      "GET /orgs/{org}/settings/network-configurations"
-    ],
-    updateNetworkConfigurationForOrg: [
-      "PATCH /orgs/{org}/settings/network-configurations/{network_configuration_id}"
-    ]
-  },
-  interactions: {
-    getRestrictionsForAuthenticatedUser: ["GET /user/interaction-limits"],
-    getRestrictionsForOrg: ["GET /orgs/{org}/interaction-limits"],
-    getRestrictionsForRepo: ["GET /repos/{owner}/{repo}/interaction-limits"],
-    getRestrictionsForYourPublicRepos: [
-      "GET /user/interaction-limits",
-      {},
-      { renamed: ["interactions", "getRestrictionsForAuthenticatedUser"] }
-    ],
-    removeRestrictionsForAuthenticatedUser: ["DELETE /user/interaction-limits"],
-    removeRestrictionsForOrg: ["DELETE /orgs/{org}/interaction-limits"],
-    removeRestrictionsForRepo: [
-      "DELETE /repos/{owner}/{repo}/interaction-limits"
-    ],
-    removeRestrictionsForYourPublicRepos: [
-      "DELETE /user/interaction-limits",
-      {},
-      { renamed: ["interactions", "removeRestrictionsForAuthenticatedUser"] }
-    ],
-    setRestrictionsForAuthenticatedUser: ["PUT /user/interaction-limits"],
-    setRestrictionsForOrg: ["PUT /orgs/{org}/interaction-limits"],
-    setRestrictionsForRepo: ["PUT /repos/{owner}/{repo}/interaction-limits"],
-    setRestrictionsForYourPublicRepos: [
-      "PUT /user/interaction-limits",
-      {},
-      { renamed: ["interactions", "setRestrictionsForAuthenticatedUser"] }
-    ]
-  },
-  issues: {
-    addAssignees: [
-      "POST /repos/{owner}/{repo}/issues/{issue_number}/assignees"
-    ],
-    addBlockedByDependency: [
-      "POST /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by"
-    ],
-    addLabels: ["POST /repos/{owner}/{repo}/issues/{issue_number}/labels"],
-    addSubIssue: [
-      "POST /repos/{owner}/{repo}/issues/{issue_number}/sub_issues"
-    ],
-    checkUserCanBeAssigned: ["GET /repos/{owner}/{repo}/assignees/{assignee}"],
-    checkUserCanBeAssignedToIssue: [
-      "GET /repos/{owner}/{repo}/issues/{issue_number}/assignees/{assignee}"
-    ],
-    create: ["POST /repos/{owner}/{repo}/issues"],
-    createComment: [
-      "POST /repos/{owner}/{repo}/issues/{issue_number}/comments"
-    ],
-    createLabel: ["POST /repos/{owner}/{repo}/labels"],
-    createMilestone: ["POST /repos/{owner}/{repo}/milestones"],
-    deleteComment: [
-      "DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}"
-    ],
-    deleteLabel: ["DELETE /repos/{owner}/{repo}/labels/{name}"],
-    deleteMilestone: [
-      "DELETE /repos/{owner}/{repo}/milestones/{milestone_number}"
-    ],
-    get: ["GET /repos/{owner}/{repo}/issues/{issue_number}"],
-    getComment: ["GET /repos/{owner}/{repo}/issues/comments/{comment_id}"],
-    getEvent: ["GET /repos/{owner}/{repo}/issues/events/{event_id}"],
-    getLabel: ["GET /repos/{owner}/{repo}/labels/{name}"],
-    getMilestone: ["GET /repos/{owner}/{repo}/milestones/{milestone_number}"],
-    getParent: ["GET /repos/{owner}/{repo}/issues/{issue_number}/parent"],
-    list: ["GET /issues"],
-    listAssignees: ["GET /repos/{owner}/{repo}/assignees"],
-    listComments: ["GET /repos/{owner}/{repo}/issues/{issue_number}/comments"],
-    listCommentsForRepo: ["GET /repos/{owner}/{repo}/issues/comments"],
-    listDependenciesBlockedBy: [
-      "GET /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by"
-    ],
-    listDependenciesBlocking: [
-      "GET /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocking"
-    ],
-    listEvents: ["GET /repos/{owner}/{repo}/issues/{issue_number}/events"],
-    listEventsForRepo: ["GET /repos/{owner}/{repo}/issues/events"],
-    listEventsForTimeline: [
-      "GET /repos/{owner}/{repo}/issues/{issue_number}/timeline"
-    ],
-    listForAuthenticatedUser: ["GET /user/issues"],
-    listForOrg: ["GET /orgs/{org}/issues"],
-    listForRepo: ["GET /repos/{owner}/{repo}/issues"],
-    listLabelsForMilestone: [
-      "GET /repos/{owner}/{repo}/milestones/{milestone_number}/labels"
-    ],
-    listLabelsForRepo: ["GET /repos/{owner}/{repo}/labels"],
-    listLabelsOnIssue: [
-      "GET /repos/{owner}/{repo}/issues/{issue_number}/labels"
-    ],
-    listMilestones: ["GET /repos/{owner}/{repo}/milestones"],
-    listSubIssues: [
-      "GET /repos/{owner}/{repo}/issues/{issue_number}/sub_issues"
-    ],
-    lock: ["PUT /repos/{owner}/{repo}/issues/{issue_number}/lock"],
-    removeAllLabels: [
-      "DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels"
-    ],
-    removeAssignees: [
-      "DELETE /repos/{owner}/{repo}/issues/{issue_number}/assignees"
-    ],
-    removeDependencyBlockedBy: [
-      "DELETE /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by/{issue_id}"
-    ],
-    removeLabel: [
-      "DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels/{name}"
-    ],
-    removeSubIssue: [
-      "DELETE /repos/{owner}/{repo}/issues/{issue_number}/sub_issue"
-    ],
-    reprioritizeSubIssue: [
-      "PATCH /repos/{owner}/{repo}/issues/{issue_number}/sub_issues/priority"
-    ],
-    setLabels: ["PUT /repos/{owner}/{repo}/issues/{issue_number}/labels"],
-    unlock: ["DELETE /repos/{owner}/{repo}/issues/{issue_number}/lock"],
-    update: ["PATCH /repos/{owner}/{repo}/issues/{issue_number}"],
-    updateComment: ["PATCH /repos/{owner}/{repo}/issues/comments/{comment_id}"],
-    updateLabel: ["PATCH /repos/{owner}/{repo}/labels/{name}"],
-    updateMilestone: [
-      "PATCH /repos/{owner}/{repo}/milestones/{milestone_number}"
-    ]
-  },
-  licenses: {
-    get: ["GET /licenses/{license}"],
-    getAllCommonlyUsed: ["GET /licenses"],
-    getForRepo: ["GET /repos/{owner}/{repo}/license"]
-  },
-  markdown: {
-    render: ["POST /markdown"],
-    renderRaw: [
-      "POST /markdown/raw",
-      { headers: { "content-type": "text/plain; charset=utf-8" } }
-    ]
-  },
-  meta: {
-    get: ["GET /meta"],
-    getAllVersions: ["GET /versions"],
-    getOctocat: ["GET /octocat"],
-    getZen: ["GET /zen"],
-    root: ["GET /"]
-  },
-  migrations: {
-    deleteArchiveForAuthenticatedUser: [
-      "DELETE /user/migrations/{migration_id}/archive"
-    ],
-    deleteArchiveForOrg: [
-      "DELETE /orgs/{org}/migrations/{migration_id}/archive"
-    ],
-    downloadArchiveForOrg: [
-      "GET /orgs/{org}/migrations/{migration_id}/archive"
-    ],
-    getArchiveForAuthenticatedUser: [
-      "GET /user/migrations/{migration_id}/archive"
-    ],
-    getStatusForAuthenticatedUser: ["GET /user/migrations/{migration_id}"],
-    getStatusForOrg: ["GET /orgs/{org}/migrations/{migration_id}"],
-    listForAuthenticatedUser: ["GET /user/migrations"],
-    listForOrg: ["GET /orgs/{org}/migrations"],
-    listReposForAuthenticatedUser: [
-      "GET /user/migrations/{migration_id}/repositories"
-    ],
-    listReposForOrg: ["GET /orgs/{org}/migrations/{migration_id}/repositories"],
-    listReposForUser: [
-      "GET /user/migrations/{migration_id}/repositories",
-      {},
-      { renamed: ["migrations", "listReposForAuthenticatedUser"] }
-    ],
-    startForAuthenticatedUser: ["POST /user/migrations"],
-    startForOrg: ["POST /orgs/{org}/migrations"],
-    unlockRepoForAuthenticatedUser: [
-      "DELETE /user/migrations/{migration_id}/repos/{repo_name}/lock"
-    ],
-    unlockRepoForOrg: [
-      "DELETE /orgs/{org}/migrations/{migration_id}/repos/{repo_name}/lock"
-    ]
-  },
-  oidc: {
-    getOidcCustomSubTemplateForOrg: [
-      "GET /orgs/{org}/actions/oidc/customization/sub"
-    ],
-    updateOidcCustomSubTemplateForOrg: [
-      "PUT /orgs/{org}/actions/oidc/customization/sub"
-    ]
-  },
-  orgs: {
-    addSecurityManagerTeam: [
-      "PUT /orgs/{org}/security-managers/teams/{team_slug}",
-      {},
-      {
-        deprecated: "octokit.rest.orgs.addSecurityManagerTeam() is deprecated, see https://docs.github.com/rest/orgs/security-managers#add-a-security-manager-team"
-      }
-    ],
-    assignTeamToOrgRole: [
-      "PUT /orgs/{org}/organization-roles/teams/{team_slug}/{role_id}"
-    ],
-    assignUserToOrgRole: [
-      "PUT /orgs/{org}/organization-roles/users/{username}/{role_id}"
-    ],
-    blockUser: ["PUT /orgs/{org}/blocks/{username}"],
-    cancelInvitation: ["DELETE /orgs/{org}/invitations/{invitation_id}"],
-    checkBlockedUser: ["GET /orgs/{org}/blocks/{username}"],
-    checkMembershipForUser: ["GET /orgs/{org}/members/{username}"],
-    checkPublicMembershipForUser: ["GET /orgs/{org}/public_members/{username}"],
-    convertMemberToOutsideCollaborator: [
-      "PUT /orgs/{org}/outside_collaborators/{username}"
-    ],
-    createArtifactStorageRecord: [
-      "POST /orgs/{org}/artifacts/metadata/storage-record"
-    ],
-    createInvitation: ["POST /orgs/{org}/invitations"],
-    createIssueType: ["POST /orgs/{org}/issue-types"],
-    createWebhook: ["POST /orgs/{org}/hooks"],
-    customPropertiesForOrgsCreateOrUpdateOrganizationValues: [
-      "PATCH /organizations/{org}/org-properties/values"
-    ],
-    customPropertiesForOrgsGetOrganizationValues: [
-      "GET /organizations/{org}/org-properties/values"
-    ],
-    customPropertiesForReposCreateOrUpdateOrganizationDefinition: [
-      "PUT /orgs/{org}/properties/schema/{custom_property_name}"
-    ],
-    customPropertiesForReposCreateOrUpdateOrganizationDefinitions: [
-      "PATCH /orgs/{org}/properties/schema"
-    ],
-    customPropertiesForReposCreateOrUpdateOrganizationValues: [
-      "PATCH /orgs/{org}/properties/values"
-    ],
-    customPropertiesForReposDeleteOrganizationDefinition: [
-      "DELETE /orgs/{org}/properties/schema/{custom_property_name}"
-    ],
-    customPropertiesForReposGetOrganizationDefinition: [
-      "GET /orgs/{org}/properties/schema/{custom_property_name}"
-    ],
-    customPropertiesForReposGetOrganizationDefinitions: [
-      "GET /orgs/{org}/properties/schema"
-    ],
-    customPropertiesForReposGetOrganizationValues: [
-      "GET /orgs/{org}/properties/values"
-    ],
-    delete: ["DELETE /orgs/{org}"],
-    deleteAttestationsBulk: ["POST /orgs/{org}/attestations/delete-request"],
-    deleteAttestationsById: [
-      "DELETE /orgs/{org}/attestations/{attestation_id}"
-    ],
-    deleteAttestationsBySubjectDigest: [
-      "DELETE /orgs/{org}/attestations/digest/{subject_digest}"
-    ],
-    deleteIssueType: ["DELETE /orgs/{org}/issue-types/{issue_type_id}"],
-    deleteWebhook: ["DELETE /orgs/{org}/hooks/{hook_id}"],
-    disableSelectedRepositoryImmutableReleasesOrganization: [
-      "DELETE /orgs/{org}/settings/immutable-releases/repositories/{repository_id}"
-    ],
-    enableSelectedRepositoryImmutableReleasesOrganization: [
-      "PUT /orgs/{org}/settings/immutable-releases/repositories/{repository_id}"
-    ],
-    get: ["GET /orgs/{org}"],
-    getImmutableReleasesSettings: [
-      "GET /orgs/{org}/settings/immutable-releases"
-    ],
-    getImmutableReleasesSettingsRepositories: [
-      "GET /orgs/{org}/settings/immutable-releases/repositories"
-    ],
-    getMembershipForAuthenticatedUser: ["GET /user/memberships/orgs/{org}"],
-    getMembershipForUser: ["GET /orgs/{org}/memberships/{username}"],
-    getOrgRole: ["GET /orgs/{org}/organization-roles/{role_id}"],
-    getOrgRulesetHistory: ["GET /orgs/{org}/rulesets/{ruleset_id}/history"],
-    getOrgRulesetVersion: [
-      "GET /orgs/{org}/rulesets/{ruleset_id}/history/{version_id}"
-    ],
-    getWebhook: ["GET /orgs/{org}/hooks/{hook_id}"],
-    getWebhookConfigForOrg: ["GET /orgs/{org}/hooks/{hook_id}/config"],
-    getWebhookDelivery: [
-      "GET /orgs/{org}/hooks/{hook_id}/deliveries/{delivery_id}"
-    ],
-    list: ["GET /organizations"],
-    listAppInstallations: ["GET /orgs/{org}/installations"],
-    listArtifactStorageRecords: [
-      "GET /orgs/{org}/artifacts/{subject_digest}/metadata/storage-records"
-    ],
-    listAttestationRepositories: ["GET /orgs/{org}/attestations/repositories"],
-    listAttestations: ["GET /orgs/{org}/attestations/{subject_digest}"],
-    listAttestationsBulk: [
-      "POST /orgs/{org}/attestations/bulk-list{?per_page,before,after}"
-    ],
-    listBlockedUsers: ["GET /orgs/{org}/blocks"],
-    listFailedInvitations: ["GET /orgs/{org}/failed_invitations"],
-    listForAuthenticatedUser: ["GET /user/orgs"],
-    listForUser: ["GET /users/{username}/orgs"],
-    listInvitationTeams: ["GET /orgs/{org}/invitations/{invitation_id}/teams"],
-    listIssueTypes: ["GET /orgs/{org}/issue-types"],
-    listMembers: ["GET /orgs/{org}/members"],
-    listMembershipsForAuthenticatedUser: ["GET /user/memberships/orgs"],
-    listOrgRoleTeams: ["GET /orgs/{org}/organization-roles/{role_id}/teams"],
-    listOrgRoleUsers: ["GET /orgs/{org}/organization-roles/{role_id}/users"],
-    listOrgRoles: ["GET /orgs/{org}/organization-roles"],
-    listOrganizationFineGrainedPermissions: [
-      "GET /orgs/{org}/organization-fine-grained-permissions"
-    ],
-    listOutsideCollaborators: ["GET /orgs/{org}/outside_collaborators"],
-    listPatGrantRepositories: [
-      "GET /orgs/{org}/personal-access-tokens/{pat_id}/repositories"
-    ],
-    listPatGrantRequestRepositories: [
-      "GET /orgs/{org}/personal-access-token-requests/{pat_request_id}/repositories"
-    ],
-    listPatGrantRequests: ["GET /orgs/{org}/personal-access-token-requests"],
-    listPatGrants: ["GET /orgs/{org}/personal-access-tokens"],
-    listPendingInvitations: ["GET /orgs/{org}/invitations"],
-    listPublicMembers: ["GET /orgs/{org}/public_members"],
-    listSecurityManagerTeams: [
-      "GET /orgs/{org}/security-managers",
-      {},
-      {
-        deprecated: "octokit.rest.orgs.listSecurityManagerTeams() is deprecated, see https://docs.github.com/rest/orgs/security-managers#list-security-manager-teams"
-      }
-    ],
-    listWebhookDeliveries: ["GET /orgs/{org}/hooks/{hook_id}/deliveries"],
-    listWebhooks: ["GET /orgs/{org}/hooks"],
-    pingWebhook: ["POST /orgs/{org}/hooks/{hook_id}/pings"],
-    redeliverWebhookDelivery: [
-      "POST /orgs/{org}/hooks/{hook_id}/deliveries/{delivery_id}/attempts"
-    ],
-    removeMember: ["DELETE /orgs/{org}/members/{username}"],
-    removeMembershipForUser: ["DELETE /orgs/{org}/memberships/{username}"],
-    removeOutsideCollaborator: [
-      "DELETE /orgs/{org}/outside_collaborators/{username}"
-    ],
-    removePublicMembershipForAuthenticatedUser: [
-      "DELETE /orgs/{org}/public_members/{username}"
-    ],
-    removeSecurityManagerTeam: [
-      "DELETE /orgs/{org}/security-managers/teams/{team_slug}",
-      {},
-      {
-        deprecated: "octokit.rest.orgs.removeSecurityManagerTeam() is deprecated, see https://docs.github.com/rest/orgs/security-managers#remove-a-security-manager-team"
-      }
-    ],
-    reviewPatGrantRequest: [
-      "POST /orgs/{org}/personal-access-token-requests/{pat_request_id}"
-    ],
-    reviewPatGrantRequestsInBulk: [
-      "POST /orgs/{org}/personal-access-token-requests"
-    ],
-    revokeAllOrgRolesTeam: [
-      "DELETE /orgs/{org}/organization-roles/teams/{team_slug}"
-    ],
-    revokeAllOrgRolesUser: [
-      "DELETE /orgs/{org}/organization-roles/users/{username}"
-    ],
-    revokeOrgRoleTeam: [
-      "DELETE /orgs/{org}/organization-roles/teams/{team_slug}/{role_id}"
-    ],
-    revokeOrgRoleUser: [
-      "DELETE /orgs/{org}/organization-roles/users/{username}/{role_id}"
-    ],
-    setImmutableReleasesSettings: [
-      "PUT /orgs/{org}/settings/immutable-releases"
-    ],
-    setImmutableReleasesSettingsRepositories: [
-      "PUT /orgs/{org}/settings/immutable-releases/repositories"
-    ],
-    setMembershipForUser: ["PUT /orgs/{org}/memberships/{username}"],
-    setPublicMembershipForAuthenticatedUser: [
-      "PUT /orgs/{org}/public_members/{username}"
-    ],
-    unblockUser: ["DELETE /orgs/{org}/blocks/{username}"],
-    update: ["PATCH /orgs/{org}"],
-    updateIssueType: ["PUT /orgs/{org}/issue-types/{issue_type_id}"],
-    updateMembershipForAuthenticatedUser: [
-      "PATCH /user/memberships/orgs/{org}"
-    ],
-    updatePatAccess: ["POST /orgs/{org}/personal-access-tokens/{pat_id}"],
-    updatePatAccesses: ["POST /orgs/{org}/personal-access-tokens"],
-    updateWebhook: ["PATCH /orgs/{org}/hooks/{hook_id}"],
-    updateWebhookConfigForOrg: ["PATCH /orgs/{org}/hooks/{hook_id}/config"]
-  },
-  packages: {
-    deletePackageForAuthenticatedUser: [
-      "DELETE /user/packages/{package_type}/{package_name}"
-    ],
-    deletePackageForOrg: [
-      "DELETE /orgs/{org}/packages/{package_type}/{package_name}"
-    ],
-    deletePackageForUser: [
-      "DELETE /users/{username}/packages/{package_type}/{package_name}"
-    ],
-    deletePackageVersionForAuthenticatedUser: [
-      "DELETE /user/packages/{package_type}/{package_name}/versions/{package_version_id}"
-    ],
-    deletePackageVersionForOrg: [
-      "DELETE /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}"
-    ],
-    deletePackageVersionForUser: [
-      "DELETE /users/{username}/packages/{package_type}/{package_name}/versions/{package_version_id}"
-    ],
-    getAllPackageVersionsForAPackageOwnedByAnOrg: [
-      "GET /orgs/{org}/packages/{package_type}/{package_name}/versions",
-      {},
-      { renamed: ["packages", "getAllPackageVersionsForPackageOwnedByOrg"] }
-    ],
-    getAllPackageVersionsForAPackageOwnedByTheAuthenticatedUser: [
-      "GET /user/packages/{package_type}/{package_name}/versions",
-      {},
-      {
-        renamed: [
-          "packages",
-          "getAllPackageVersionsForPackageOwnedByAuthenticatedUser"
-        ]
-      }
-    ],
-    getAllPackageVersionsForPackageOwnedByAuthenticatedUser: [
-      "GET /user/packages/{package_type}/{package_name}/versions"
-    ],
-    getAllPackageVersionsForPackageOwnedByOrg: [
-      "GET /orgs/{org}/packages/{package_type}/{package_name}/versions"
-    ],
-    getAllPackageVersionsForPackageOwnedByUser: [
-      "GET /users/{username}/packages/{package_type}/{package_name}/versions"
-    ],
-    getPackageForAuthenticatedUser: [
-      "GET /user/packages/{package_type}/{package_name}"
-    ],
-    getPackageForOrganization: [
-      "GET /orgs/{org}/packages/{package_type}/{package_name}"
-    ],
-    getPackageForUser: [
-      "GET /users/{username}/packages/{package_type}/{package_name}"
-    ],
-    getPackageVersionForAuthenticatedUser: [
-      "GET /user/packages/{package_type}/{package_name}/versions/{package_version_id}"
-    ],
-    getPackageVersionForOrganization: [
-      "GET /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}"
-    ],
-    getPackageVersionForUser: [
-      "GET /users/{username}/packages/{package_type}/{package_name}/versions/{package_version_id}"
-    ],
-    listDockerMigrationConflictingPackagesForAuthenticatedUser: [
-      "GET /user/docker/conflicts"
-    ],
-    listDockerMigrationConflictingPackagesForOrganization: [
-      "GET /orgs/{org}/docker/conflicts"
-    ],
-    listDockerMigrationConflictingPackagesForUser: [
-      "GET /users/{username}/docker/conflicts"
-    ],
-    listPackagesForAuthenticatedUser: ["GET /user/packages"],
-    listPackagesForOrganization: ["GET /orgs/{org}/packages"],
-    listPackagesForUser: ["GET /users/{username}/packages"],
-    restorePackageForAuthenticatedUser: [
-      "POST /user/packages/{package_type}/{package_name}/restore{?token}"
-    ],
-    restorePackageForOrg: [
-      "POST /orgs/{org}/packages/{package_type}/{package_name}/restore{?token}"
-    ],
-    restorePackageForUser: [
-      "POST /users/{username}/packages/{package_type}/{package_name}/restore{?token}"
-    ],
-    restorePackageVersionForAuthenticatedUser: [
-      "POST /user/packages/{package_type}/{package_name}/versions/{package_version_id}/restore"
-    ],
-    restorePackageVersionForOrg: [
-      "POST /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}/restore"
-    ],
-    restorePackageVersionForUser: [
-      "POST /users/{username}/packages/{package_type}/{package_name}/versions/{package_version_id}/restore"
-    ]
-  },
-  privateRegistries: {
-    createOrgPrivateRegistry: ["POST /orgs/{org}/private-registries"],
-    deleteOrgPrivateRegistry: [
-      "DELETE /orgs/{org}/private-registries/{secret_name}"
-    ],
-    getOrgPrivateRegistry: ["GET /orgs/{org}/private-registries/{secret_name}"],
-    getOrgPublicKey: ["GET /orgs/{org}/private-registries/public-key"],
-    listOrgPrivateRegistries: ["GET /orgs/{org}/private-registries"],
-    updateOrgPrivateRegistry: [
-      "PATCH /orgs/{org}/private-registries/{secret_name}"
-    ]
-  },
-  projects: {
-    addItemForOrg: ["POST /orgs/{org}/projectsV2/{project_number}/items"],
-    addItemForUser: [
-      "POST /users/{username}/projectsV2/{project_number}/items"
-    ],
-    deleteItemForOrg: [
-      "DELETE /orgs/{org}/projectsV2/{project_number}/items/{item_id}"
-    ],
-    deleteItemForUser: [
-      "DELETE /users/{username}/projectsV2/{project_number}/items/{item_id}"
-    ],
-    getFieldForOrg: [
-      "GET /orgs/{org}/projectsV2/{project_number}/fields/{field_id}"
-    ],
-    getFieldForUser: [
-      "GET /users/{username}/projectsV2/{project_number}/fields/{field_id}"
-    ],
-    getForOrg: ["GET /orgs/{org}/projectsV2/{project_number}"],
-    getForUser: ["GET /users/{username}/projectsV2/{project_number}"],
-    getOrgItem: ["GET /orgs/{org}/projectsV2/{project_number}/items/{item_id}"],
-    getUserItem: [
-      "GET /users/{username}/projectsV2/{project_number}/items/{item_id}"
-    ],
-    listFieldsForOrg: ["GET /orgs/{org}/projectsV2/{project_number}/fields"],
-    listFieldsForUser: [
-      "GET /users/{username}/projectsV2/{project_number}/fields"
-    ],
-    listForOrg: ["GET /orgs/{org}/projectsV2"],
-    listForUser: ["GET /users/{username}/projectsV2"],
-    listItemsForOrg: ["GET /orgs/{org}/projectsV2/{project_number}/items"],
-    listItemsForUser: [
-      "GET /users/{username}/projectsV2/{project_number}/items"
-    ],
-    updateItemForOrg: [
-      "PATCH /orgs/{org}/projectsV2/{project_number}/items/{item_id}"
-    ],
-    updateItemForUser: [
-      "PATCH /users/{username}/projectsV2/{project_number}/items/{item_id}"
-    ]
-  },
-  pulls: {
-    checkIfMerged: ["GET /repos/{owner}/{repo}/pulls/{pull_number}/merge"],
-    create: ["POST /repos/{owner}/{repo}/pulls"],
-    createReplyForReviewComment: [
-      "POST /repos/{owner}/{repo}/pulls/{pull_number}/comments/{comment_id}/replies"
-    ],
-    createReview: ["POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews"],
-    createReviewComment: [
-      "POST /repos/{owner}/{repo}/pulls/{pull_number}/comments"
-    ],
-    deletePendingReview: [
-      "DELETE /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}"
-    ],
-    deleteReviewComment: [
-      "DELETE /repos/{owner}/{repo}/pulls/comments/{comment_id}"
-    ],
-    dismissReview: [
-      "PUT /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/dismissals"
-    ],
-    get: ["GET /repos/{owner}/{repo}/pulls/{pull_number}"],
-    getReview: [
-      "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}"
-    ],
-    getReviewComment: ["GET /repos/{owner}/{repo}/pulls/comments/{comment_id}"],
-    list: ["GET /repos/{owner}/{repo}/pulls"],
-    listCommentsForReview: [
-      "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/comments"
-    ],
-    listCommits: ["GET /repos/{owner}/{repo}/pulls/{pull_number}/commits"],
-    listFiles: ["GET /repos/{owner}/{repo}/pulls/{pull_number}/files"],
-    listRequestedReviewers: [
-      "GET /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers"
-    ],
-    listReviewComments: [
-      "GET /repos/{owner}/{repo}/pulls/{pull_number}/comments"
-    ],
-    listReviewCommentsForRepo: ["GET /repos/{owner}/{repo}/pulls/comments"],
-    listReviews: ["GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews"],
-    merge: ["PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge"],
-    removeRequestedReviewers: [
-      "DELETE /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers"
-    ],
-    requestReviewers: [
-      "POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers"
-    ],
-    submitReview: [
-      "POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/events"
-    ],
-    update: ["PATCH /repos/{owner}/{repo}/pulls/{pull_number}"],
-    updateBranch: [
-      "PUT /repos/{owner}/{repo}/pulls/{pull_number}/update-branch"
-    ],
-    updateReview: [
-      "PUT /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}"
-    ],
-    updateReviewComment: [
-      "PATCH /repos/{owner}/{repo}/pulls/comments/{comment_id}"
-    ]
-  },
-  rateLimit: { get: ["GET /rate_limit"] },
-  reactions: {
-    createForCommitComment: [
-      "POST /repos/{owner}/{repo}/comments/{comment_id}/reactions"
-    ],
-    createForIssue: [
-      "POST /repos/{owner}/{repo}/issues/{issue_number}/reactions"
-    ],
-    createForIssueComment: [
-      "POST /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions"
-    ],
-    createForPullRequestReviewComment: [
-      "POST /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions"
-    ],
-    createForRelease: [
-      "POST /repos/{owner}/{repo}/releases/{release_id}/reactions"
-    ],
-    createForTeamDiscussionCommentInOrg: [
-      "POST /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}/reactions"
-    ],
-    createForTeamDiscussionInOrg: [
-      "POST /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/reactions"
-    ],
-    deleteForCommitComment: [
-      "DELETE /repos/{owner}/{repo}/comments/{comment_id}/reactions/{reaction_id}"
-    ],
-    deleteForIssue: [
-      "DELETE /repos/{owner}/{repo}/issues/{issue_number}/reactions/{reaction_id}"
-    ],
-    deleteForIssueComment: [
-      "DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions/{reaction_id}"
-    ],
-    deleteForPullRequestComment: [
-      "DELETE /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions/{reaction_id}"
-    ],
-    deleteForRelease: [
-      "DELETE /repos/{owner}/{repo}/releases/{release_id}/reactions/{reaction_id}"
-    ],
-    deleteForTeamDiscussion: [
-      "DELETE /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/reactions/{reaction_id}"
-    ],
-    deleteForTeamDiscussionComment: [
-      "DELETE /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}/reactions/{reaction_id}"
-    ],
-    listForCommitComment: [
-      "GET /repos/{owner}/{repo}/comments/{comment_id}/reactions"
-    ],
-    listForIssue: ["GET /repos/{owner}/{repo}/issues/{issue_number}/reactions"],
-    listForIssueComment: [
-      "GET /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions"
-    ],
-    listForPullRequestReviewComment: [
-      "GET /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions"
-    ],
-    listForRelease: [
-      "GET /repos/{owner}/{repo}/releases/{release_id}/reactions"
-    ],
-    listForTeamDiscussionCommentInOrg: [
-      "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}/reactions"
-    ],
-    listForTeamDiscussionInOrg: [
-      "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/reactions"
-    ]
-  },
-  repos: {
-    acceptInvitation: [
-      "PATCH /user/repository_invitations/{invitation_id}",
-      {},
-      { renamed: ["repos", "acceptInvitationForAuthenticatedUser"] }
-    ],
-    acceptInvitationForAuthenticatedUser: [
-      "PATCH /user/repository_invitations/{invitation_id}"
-    ],
-    addAppAccessRestrictions: [
-      "POST /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/apps",
-      {},
-      { mapToData: "apps" }
-    ],
-    addCollaborator: ["PUT /repos/{owner}/{repo}/collaborators/{username}"],
-    addStatusCheckContexts: [
-      "POST /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks/contexts",
-      {},
-      { mapToData: "contexts" }
-    ],
-    addTeamAccessRestrictions: [
-      "POST /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/teams",
-      {},
-      { mapToData: "teams" }
-    ],
-    addUserAccessRestrictions: [
-      "POST /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/users",
-      {},
-      { mapToData: "users" }
-    ],
-    cancelPagesDeployment: [
-      "POST /repos/{owner}/{repo}/pages/deployments/{pages_deployment_id}/cancel"
-    ],
-    checkAutomatedSecurityFixes: [
-      "GET /repos/{owner}/{repo}/automated-security-fixes"
-    ],
-    checkCollaborator: ["GET /repos/{owner}/{repo}/collaborators/{username}"],
-    checkImmutableReleases: ["GET /repos/{owner}/{repo}/immutable-releases"],
-    checkPrivateVulnerabilityReporting: [
-      "GET /repos/{owner}/{repo}/private-vulnerability-reporting"
-    ],
-    checkVulnerabilityAlerts: [
-      "GET /repos/{owner}/{repo}/vulnerability-alerts"
-    ],
-    codeownersErrors: ["GET /repos/{owner}/{repo}/codeowners/errors"],
-    compareCommits: ["GET /repos/{owner}/{repo}/compare/{base}...{head}"],
-    compareCommitsWithBasehead: [
-      "GET /repos/{owner}/{repo}/compare/{basehead}"
-    ],
-    createAttestation: ["POST /repos/{owner}/{repo}/attestations"],
-    createAutolink: ["POST /repos/{owner}/{repo}/autolinks"],
-    createCommitComment: [
-      "POST /repos/{owner}/{repo}/commits/{commit_sha}/comments"
-    ],
-    createCommitSignatureProtection: [
-      "POST /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures"
-    ],
-    createCommitStatus: ["POST /repos/{owner}/{repo}/statuses/{sha}"],
-    createDeployKey: ["POST /repos/{owner}/{repo}/keys"],
-    createDeployment: ["POST /repos/{owner}/{repo}/deployments"],
-    createDeploymentBranchPolicy: [
-      "POST /repos/{owner}/{repo}/environments/{environment_name}/deployment-branch-policies"
-    ],
-    createDeploymentProtectionRule: [
-      "POST /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules"
-    ],
-    createDeploymentStatus: [
-      "POST /repos/{owner}/{repo}/deployments/{deployment_id}/statuses"
-    ],
-    createDispatchEvent: ["POST /repos/{owner}/{repo}/dispatches"],
-    createForAuthenticatedUser: ["POST /user/repos"],
-    createFork: ["POST /repos/{owner}/{repo}/forks"],
-    createInOrg: ["POST /orgs/{org}/repos"],
-    createOrUpdateEnvironment: [
-      "PUT /repos/{owner}/{repo}/environments/{environment_name}"
-    ],
-    createOrUpdateFileContents: ["PUT /repos/{owner}/{repo}/contents/{path}"],
-    createOrgRuleset: ["POST /orgs/{org}/rulesets"],
-    createPagesDeployment: ["POST /repos/{owner}/{repo}/pages/deployments"],
-    createPagesSite: ["POST /repos/{owner}/{repo}/pages"],
-    createRelease: ["POST /repos/{owner}/{repo}/releases"],
-    createRepoRuleset: ["POST /repos/{owner}/{repo}/rulesets"],
-    createUsingTemplate: [
-      "POST /repos/{template_owner}/{template_repo}/generate"
-    ],
-    createWebhook: ["POST /repos/{owner}/{repo}/hooks"],
-    customPropertiesForReposCreateOrUpdateRepositoryValues: [
-      "PATCH /repos/{owner}/{repo}/properties/values"
-    ],
-    customPropertiesForReposGetRepositoryValues: [
-      "GET /repos/{owner}/{repo}/properties/values"
-    ],
-    declineInvitation: [
-      "DELETE /user/repository_invitations/{invitation_id}",
-      {},
-      { renamed: ["repos", "declineInvitationForAuthenticatedUser"] }
-    ],
-    declineInvitationForAuthenticatedUser: [
-      "DELETE /user/repository_invitations/{invitation_id}"
-    ],
-    delete: ["DELETE /repos/{owner}/{repo}"],
-    deleteAccessRestrictions: [
-      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/restrictions"
-    ],
-    deleteAdminBranchProtection: [
-      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/enforce_admins"
-    ],
-    deleteAnEnvironment: [
-      "DELETE /repos/{owner}/{repo}/environments/{environment_name}"
-    ],
-    deleteAutolink: ["DELETE /repos/{owner}/{repo}/autolinks/{autolink_id}"],
-    deleteBranchProtection: [
-      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection"
-    ],
-    deleteCommitComment: ["DELETE /repos/{owner}/{repo}/comments/{comment_id}"],
-    deleteCommitSignatureProtection: [
-      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures"
-    ],
-    deleteDeployKey: ["DELETE /repos/{owner}/{repo}/keys/{key_id}"],
-    deleteDeployment: [
-      "DELETE /repos/{owner}/{repo}/deployments/{deployment_id}"
-    ],
-    deleteDeploymentBranchPolicy: [
-      "DELETE /repos/{owner}/{repo}/environments/{environment_name}/deployment-branch-policies/{branch_policy_id}"
-    ],
-    deleteFile: ["DELETE /repos/{owner}/{repo}/contents/{path}"],
-    deleteInvitation: [
-      "DELETE /repos/{owner}/{repo}/invitations/{invitation_id}"
-    ],
-    deleteOrgRuleset: ["DELETE /orgs/{org}/rulesets/{ruleset_id}"],
-    deletePagesSite: ["DELETE /repos/{owner}/{repo}/pages"],
-    deletePullRequestReviewProtection: [
-      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/required_pull_request_reviews"
-    ],
-    deleteRelease: ["DELETE /repos/{owner}/{repo}/releases/{release_id}"],
-    deleteReleaseAsset: [
-      "DELETE /repos/{owner}/{repo}/releases/assets/{asset_id}"
-    ],
-    deleteRepoRuleset: ["DELETE /repos/{owner}/{repo}/rulesets/{ruleset_id}"],
-    deleteWebhook: ["DELETE /repos/{owner}/{repo}/hooks/{hook_id}"],
-    disableAutomatedSecurityFixes: [
-      "DELETE /repos/{owner}/{repo}/automated-security-fixes"
-    ],
-    disableDeploymentProtectionRule: [
-      "DELETE /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules/{protection_rule_id}"
-    ],
-    disableImmutableReleases: [
-      "DELETE /repos/{owner}/{repo}/immutable-releases"
-    ],
-    disablePrivateVulnerabilityReporting: [
-      "DELETE /repos/{owner}/{repo}/private-vulnerability-reporting"
-    ],
-    disableVulnerabilityAlerts: [
-      "DELETE /repos/{owner}/{repo}/vulnerability-alerts"
-    ],
-    downloadArchive: [
-      "GET /repos/{owner}/{repo}/zipball/{ref}",
-      {},
-      { renamed: ["repos", "downloadZipballArchive"] }
-    ],
-    downloadTarballArchive: ["GET /repos/{owner}/{repo}/tarball/{ref}"],
-    downloadZipballArchive: ["GET /repos/{owner}/{repo}/zipball/{ref}"],
-    enableAutomatedSecurityFixes: [
-      "PUT /repos/{owner}/{repo}/automated-security-fixes"
-    ],
-    enableImmutableReleases: ["PUT /repos/{owner}/{repo}/immutable-releases"],
-    enablePrivateVulnerabilityReporting: [
-      "PUT /repos/{owner}/{repo}/private-vulnerability-reporting"
-    ],
-    enableVulnerabilityAlerts: [
-      "PUT /repos/{owner}/{repo}/vulnerability-alerts"
-    ],
-    generateReleaseNotes: [
-      "POST /repos/{owner}/{repo}/releases/generate-notes"
-    ],
-    get: ["GET /repos/{owner}/{repo}"],
-    getAccessRestrictions: [
-      "GET /repos/{owner}/{repo}/branches/{branch}/protection/restrictions"
-    ],
-    getAdminBranchProtection: [
-      "GET /repos/{owner}/{repo}/branches/{branch}/protection/enforce_admins"
-    ],
-    getAllDeploymentProtectionRules: [
-      "GET /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules"
-    ],
-    getAllEnvironments: ["GET /repos/{owner}/{repo}/environments"],
-    getAllStatusCheckContexts: [
-      "GET /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks/contexts"
-    ],
-    getAllTopics: ["GET /repos/{owner}/{repo}/topics"],
-    getAppsWithAccessToProtectedBranch: [
-      "GET /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/apps"
-    ],
-    getAutolink: ["GET /repos/{owner}/{repo}/autolinks/{autolink_id}"],
-    getBranch: ["GET /repos/{owner}/{repo}/branches/{branch}"],
-    getBranchProtection: [
-      "GET /repos/{owner}/{repo}/branches/{branch}/protection"
-    ],
-    getBranchRules: ["GET /repos/{owner}/{repo}/rules/branches/{branch}"],
-    getClones: ["GET /repos/{owner}/{repo}/traffic/clones"],
-    getCodeFrequencyStats: ["GET /repos/{owner}/{repo}/stats/code_frequency"],
-    getCollaboratorPermissionLevel: [
-      "GET /repos/{owner}/{repo}/collaborators/{username}/permission"
-    ],
-    getCombinedStatusForRef: ["GET /repos/{owner}/{repo}/commits/{ref}/status"],
-    getCommit: ["GET /repos/{owner}/{repo}/commits/{ref}"],
-    getCommitActivityStats: ["GET /repos/{owner}/{repo}/stats/commit_activity"],
-    getCommitComment: ["GET /repos/{owner}/{repo}/comments/{comment_id}"],
-    getCommitSignatureProtection: [
-      "GET /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures"
-    ],
-    getCommunityProfileMetrics: ["GET /repos/{owner}/{repo}/community/profile"],
-    getContent: ["GET /repos/{owner}/{repo}/contents/{path}"],
-    getContributorsStats: ["GET /repos/{owner}/{repo}/stats/contributors"],
-    getCustomDeploymentProtectionRule: [
-      "GET /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules/{protection_rule_id}"
-    ],
-    getDeployKey: ["GET /repos/{owner}/{repo}/keys/{key_id}"],
-    getDeployment: ["GET /repos/{owner}/{repo}/deployments/{deployment_id}"],
-    getDeploymentBranchPolicy: [
-      "GET /repos/{owner}/{repo}/environments/{environment_name}/deployment-branch-policies/{branch_policy_id}"
-    ],
-    getDeploymentStatus: [
-      "GET /repos/{owner}/{repo}/deployments/{deployment_id}/statuses/{status_id}"
-    ],
-    getEnvironment: [
-      "GET /repos/{owner}/{repo}/environments/{environment_name}"
-    ],
-    getLatestPagesBuild: ["GET /repos/{owner}/{repo}/pages/builds/latest"],
-    getLatestRelease: ["GET /repos/{owner}/{repo}/releases/latest"],
-    getOrgRuleSuite: ["GET /orgs/{org}/rulesets/rule-suites/{rule_suite_id}"],
-    getOrgRuleSuites: ["GET /orgs/{org}/rulesets/rule-suites"],
-    getOrgRuleset: ["GET /orgs/{org}/rulesets/{ruleset_id}"],
-    getOrgRulesets: ["GET /orgs/{org}/rulesets"],
-    getPages: ["GET /repos/{owner}/{repo}/pages"],
-    getPagesBuild: ["GET /repos/{owner}/{repo}/pages/builds/{build_id}"],
-    getPagesDeployment: [
-      "GET /repos/{owner}/{repo}/pages/deployments/{pages_deployment_id}"
-    ],
-    getPagesHealthCheck: ["GET /repos/{owner}/{repo}/pages/health"],
-    getParticipationStats: ["GET /repos/{owner}/{repo}/stats/participation"],
-    getPullRequestReviewProtection: [
-      "GET /repos/{owner}/{repo}/branches/{branch}/protection/required_pull_request_reviews"
-    ],
-    getPunchCardStats: ["GET /repos/{owner}/{repo}/stats/punch_card"],
-    getReadme: ["GET /repos/{owner}/{repo}/readme"],
-    getReadmeInDirectory: ["GET /repos/{owner}/{repo}/readme/{dir}"],
-    getRelease: ["GET /repos/{owner}/{repo}/releases/{release_id}"],
-    getReleaseAsset: ["GET /repos/{owner}/{repo}/releases/assets/{asset_id}"],
-    getReleaseByTag: ["GET /repos/{owner}/{repo}/releases/tags/{tag}"],
-    getRepoRuleSuite: [
-      "GET /repos/{owner}/{repo}/rulesets/rule-suites/{rule_suite_id}"
-    ],
-    getRepoRuleSuites: ["GET /repos/{owner}/{repo}/rulesets/rule-suites"],
-    getRepoRuleset: ["GET /repos/{owner}/{repo}/rulesets/{ruleset_id}"],
-    getRepoRulesetHistory: [
-      "GET /repos/{owner}/{repo}/rulesets/{ruleset_id}/history"
-    ],
-    getRepoRulesetVersion: [
-      "GET /repos/{owner}/{repo}/rulesets/{ruleset_id}/history/{version_id}"
-    ],
-    getRepoRulesets: ["GET /repos/{owner}/{repo}/rulesets"],
-    getStatusChecksProtection: [
-      "GET /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks"
-    ],
-    getTeamsWithAccessToProtectedBranch: [
-      "GET /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/teams"
-    ],
-    getTopPaths: ["GET /repos/{owner}/{repo}/traffic/popular/paths"],
-    getTopReferrers: ["GET /repos/{owner}/{repo}/traffic/popular/referrers"],
-    getUsersWithAccessToProtectedBranch: [
-      "GET /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/users"
-    ],
-    getViews: ["GET /repos/{owner}/{repo}/traffic/views"],
-    getWebhook: ["GET /repos/{owner}/{repo}/hooks/{hook_id}"],
-    getWebhookConfigForRepo: [
-      "GET /repos/{owner}/{repo}/hooks/{hook_id}/config"
-    ],
-    getWebhookDelivery: [
-      "GET /repos/{owner}/{repo}/hooks/{hook_id}/deliveries/{delivery_id}"
-    ],
-    listActivities: ["GET /repos/{owner}/{repo}/activity"],
-    listAttestations: [
-      "GET /repos/{owner}/{repo}/attestations/{subject_digest}"
-    ],
-    listAutolinks: ["GET /repos/{owner}/{repo}/autolinks"],
-    listBranches: ["GET /repos/{owner}/{repo}/branches"],
-    listBranchesForHeadCommit: [
-      "GET /repos/{owner}/{repo}/commits/{commit_sha}/branches-where-head"
-    ],
-    listCollaborators: ["GET /repos/{owner}/{repo}/collaborators"],
-    listCommentsForCommit: [
-      "GET /repos/{owner}/{repo}/commits/{commit_sha}/comments"
-    ],
-    listCommitCommentsForRepo: ["GET /repos/{owner}/{repo}/comments"],
-    listCommitStatusesForRef: [
-      "GET /repos/{owner}/{repo}/commits/{ref}/statuses"
-    ],
-    listCommits: ["GET /repos/{owner}/{repo}/commits"],
-    listContributors: ["GET /repos/{owner}/{repo}/contributors"],
-    listCustomDeploymentRuleIntegrations: [
-      "GET /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules/apps"
-    ],
-    listDeployKeys: ["GET /repos/{owner}/{repo}/keys"],
-    listDeploymentBranchPolicies: [
-      "GET /repos/{owner}/{repo}/environments/{environment_name}/deployment-branch-policies"
-    ],
-    listDeploymentStatuses: [
-      "GET /repos/{owner}/{repo}/deployments/{deployment_id}/statuses"
-    ],
-    listDeployments: ["GET /repos/{owner}/{repo}/deployments"],
-    listForAuthenticatedUser: ["GET /user/repos"],
-    listForOrg: ["GET /orgs/{org}/repos"],
-    listForUser: ["GET /users/{username}/repos"],
-    listForks: ["GET /repos/{owner}/{repo}/forks"],
-    listInvitations: ["GET /repos/{owner}/{repo}/invitations"],
-    listInvitationsForAuthenticatedUser: ["GET /user/repository_invitations"],
-    listLanguages: ["GET /repos/{owner}/{repo}/languages"],
-    listPagesBuilds: ["GET /repos/{owner}/{repo}/pages/builds"],
-    listPublic: ["GET /repositories"],
-    listPullRequestsAssociatedWithCommit: [
-      "GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls"
-    ],
-    listReleaseAssets: [
-      "GET /repos/{owner}/{repo}/releases/{release_id}/assets"
-    ],
-    listReleases: ["GET /repos/{owner}/{repo}/releases"],
-    listTags: ["GET /repos/{owner}/{repo}/tags"],
-    listTeams: ["GET /repos/{owner}/{repo}/teams"],
-    listWebhookDeliveries: [
-      "GET /repos/{owner}/{repo}/hooks/{hook_id}/deliveries"
-    ],
-    listWebhooks: ["GET /repos/{owner}/{repo}/hooks"],
-    merge: ["POST /repos/{owner}/{repo}/merges"],
-    mergeUpstream: ["POST /repos/{owner}/{repo}/merge-upstream"],
-    pingWebhook: ["POST /repos/{owner}/{repo}/hooks/{hook_id}/pings"],
-    redeliverWebhookDelivery: [
-      "POST /repos/{owner}/{repo}/hooks/{hook_id}/deliveries/{delivery_id}/attempts"
-    ],
-    removeAppAccessRestrictions: [
-      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/apps",
-      {},
-      { mapToData: "apps" }
-    ],
-    removeCollaborator: [
-      "DELETE /repos/{owner}/{repo}/collaborators/{username}"
-    ],
-    removeStatusCheckContexts: [
-      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks/contexts",
-      {},
-      { mapToData: "contexts" }
-    ],
-    removeStatusCheckProtection: [
-      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks"
-    ],
-    removeTeamAccessRestrictions: [
-      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/teams",
-      {},
-      { mapToData: "teams" }
-    ],
-    removeUserAccessRestrictions: [
-      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/users",
-      {},
-      { mapToData: "users" }
-    ],
-    renameBranch: ["POST /repos/{owner}/{repo}/branches/{branch}/rename"],
-    replaceAllTopics: ["PUT /repos/{owner}/{repo}/topics"],
-    requestPagesBuild: ["POST /repos/{owner}/{repo}/pages/builds"],
-    setAdminBranchProtection: [
-      "POST /repos/{owner}/{repo}/branches/{branch}/protection/enforce_admins"
-    ],
-    setAppAccessRestrictions: [
-      "PUT /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/apps",
-      {},
-      { mapToData: "apps" }
-    ],
-    setStatusCheckContexts: [
-      "PUT /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks/contexts",
-      {},
-      { mapToData: "contexts" }
-    ],
-    setTeamAccessRestrictions: [
-      "PUT /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/teams",
-      {},
-      { mapToData: "teams" }
-    ],
-    setUserAccessRestrictions: [
-      "PUT /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/users",
-      {},
-      { mapToData: "users" }
-    ],
-    testPushWebhook: ["POST /repos/{owner}/{repo}/hooks/{hook_id}/tests"],
-    transfer: ["POST /repos/{owner}/{repo}/transfer"],
-    update: ["PATCH /repos/{owner}/{repo}"],
-    updateBranchProtection: [
-      "PUT /repos/{owner}/{repo}/branches/{branch}/protection"
-    ],
-    updateCommitComment: ["PATCH /repos/{owner}/{repo}/comments/{comment_id}"],
-    updateDeploymentBranchPolicy: [
-      "PUT /repos/{owner}/{repo}/environments/{environment_name}/deployment-branch-policies/{branch_policy_id}"
-    ],
-    updateInformationAboutPagesSite: ["PUT /repos/{owner}/{repo}/pages"],
-    updateInvitation: [
-      "PATCH /repos/{owner}/{repo}/invitations/{invitation_id}"
-    ],
-    updateOrgRuleset: ["PUT /orgs/{org}/rulesets/{ruleset_id}"],
-    updatePullRequestReviewProtection: [
-      "PATCH /repos/{owner}/{repo}/branches/{branch}/protection/required_pull_request_reviews"
-    ],
-    updateRelease: ["PATCH /repos/{owner}/{repo}/releases/{release_id}"],
-    updateReleaseAsset: [
-      "PATCH /repos/{owner}/{repo}/releases/assets/{asset_id}"
-    ],
-    updateRepoRuleset: ["PUT /repos/{owner}/{repo}/rulesets/{ruleset_id}"],
-    updateStatusCheckPotection: [
-      "PATCH /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks",
-      {},
-      { renamed: ["repos", "updateStatusCheckProtection"] }
-    ],
-    updateStatusCheckProtection: [
-      "PATCH /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks"
-    ],
-    updateWebhook: ["PATCH /repos/{owner}/{repo}/hooks/{hook_id}"],
-    updateWebhookConfigForRepo: [
-      "PATCH /repos/{owner}/{repo}/hooks/{hook_id}/config"
-    ],
-    uploadReleaseAsset: [
-      "POST /repos/{owner}/{repo}/releases/{release_id}/assets{?name,label}",
-      { baseUrl: "https://uploads.github.com" }
-    ]
-  },
-  search: {
-    code: ["GET /search/code"],
-    commits: ["GET /search/commits"],
-    issuesAndPullRequests: ["GET /search/issues"],
-    labels: ["GET /search/labels"],
-    repos: ["GET /search/repositories"],
-    topics: ["GET /search/topics"],
-    users: ["GET /search/users"]
-  },
-  secretScanning: {
-    createPushProtectionBypass: [
-      "POST /repos/{owner}/{repo}/secret-scanning/push-protection-bypasses"
-    ],
-    getAlert: [
-      "GET /repos/{owner}/{repo}/secret-scanning/alerts/{alert_number}"
-    ],
-    getScanHistory: ["GET /repos/{owner}/{repo}/secret-scanning/scan-history"],
-    listAlertsForOrg: ["GET /orgs/{org}/secret-scanning/alerts"],
-    listAlertsForRepo: ["GET /repos/{owner}/{repo}/secret-scanning/alerts"],
-    listLocationsForAlert: [
-      "GET /repos/{owner}/{repo}/secret-scanning/alerts/{alert_number}/locations"
-    ],
-    listOrgPatternConfigs: [
-      "GET /orgs/{org}/secret-scanning/pattern-configurations"
-    ],
-    updateAlert: [
-      "PATCH /repos/{owner}/{repo}/secret-scanning/alerts/{alert_number}"
-    ],
-    updateOrgPatternConfigs: [
-      "PATCH /orgs/{org}/secret-scanning/pattern-configurations"
-    ]
-  },
-  securityAdvisories: {
-    createFork: [
-      "POST /repos/{owner}/{repo}/security-advisories/{ghsa_id}/forks"
-    ],
-    createPrivateVulnerabilityReport: [
-      "POST /repos/{owner}/{repo}/security-advisories/reports"
-    ],
-    createRepositoryAdvisory: [
-      "POST /repos/{owner}/{repo}/security-advisories"
-    ],
-    createRepositoryAdvisoryCveRequest: [
-      "POST /repos/{owner}/{repo}/security-advisories/{ghsa_id}/cve"
-    ],
-    getGlobalAdvisory: ["GET /advisories/{ghsa_id}"],
-    getRepositoryAdvisory: [
-      "GET /repos/{owner}/{repo}/security-advisories/{ghsa_id}"
-    ],
-    listGlobalAdvisories: ["GET /advisories"],
-    listOrgRepositoryAdvisories: ["GET /orgs/{org}/security-advisories"],
-    listRepositoryAdvisories: ["GET /repos/{owner}/{repo}/security-advisories"],
-    updateRepositoryAdvisory: [
-      "PATCH /repos/{owner}/{repo}/security-advisories/{ghsa_id}"
-    ]
-  },
-  teams: {
-    addOrUpdateMembershipForUserInOrg: [
-      "PUT /orgs/{org}/teams/{team_slug}/memberships/{username}"
-    ],
-    addOrUpdateRepoPermissionsInOrg: [
-      "PUT /orgs/{org}/teams/{team_slug}/repos/{owner}/{repo}"
-    ],
-    checkPermissionsForRepoInOrg: [
-      "GET /orgs/{org}/teams/{team_slug}/repos/{owner}/{repo}"
-    ],
-    create: ["POST /orgs/{org}/teams"],
-    createDiscussionCommentInOrg: [
-      "POST /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments"
-    ],
-    createDiscussionInOrg: ["POST /orgs/{org}/teams/{team_slug}/discussions"],
-    deleteDiscussionCommentInOrg: [
-      "DELETE /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}"
-    ],
-    deleteDiscussionInOrg: [
-      "DELETE /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}"
-    ],
-    deleteInOrg: ["DELETE /orgs/{org}/teams/{team_slug}"],
-    getByName: ["GET /orgs/{org}/teams/{team_slug}"],
-    getDiscussionCommentInOrg: [
-      "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}"
-    ],
-    getDiscussionInOrg: [
-      "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}"
-    ],
-    getMembershipForUserInOrg: [
-      "GET /orgs/{org}/teams/{team_slug}/memberships/{username}"
-    ],
-    list: ["GET /orgs/{org}/teams"],
-    listChildInOrg: ["GET /orgs/{org}/teams/{team_slug}/teams"],
-    listDiscussionCommentsInOrg: [
-      "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments"
-    ],
-    listDiscussionsInOrg: ["GET /orgs/{org}/teams/{team_slug}/discussions"],
-    listForAuthenticatedUser: ["GET /user/teams"],
-    listMembersInOrg: ["GET /orgs/{org}/teams/{team_slug}/members"],
-    listPendingInvitationsInOrg: [
-      "GET /orgs/{org}/teams/{team_slug}/invitations"
-    ],
-    listReposInOrg: ["GET /orgs/{org}/teams/{team_slug}/repos"],
-    removeMembershipForUserInOrg: [
-      "DELETE /orgs/{org}/teams/{team_slug}/memberships/{username}"
-    ],
-    removeRepoInOrg: [
-      "DELETE /orgs/{org}/teams/{team_slug}/repos/{owner}/{repo}"
-    ],
-    updateDiscussionCommentInOrg: [
-      "PATCH /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}"
-    ],
-    updateDiscussionInOrg: [
-      "PATCH /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}"
-    ],
-    updateInOrg: ["PATCH /orgs/{org}/teams/{team_slug}"]
-  },
-  users: {
-    addEmailForAuthenticated: [
-      "POST /user/emails",
-      {},
-      { renamed: ["users", "addEmailForAuthenticatedUser"] }
-    ],
-    addEmailForAuthenticatedUser: ["POST /user/emails"],
-    addSocialAccountForAuthenticatedUser: ["POST /user/social_accounts"],
-    block: ["PUT /user/blocks/{username}"],
-    checkBlocked: ["GET /user/blocks/{username}"],
-    checkFollowingForUser: ["GET /users/{username}/following/{target_user}"],
-    checkPersonIsFollowedByAuthenticated: ["GET /user/following/{username}"],
-    createGpgKeyForAuthenticated: [
-      "POST /user/gpg_keys",
-      {},
-      { renamed: ["users", "createGpgKeyForAuthenticatedUser"] }
-    ],
-    createGpgKeyForAuthenticatedUser: ["POST /user/gpg_keys"],
-    createPublicSshKeyForAuthenticated: [
-      "POST /user/keys",
-      {},
-      { renamed: ["users", "createPublicSshKeyForAuthenticatedUser"] }
-    ],
-    createPublicSshKeyForAuthenticatedUser: ["POST /user/keys"],
-    createSshSigningKeyForAuthenticatedUser: ["POST /user/ssh_signing_keys"],
-    deleteAttestationsBulk: [
-      "POST /users/{username}/attestations/delete-request"
-    ],
-    deleteAttestationsById: [
-      "DELETE /users/{username}/attestations/{attestation_id}"
-    ],
-    deleteAttestationsBySubjectDigest: [
-      "DELETE /users/{username}/attestations/digest/{subject_digest}"
-    ],
-    deleteEmailForAuthenticated: [
-      "DELETE /user/emails",
-      {},
-      { renamed: ["users", "deleteEmailForAuthenticatedUser"] }
-    ],
-    deleteEmailForAuthenticatedUser: ["DELETE /user/emails"],
-    deleteGpgKeyForAuthenticated: [
-      "DELETE /user/gpg_keys/{gpg_key_id}",
-      {},
-      { renamed: ["users", "deleteGpgKeyForAuthenticatedUser"] }
-    ],
-    deleteGpgKeyForAuthenticatedUser: ["DELETE /user/gpg_keys/{gpg_key_id}"],
-    deletePublicSshKeyForAuthenticated: [
-      "DELETE /user/keys/{key_id}",
-      {},
-      { renamed: ["users", "deletePublicSshKeyForAuthenticatedUser"] }
-    ],
-    deletePublicSshKeyForAuthenticatedUser: ["DELETE /user/keys/{key_id}"],
-    deleteSocialAccountForAuthenticatedUser: ["DELETE /user/social_accounts"],
-    deleteSshSigningKeyForAuthenticatedUser: [
-      "DELETE /user/ssh_signing_keys/{ssh_signing_key_id}"
-    ],
-    follow: ["PUT /user/following/{username}"],
-    getAuthenticated: ["GET /user"],
-    getById: ["GET /user/{account_id}"],
-    getByUsername: ["GET /users/{username}"],
-    getContextForUser: ["GET /users/{username}/hovercard"],
-    getGpgKeyForAuthenticated: [
-      "GET /user/gpg_keys/{gpg_key_id}",
-      {},
-      { renamed: ["users", "getGpgKeyForAuthenticatedUser"] }
-    ],
-    getGpgKeyForAuthenticatedUser: ["GET /user/gpg_keys/{gpg_key_id}"],
-    getPublicSshKeyForAuthenticated: [
-      "GET /user/keys/{key_id}",
-      {},
-      { renamed: ["users", "getPublicSshKeyForAuthenticatedUser"] }
-    ],
-    getPublicSshKeyForAuthenticatedUser: ["GET /user/keys/{key_id}"],
-    getSshSigningKeyForAuthenticatedUser: [
-      "GET /user/ssh_signing_keys/{ssh_signing_key_id}"
-    ],
-    list: ["GET /users"],
-    listAttestations: ["GET /users/{username}/attestations/{subject_digest}"],
-    listAttestationsBulk: [
-      "POST /users/{username}/attestations/bulk-list{?per_page,before,after}"
-    ],
-    listBlockedByAuthenticated: [
-      "GET /user/blocks",
-      {},
-      { renamed: ["users", "listBlockedByAuthenticatedUser"] }
-    ],
-    listBlockedByAuthenticatedUser: ["GET /user/blocks"],
-    listEmailsForAuthenticated: [
-      "GET /user/emails",
-      {},
-      { renamed: ["users", "listEmailsForAuthenticatedUser"] }
-    ],
-    listEmailsForAuthenticatedUser: ["GET /user/emails"],
-    listFollowedByAuthenticated: [
-      "GET /user/following",
-      {},
-      { renamed: ["users", "listFollowedByAuthenticatedUser"] }
-    ],
-    listFollowedByAuthenticatedUser: ["GET /user/following"],
-    listFollowersForAuthenticatedUser: ["GET /user/followers"],
-    listFollowersForUser: ["GET /users/{username}/followers"],
-    listFollowingForUser: ["GET /users/{username}/following"],
-    listGpgKeysForAuthenticated: [
-      "GET /user/gpg_keys",
-      {},
-      { renamed: ["users", "listGpgKeysForAuthenticatedUser"] }
-    ],
-    listGpgKeysForAuthenticatedUser: ["GET /user/gpg_keys"],
-    listGpgKeysForUser: ["GET /users/{username}/gpg_keys"],
-    listPublicEmailsForAuthenticated: [
-      "GET /user/public_emails",
-      {},
-      { renamed: ["users", "listPublicEmailsForAuthenticatedUser"] }
-    ],
-    listPublicEmailsForAuthenticatedUser: ["GET /user/public_emails"],
-    listPublicKeysForUser: ["GET /users/{username}/keys"],
-    listPublicSshKeysForAuthenticated: [
-      "GET /user/keys",
-      {},
-      { renamed: ["users", "listPublicSshKeysForAuthenticatedUser"] }
-    ],
-    listPublicSshKeysForAuthenticatedUser: ["GET /user/keys"],
-    listSocialAccountsForAuthenticatedUser: ["GET /user/social_accounts"],
-    listSocialAccountsForUser: ["GET /users/{username}/social_accounts"],
-    listSshSigningKeysForAuthenticatedUser: ["GET /user/ssh_signing_keys"],
-    listSshSigningKeysForUser: ["GET /users/{username}/ssh_signing_keys"],
-    setPrimaryEmailVisibilityForAuthenticated: [
-      "PATCH /user/email/visibility",
-      {},
-      { renamed: ["users", "setPrimaryEmailVisibilityForAuthenticatedUser"] }
-    ],
-    setPrimaryEmailVisibilityForAuthenticatedUser: [
-      "PATCH /user/email/visibility"
-    ],
-    unblock: ["DELETE /user/blocks/{username}"],
-    unfollow: ["DELETE /user/following/{username}"],
-    updateAuthenticated: ["PATCH /user"]
-  }
-};
-var endpoints_default = Endpoints;
-
-// node_modules/@octokit/rest/node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/endpoints-to-methods.js
-var endpointMethodsMap = /* @__PURE__ */ new Map;
-for (const [scope, endpoints] of Object.entries(endpoints_default)) {
-  for (const [methodName, endpoint2] of Object.entries(endpoints)) {
-    const [route, defaults, decorations] = endpoint2;
-    const [method, url] = route.split(/ /);
-    const endpointDefaults = Object.assign({
-      method,
-      url
-    }, defaults);
-    if (!endpointMethodsMap.has(scope)) {
-      endpointMethodsMap.set(scope, /* @__PURE__ */ new Map);
-    }
-    endpointMethodsMap.get(scope).set(methodName, {
-      scope,
-      methodName,
-      endpointDefaults,
-      decorations
-    });
-  }
-}
-var handler = {
-  has({ scope }, methodName) {
-    return endpointMethodsMap.get(scope).has(methodName);
-  },
-  getOwnPropertyDescriptor(target, methodName) {
-    return {
-      value: this.get(target, methodName),
-      configurable: true,
-      writable: true,
-      enumerable: true
-    };
-  },
-  defineProperty(target, methodName, descriptor) {
-    Object.defineProperty(target.cache, methodName, descriptor);
-    return true;
-  },
-  deleteProperty(target, methodName) {
-    delete target.cache[methodName];
-    return true;
-  },
-  ownKeys({ scope }) {
-    return [...endpointMethodsMap.get(scope).keys()];
-  },
-  set(target, methodName, value) {
-    return target.cache[methodName] = value;
-  },
-  get({ octokit, scope, cache }, methodName) {
-    if (cache[methodName]) {
-      return cache[methodName];
-    }
-    const method = endpointMethodsMap.get(scope).get(methodName);
-    if (!method) {
-      return;
-    }
-    const { endpointDefaults, decorations } = method;
-    if (decorations) {
-      cache[methodName] = decorate(octokit, scope, methodName, endpointDefaults, decorations);
-    } else {
-      cache[methodName] = octokit.request.defaults(endpointDefaults);
-    }
-    return cache[methodName];
-  }
-};
-function endpointsToMethods(octokit) {
-  const newMethods = {};
-  for (const scope of endpointMethodsMap.keys()) {
-    newMethods[scope] = new Proxy({ octokit, scope, cache: {} }, handler);
-  }
-  return newMethods;
-}
-function decorate(octokit, scope, methodName, defaults, decorations) {
-  const requestWithDefaults = octokit.request.defaults(defaults);
-  function withDecorations(...args) {
-    let options = requestWithDefaults.endpoint.merge(...args);
-    if (decorations.mapToData) {
-      options = Object.assign({}, options, {
-        data: options[decorations.mapToData],
-        [decorations.mapToData]: undefined
-      });
-      return requestWithDefaults(options);
-    }
-    if (decorations.renamed) {
-      const [newScope, newMethodName] = decorations.renamed;
-      octokit.log.warn(`octokit.${scope}.${methodName}() has been renamed to octokit.${newScope}.${newMethodName}()`);
-    }
-    if (decorations.deprecated) {
-      octokit.log.warn(decorations.deprecated);
-    }
-    if (decorations.renamedParameters) {
-      const options2 = requestWithDefaults.endpoint.merge(...args);
-      for (const [name, alias] of Object.entries(decorations.renamedParameters)) {
-        if (name in options2) {
-          octokit.log.warn(`"${name}" parameter is deprecated for "octokit.${scope}.${methodName}()". Use "${alias}" instead`);
-          if (!(alias in options2)) {
-            options2[alias] = options2[name];
-          }
-          delete options2[name];
-        }
-      }
-      return requestWithDefaults(options2);
-    }
-    return requestWithDefaults(...args);
-  }
-  return Object.assign(withDecorations, requestWithDefaults);
-}
-
-// node_modules/@octokit/rest/node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/index.js
-function restEndpointMethods(octokit) {
-  const api = endpointsToMethods(octokit);
-  return {
-    rest: api
-  };
-}
-restEndpointMethods.VERSION = VERSION7;
-function legacyRestEndpointMethods(octokit) {
-  const api = endpointsToMethods(octokit);
-  return {
-    ...api,
-    rest: api
-  };
-}
-legacyRestEndpointMethods.VERSION = VERSION7;
-
-// node_modules/@octokit/rest/dist-src/version.js
-var VERSION8 = "22.0.1";
-
-// node_modules/@octokit/rest/dist-src/index.js
-var Octokit2 = Octokit.plugin(requestLog, legacyRestEndpointMethods, paginateRest).defaults({
-  userAgent: `octokit-rest.js/${VERSION8}`
-});
-
-// app/github.ts
-class GithubPlatform extends Platform {
-  async fetchRawPatch(params) {
-    const url = `https://patch-diff.githubusercontent.com/raw/${params.owner}/${params.repo}/pull/${params.pullno}.patch`;
-    if (params.token) {
-      const octokit = new Octokit2({ auth: params.token });
-      const res2 = await octokit.request("GET /repos/{owner}/{repo}/pulls/{pull_number}", {
-        owner: params.owner,
-        repo: params.repo,
-        pull_number: params.pullno,
-        headers: {
-          accept: "application/vnd.github.v3.patch"
-        }
-      });
-      if (typeof res2.data !== "string" || !res2.data.trim()) {
-        throw new Error("Error fetching raw patch file from GitHub API.");
-      }
-      return res2.data;
-    }
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error("Error fetching raw patch file.");
-    }
-    const text = await res.text();
-    return text;
-  }
-  async commentInPr(params) {
-    try {
-      if (!params.token) {
-        throw new Error("Missing GitHub token. Provide github_token input or GITHUB_TOKEN env.");
-      }
-      const octokit = new Octokit2({ auth: params.token });
-      await octokit.rest.issues.createComment({
-        owner: params.owner,
-        repo: params.repo,
-        issue_number: params.pullNo,
-        body: params.summary
-      });
-    } catch (error) {
-      throw new Error(error);
-    }
-  }
-  async createReviewComment(params) {
-    try {
-      if (!params.token) {
-        throw new Error("Missing GitHub token. Provide github_token input or GITHUB_TOKEN env.");
-      }
-      const octokit = new Octokit2({ auth: params.token });
-      const hasPosition = typeof params.position === "number";
-      const hasLine = typeof params.line === "number";
-      const hasSide = typeof params.side === "string";
-      if (!hasPosition && !(hasLine && hasSide)) {
-        throw new Error("Review comment requires either position or line+side per GitHub API.");
-      }
-      const location2 = hasPosition ? { position: params.position } : {
-        line: params.line,
-        side: params.side,
-        start_line: params.startLine,
-        start_side: params.startSide
-      };
-      await octokit.rest.pulls.createReviewComment({
-        owner: params.owner,
-        repo: params.repo,
-        pull_number: params.pullNo,
-        body: params.body,
-        commit_id: params.commitId,
-        path: params.path,
-        ...location2
-      });
-    } catch (error) {
-      throw new Error(error);
-    }
-  }
-}
-
-// app/models/provider.ts
-class Provider {
-  async generateSummary(patch) {
-    try {
-      return await this.generateAgenticSummary(patch);
-    } catch (error) {
-      return this.generateSimpleSummary(patch);
-    }
-  }
-  async invokeModel(_prompt) {
-    throw new Error("Method not implemented");
-  }
-  async generateSimpleSummary(patch) {
-    let prompt = this.summaryPrompt(patch);
-    return this.invokeModel(prompt);
-  }
-  async generateAgenticSummary(patch) {
-    let analysisPrompt = this.analysisPrompt(patch);
-    let analysisResponse = await this.invokeModel(analysisPrompt);
-    let analysis = this.parseSummaryAnalysis(analysisResponse);
-    if (!analysis) {
-      return this.generateSimpleSummary(patch);
-    }
-    let finalPrompt = this.finalPrompt(patch, analysis);
-    return this.invokeModel(finalPrompt);
-  }
-  summaryPrompt(patch) {
-    let system = {
-      role: "system",
-      content: `You are an expert software engineer who specializes in reading GitHub pull request patches.
-Your job is to analyze a given patch file and produce a clear, concise, and technically accurate summary.
-You must understand file-level changes, code modifications, additions, deletions, and overall intent.
-`
-    };
-    let user = {
-      role: "human",
-      content: `You are given a GitHub Pull Request patch file.
-
-Your tasks:
-1. Provide an overall high-level summary of what the PR does.
-2. List all modified files with 1–2 line descriptions for each.
-3. Highlight major code changes such as:
-   - added features
-   - removed logic
-   - refactoring
-   - renaming
-   - dependency updates
-   - important bug fixes
-4. If applicable, describe potential risks or breaking changes.
-5. Keep the summary readable and technical.
-
-Here is the patch file:
-
-{${patch}}
-`
-    };
-    return [system, user];
-  }
-  analysisPrompt(patch) {
-    let system = {
-      role: "system",
-      content: `You are a code review analyst. Extract structured notes from a GitHub pull request patch.
-Return only valid JSON, with no markdown and no extra text.`
-    };
-    let user = {
-      role: "human",
-      content: `Analyze the patch and produce JSON with this shape:
-{
-  "overall": "1-2 sentence overview",
-  "files": [
-    { "path": "file path", "summary": "1 sentence change summary" }
-  ],
-  "changes": ["major change 1", "major change 2"],
-  "risks": ["risk or breaking change, or empty if none"]
-}
-
-Patch:
-
-{${patch}}
-`
-    };
-    return [system, user];
-  }
-  finalPrompt(patch, analysis) {
-    let system = {
-      role: "system",
-      content: `You are an expert software engineer who writes concise GitHub pull request summaries.`
-    };
-    let user = {
-      role: "human",
-      content: `You are given a patch and structured analysis.
-Write a clear summary with:
-1) High-level summary (2-3 sentences)
-2) Modified files with 1-2 lines each
-3) Major changes
-4) Risks/breaking changes (if any)
-
-Structured analysis:
-${JSON.stringify(analysis, null, 2)}
-
-Patch:
-{${patch}}
-`
-    };
-    return [system, user];
-  }
-  parseSummaryAnalysis(raw) {
-    let json = this.extractJsonObject(raw);
-    if (!json)
-      return null;
-    try {
-      let parsed = JSON.parse(json);
-      return this.normalizeAnalysis(parsed);
-    } catch (error) {
-      return null;
-    }
-  }
-  extractJsonObject(raw) {
-    let start = raw.indexOf("{");
-    if (start === -1)
-      return null;
-    let depth = 0;
-    let inString = false;
-    let escaped = false;
-    for (let i = start;i < raw.length; i++) {
-      let ch = raw[i];
-      if (ch === "\\" && inString) {
-        escaped = !escaped;
-      } else {
-        if (ch === '"' && !escaped)
-          inString = !inString;
-        escaped = false;
-      }
-      if (inString)
-        continue;
-      if (ch === "{")
-        depth += 1;
-      if (ch === "}")
-        depth -= 1;
-      if (depth === 0) {
-        return raw.slice(start, i + 1);
-      }
-    }
-    return null;
-  }
-  normalizeAnalysis(input) {
-    if (!input || typeof input !== "object")
-      return null;
-    let overall = typeof input.overall === "string" ? input.overall : "";
-    let files = Array.isArray(input.files) ? input.files.map((file) => ({
-      path: typeof file?.path === "string" ? file.path : "",
-      summary: typeof file?.summary === "string" ? file.summary : ""
-    })).filter((file) => file.path && file.summary) : [];
-    let changes = Array.isArray(input.changes) ? input.changes.filter((item) => typeof item === "string") : [];
-    let risks = Array.isArray(input.risks) ? input.risks.filter((item) => typeof item === "string") : [];
-    if (!overall && files.length === 0 && changes.length === 0 && risks.length === 0) {
-      return null;
-    }
-    return { overall, files, changes, risks };
-  }
-}
+var github = __toESM(require_github(), 1);
 
 // node_modules/@langchain/core/dist/_virtual/rolldown_runtime.js
 var __defProp2 = Object.defineProperty;
@@ -45981,7 +41535,7 @@ __export(exports_core2, {
   toJSONSchema: () => toJSONSchema,
   toDotPath: () => toDotPath,
   safeParseAsync: () => safeParseAsync,
-  safeParse: () => safeParse2,
+  safeParse: () => safeParse,
   safeEncodeAsync: () => safeEncodeAsync,
   safeEncode: () => safeEncode,
   safeDecodeAsync: () => safeDecodeAsync,
@@ -45990,7 +41544,7 @@ __export(exports_core2, {
   regexes: () => exports_regexes,
   prettifyError: () => prettifyError,
   parseAsync: () => parseAsync,
-  parse: () => parse2,
+  parse: () => parse,
   meta: () => meta,
   locales: () => exports_locales,
   isValidJWT: () => isValidJWT,
@@ -46337,17 +41891,17 @@ __export(exports_util, {
   pick: () => pick,
   partial: () => partial,
   optionalKeys: () => optionalKeys,
-  omit: () => omit2,
+  omit: () => omit,
   objectClone: () => objectClone,
   numKeys: () => numKeys,
   nullish: () => nullish,
   normalizeParams: () => normalizeParams,
   mergeDefs: () => mergeDefs,
-  merge: () => merge2,
+  merge: () => merge,
   jsonStringifyReplacer: () => jsonStringifyReplacer,
   joinValues: () => joinValues,
   issue: () => issue,
-  isPlainObject: () => isPlainObject3,
+  isPlainObject: () => isPlainObject,
   isObject: () => isObject,
   hexToUint8Array: () => hexToUint8Array,
   getSizableOrigin: () => getSizableOrigin,
@@ -46532,7 +42086,7 @@ var allowsEval = cached(() => {
     return false;
   }
 });
-function isPlainObject3(o) {
+function isPlainObject(o) {
   if (isObject(o) === false)
     return false;
   const ctor = o.constructor;
@@ -46549,7 +42103,7 @@ function isPlainObject3(o) {
   return true;
 }
 function shallowClone(o) {
-  if (isPlainObject3(o))
+  if (isPlainObject(o))
     return { ...o };
   if (Array.isArray(o))
     return [...o];
@@ -46711,7 +42265,7 @@ function pick(schema, mask) {
   });
   return clone(schema, def);
 }
-function omit2(schema, mask) {
+function omit(schema, mask) {
   const currDef = schema._zod.def;
   const def = mergeDefs(schema._zod.def, {
     get shape() {
@@ -46732,7 +42286,7 @@ function omit2(schema, mask) {
   return clone(schema, def);
 }
 function extend(schema, shape) {
-  if (!isPlainObject3(shape)) {
+  if (!isPlainObject(shape)) {
     throw new Error("Invalid input to extend: expected a plain object");
   }
   const checks = schema._zod.def.checks;
@@ -46751,7 +42305,7 @@ function extend(schema, shape) {
   return clone(schema, def);
 }
 function safeExtend(schema, shape) {
-  if (!isPlainObject3(shape)) {
+  if (!isPlainObject(shape)) {
     throw new Error("Invalid input to safeExtend: expected a plain object");
   }
   const def = {
@@ -46765,7 +42319,7 @@ function safeExtend(schema, shape) {
   };
   return clone(schema, def);
 }
-function merge2(a, b) {
+function merge(a, b) {
   const def = mergeDefs(a._zod.def, {
     get shape() {
       const _shape = { ...a._zod.def.shape, ...b._zod.def.shape };
@@ -47103,7 +42657,7 @@ var _parse = (_Err) => (schema, value, _ctx, _params) => {
   }
   return result.value;
 };
-var parse2 = /* @__PURE__ */ _parse($ZodRealError);
+var parse = /* @__PURE__ */ _parse($ZodRealError);
 var _parseAsync = (_Err) => async (schema, value, _ctx, params) => {
   const ctx = _ctx ? Object.assign(_ctx, { async: true }) : { async: true };
   let result = schema._zod.run({ value, issues: [] }, ctx);
@@ -47128,7 +42682,7 @@ var _safeParse = (_Err) => (schema, value, _ctx) => {
     error: new (_Err ?? $ZodError)(result.issues.map((iss) => finalizeIssue(iss, ctx, config())))
   } : { success: true, data: result.value };
 };
-var safeParse2 = /* @__PURE__ */ _safeParse($ZodRealError);
+var safeParse = /* @__PURE__ */ _safeParse($ZodRealError);
 var _safeParseAsync = (_Err) => async (schema, value, _ctx) => {
   const ctx = _ctx ? Object.assign(_ctx, { async: true }) : { async: true };
   let result = schema._zod.run({ value, issues: [] }, ctx);
@@ -48019,7 +43573,7 @@ var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   inst["~standard"] = {
     validate: (value) => {
       try {
-        const r = safeParse2(inst, value);
+        const r = safeParse(inst, value);
         return r.success ? { value: r.data } : { issues: r.error?.issues };
       } catch (_) {
         return safeParseAsync(inst, value).then((r) => r.success ? { value: r.data } : { issues: r.error?.issues });
@@ -48908,7 +44462,7 @@ function mergeValues(a, b) {
   if (a instanceof Date && b instanceof Date && +a === +b) {
     return { valid: true, data: a };
   }
-  if (isPlainObject3(a) && isPlainObject3(b)) {
+  if (isPlainObject(a) && isPlainObject(b)) {
     const bKeys = Object.keys(b);
     const sharedKeys = Object.keys(a).filter((key) => bKeys.indexOf(key) !== -1);
     const newObj = { ...a, ...b };
@@ -49039,7 +44593,7 @@ var $ZodRecord = /* @__PURE__ */ $constructor("$ZodRecord", (inst, def) => {
   $ZodType.init(inst, def);
   inst._zod.parse = (payload, ctx) => {
     const input = payload.value;
-    if (!isPlainObject3(input)) {
+    if (!isPlainObject(input)) {
       payload.issues.push({
         expected: "record",
         code: "invalid_type",
@@ -49638,10 +45192,10 @@ var $ZodFunction = /* @__PURE__ */ $constructor("$ZodFunction", (inst, def) => {
       throw new Error("implement() must be called with a function");
     }
     return function(...args) {
-      const parsedArgs = inst._def.input ? parse2(inst._def.input, args) : args;
+      const parsedArgs = inst._def.input ? parse(inst._def.input, args) : args;
       const result = Reflect.apply(func, this, parsedArgs);
       if (inst._def.output) {
-        return parse2(inst._def.output, result);
+        return parse(inst._def.output, result);
       }
       return result;
     };
@@ -57266,7 +52820,7 @@ async function interopParseAsync(schema, input) {
 function interopSafeParse(schema, input) {
   if (isZodSchemaV4(schema))
     try {
-      const data = parse2(schema, input);
+      const data = parse(schema, input);
       return {
         success: true,
         data
@@ -57283,7 +52837,7 @@ function interopSafeParse(schema, input) {
 }
 function interopParse(schema, input) {
   if (isZodSchemaV4(schema))
-    return parse2(schema, input);
+    return parse(schema, input);
   if (isZodSchemaV3(schema))
     return schema.parse(input);
   throw new Error("Schema must be an instance of z3.ZodType or z4.$ZodType");
@@ -57464,7 +53018,7 @@ function getInteropZodDefaultGetter(schema) {
     }
   if (isZodSchemaV4(schema))
     try {
-      const defaultValue = parse2(schema, undefined);
+      const defaultValue = parse(schema, undefined);
       return () => defaultValue;
     } catch {
       return;
@@ -62966,7 +58520,7 @@ var EMAIL = (input) => {
 var IPV4 = /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
 var IPV6 = /^((([0-9a-f]{1,4}:){7}([0-9a-f]{1,4}|:))|(([0-9a-f]{1,4}:){6}(:[0-9a-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9a-f]{1,4}:){5}(((:[0-9a-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9a-f]{1,4}:){4}(((:[0-9a-f]{1,4}){1,3})|((:[0-9a-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9a-f]{1,4}:){3}(((:[0-9a-f]{1,4}){1,4})|((:[0-9a-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9a-f]{1,4}:){2}(((:[0-9a-f]{1,4}){1,5})|((:[0-9a-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9a-f]{1,4}:){1}(((:[0-9a-f]{1,4}){1,6})|((:[0-9a-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9a-f]{1,4}){1,7})|((:[0-9a-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))$/i;
 var DURATION = (input) => input.length > 1 && input.length < 80 && (/^P\d+([.,]\d+)?W$/.test(input) || /^P[\dYMDTHS]*(\d[.,]\d+)?[YMDHS]$/.test(input) && /^P([.,\d]+Y)?([.,\d]+M)?([.,\d]+D)?(T([.,\d]+H)?([.,\d]+M)?([.,\d]+S)?)?$/.test(input));
-function bind2(r) {
+function bind(r) {
   return r.test.bind(r);
 }
 var format = {
@@ -62975,18 +58529,18 @@ var format = {
   "date-time": date_time,
   duration: DURATION,
   uri,
-  "uri-reference": bind2(URIREF),
-  "uri-template": bind2(URITEMPLATE),
-  url: bind2(URL_),
+  "uri-reference": bind(URIREF),
+  "uri-template": bind(URITEMPLATE),
+  url: bind(URL_),
   email: EMAIL,
-  hostname: bind2(HOSTNAME),
-  ipv4: bind2(IPV4),
-  ipv6: bind2(IPV6),
+  hostname: bind(HOSTNAME),
+  ipv4: bind(IPV4),
+  ipv6: bind(IPV6),
   regex,
-  uuid: bind2(UUID),
-  "json-pointer": bind2(JSON_POINTER),
-  "json-pointer-uri-fragment": bind2(JSON_POINTER_URI_FRAGMENT),
-  "relative-json-pointer": bind2(RELATIVE_JSON_POINTER)
+  uuid: bind(UUID),
+  "json-pointer": bind(JSON_POINTER),
+  "json-pointer-uri-fragment": bind(JSON_POINTER_URI_FRAGMENT),
+  "relative-json-pointer": bind(RELATIVE_JSON_POINTER)
 };
 function isLeapYear(year) {
   return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
@@ -64817,9 +60371,9 @@ function convertToPrettyString(message) {
   const lines = [];
   const title = ` ${message.type.charAt(0).toUpperCase() + message.type.slice(1)} Message `;
   const sepLen = Math.floor((80 - title.length) / 2);
-  const sep2 = "=".repeat(sepLen);
-  const secondSep = title.length % 2 === 0 ? sep2 : `${sep2}=`;
-  lines.push(`${sep2}${title}${secondSep}`);
+  const sep = "=".repeat(sepLen);
+  const secondSep = title.length % 2 === 0 ? sep : `${sep}=`;
+  lines.push(`${sep}${title}${secondSep}`);
   if (message.type === "ai") {
     const aiMessage = message;
     if (aiMessage.tool_calls && aiMessage.tool_calls.length > 0) {
@@ -66552,7 +62106,7 @@ var MAX = import_dist.default.MAX;
 var version2 = import_dist.default.version;
 var validate2 = import_dist.default.validate;
 var stringify = import_dist.default.stringify;
-var parse4 = import_dist.default.parse;
+var parse3 = import_dist.default.parse;
 
 // node_modules/@langchain/core/dist/callbacks/base.js
 var base_exports = {};
@@ -66655,7 +62209,7 @@ var MAX2 = import_dist2.default.MAX;
 var version3 = import_dist2.default.version;
 var validate3 = import_dist2.default.validate;
 var stringify2 = import_dist2.default.stringify;
-var parse5 = import_dist2.default.parse;
+var parse4 = import_dist2.default.parse;
 
 // node_modules/langsmith/dist/experimental/otel/constants.js
 var GEN_AI_OPERATION_NAME = "gen_ai.operation.name";
@@ -69538,7 +65092,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
   }
   async createProject({ projectName, description = null, metadata = null, upsert = false, projectExtra = null, referenceDatasetId = null }) {
     const upsert_ = upsert ? `?upsert=true` : "";
-    const endpoint2 = `${this.apiUrl}/sessions${upsert_}`;
+    const endpoint = `${this.apiUrl}/sessions${upsert_}`;
     const extra = projectExtra || {};
     if (metadata) {
       extra["metadata"] = metadata;
@@ -69553,7 +65107,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
     }
     const serializedBody = JSON.stringify(body);
     const response = await this.caller.call(async () => {
-      const res = await this._fetch(endpoint2, {
+      const res = await this._fetch(endpoint, {
         method: "POST",
         headers: { ...this.headers, "Content-Type": "application/json" },
         signal: AbortSignal.timeout(this.timeout_ms),
@@ -69567,7 +65121,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
     return result;
   }
   async updateProject(projectId, { name = null, description = null, metadata = null, projectExtra = null, endTime = null }) {
-    const endpoint2 = `${this.apiUrl}/sessions/${projectId}`;
+    const endpoint = `${this.apiUrl}/sessions/${projectId}`;
     let extra = projectExtra;
     if (metadata) {
       extra = { ...extra || {}, metadata };
@@ -69579,7 +65133,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
       end_time: endTime ? new Date(endTime).toISOString() : null
     });
     const response = await this.caller.call(async () => {
-      const res = await this._fetch(endpoint2, {
+      const res = await this._fetch(endpoint, {
         method: "PATCH",
         headers: { ...this.headers, "Content-Type": "application/json" },
         signal: AbortSignal.timeout(this.timeout_ms),
@@ -71932,7 +67486,7 @@ class RunTree {
     let tracingEnabled = isTracingEnabled();
     if (callbackManager) {
       const parentRunId = callbackManager?.getParentRunId?.() ?? "";
-      const langChainTracer = callbackManager?.handlers?.find((handler2) => handler2?.name == "langchain_tracer");
+      const langChainTracer = callbackManager?.handlers?.find((handler) => handler?.name == "langchain_tracer");
       parentRun = langChainTracer?.getRun?.(parentRunId);
       projectName = langChainTracer?.projectName;
       client = langChainTracer?.client;
@@ -72879,8 +68433,8 @@ function parseCallbackConfigArg(arg) {
     return arg;
 }
 var BaseCallbackManager = class {
-  setHandler(handler2) {
-    return this.setHandlers([handler2]);
+  setHandler(handler) {
+    return this.setHandlers([handler]);
   }
 };
 var BaseRunManager = class {
@@ -72898,28 +68452,28 @@ var BaseRunManager = class {
     return this._parentRunId;
   }
   async handleText(text) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback(async () => {
+    await Promise.all(this.handlers.map((handler) => consumeCallback(async () => {
       try {
-        await handler2.handleText?.(text, this.runId, this._parentRunId, this.tags);
+        await handler.handleText?.(text, this.runId, this._parentRunId, this.tags);
       } catch (err) {
-        const logFunction = handler2.raiseError ? console.error : console.warn;
-        logFunction(`Error in handler ${handler2.constructor.name}, handleText: ${err}`);
-        if (handler2.raiseError)
+        const logFunction = handler.raiseError ? console.error : console.warn;
+        logFunction(`Error in handler ${handler.constructor.name}, handleText: ${err}`);
+        if (handler.raiseError)
           throw err;
       }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleCustomEvent(eventName, data, _runId, _tags, _metadata) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback(async () => {
+    await Promise.all(this.handlers.map((handler) => consumeCallback(async () => {
       try {
-        await handler2.handleCustomEvent?.(eventName, data, this.runId, this.tags, this.metadata);
+        await handler.handleCustomEvent?.(eventName, data, this.runId, this.tags, this.metadata);
       } catch (err) {
-        const logFunction = handler2.raiseError ? console.error : console.warn;
-        logFunction(`Error in handler ${handler2.constructor.name}, handleCustomEvent: ${err}`);
-        if (handler2.raiseError)
+        const logFunction = handler.raiseError ? console.error : console.warn;
+        logFunction(`Error in handler ${handler.constructor.name}, handleCustomEvent: ${err}`);
+        if (handler.raiseError)
           throw err;
       }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManagerForRetrieverRun = class extends BaseRunManager {
@@ -72933,74 +68487,74 @@ var CallbackManagerForRetrieverRun = class extends BaseRunManager {
     return manager;
   }
   async handleRetrieverEnd(documents) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback(async () => {
-      if (!handler2.ignoreRetriever)
+    await Promise.all(this.handlers.map((handler) => consumeCallback(async () => {
+      if (!handler.ignoreRetriever)
         try {
-          await handler2.handleRetrieverEnd?.(documents, this.runId, this._parentRunId, this.tags);
+          await handler.handleRetrieverEnd?.(documents, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          const logFunction = handler2.raiseError ? console.error : console.warn;
-          logFunction(`Error in handler ${handler2.constructor.name}, handleRetriever`);
-          if (handler2.raiseError)
+          const logFunction = handler.raiseError ? console.error : console.warn;
+          logFunction(`Error in handler ${handler.constructor.name}, handleRetriever`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleRetrieverError(err) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback(async () => {
-      if (!handler2.ignoreRetriever)
+    await Promise.all(this.handlers.map((handler) => consumeCallback(async () => {
+      if (!handler.ignoreRetriever)
         try {
-          await handler2.handleRetrieverError?.(err, this.runId, this._parentRunId, this.tags);
+          await handler.handleRetrieverError?.(err, this.runId, this._parentRunId, this.tags);
         } catch (error46) {
-          const logFunction = handler2.raiseError ? console.error : console.warn;
-          logFunction(`Error in handler ${handler2.constructor.name}, handleRetrieverError: ${error46}`);
-          if (handler2.raiseError)
+          const logFunction = handler.raiseError ? console.error : console.warn;
+          logFunction(`Error in handler ${handler.constructor.name}, handleRetrieverError: ${error46}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManagerForLLMRun = class extends BaseRunManager {
   async handleLLMNewToken(token, idx, _runId, _parentRunId, _tags, fields) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback(async () => {
-      if (!handler2.ignoreLLM)
+    await Promise.all(this.handlers.map((handler) => consumeCallback(async () => {
+      if (!handler.ignoreLLM)
         try {
-          await handler2.handleLLMNewToken?.(token, idx ?? {
+          await handler.handleLLMNewToken?.(token, idx ?? {
             prompt: 0,
             completion: 0
           }, this.runId, this._parentRunId, this.tags, fields);
         } catch (err) {
-          const logFunction = handler2.raiseError ? console.error : console.warn;
-          logFunction(`Error in handler ${handler2.constructor.name}, handleLLMNewToken: ${err}`);
-          if (handler2.raiseError)
+          const logFunction = handler.raiseError ? console.error : console.warn;
+          logFunction(`Error in handler ${handler.constructor.name}, handleLLMNewToken: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleLLMError(err, _runId, _parentRunId, _tags, extraParams) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback(async () => {
-      if (!handler2.ignoreLLM)
+    await Promise.all(this.handlers.map((handler) => consumeCallback(async () => {
+      if (!handler.ignoreLLM)
         try {
-          await handler2.handleLLMError?.(err, this.runId, this._parentRunId, this.tags, extraParams);
+          await handler.handleLLMError?.(err, this.runId, this._parentRunId, this.tags, extraParams);
         } catch (err$1) {
-          const logFunction = handler2.raiseError ? console.error : console.warn;
-          logFunction(`Error in handler ${handler2.constructor.name}, handleLLMError: ${err$1}`);
-          if (handler2.raiseError)
+          const logFunction = handler.raiseError ? console.error : console.warn;
+          logFunction(`Error in handler ${handler.constructor.name}, handleLLMError: ${err$1}`);
+          if (handler.raiseError)
             throw err$1;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleLLMEnd(output, _runId, _parentRunId, _tags, extraParams) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback(async () => {
-      if (!handler2.ignoreLLM)
+    await Promise.all(this.handlers.map((handler) => consumeCallback(async () => {
+      if (!handler.ignoreLLM)
         try {
-          await handler2.handleLLMEnd?.(output, this.runId, this._parentRunId, this.tags, extraParams);
+          await handler.handleLLMEnd?.(output, this.runId, this._parentRunId, this.tags, extraParams);
         } catch (err) {
-          const logFunction = handler2.raiseError ? console.error : console.warn;
-          logFunction(`Error in handler ${handler2.constructor.name}, handleLLMEnd: ${err}`);
-          if (handler2.raiseError)
+          const logFunction = handler.raiseError ? console.error : console.warn;
+          logFunction(`Error in handler ${handler.constructor.name}, handleLLMEnd: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManagerForChainRun = class extends BaseRunManager {
@@ -73014,56 +68568,56 @@ var CallbackManagerForChainRun = class extends BaseRunManager {
     return manager;
   }
   async handleChainError(err, _runId, _parentRunId, _tags, kwargs) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback(async () => {
-      if (!handler2.ignoreChain)
+    await Promise.all(this.handlers.map((handler) => consumeCallback(async () => {
+      if (!handler.ignoreChain)
         try {
-          await handler2.handleChainError?.(err, this.runId, this._parentRunId, this.tags, kwargs);
+          await handler.handleChainError?.(err, this.runId, this._parentRunId, this.tags, kwargs);
         } catch (err$1) {
-          const logFunction = handler2.raiseError ? console.error : console.warn;
-          logFunction(`Error in handler ${handler2.constructor.name}, handleChainError: ${err$1}`);
-          if (handler2.raiseError)
+          const logFunction = handler.raiseError ? console.error : console.warn;
+          logFunction(`Error in handler ${handler.constructor.name}, handleChainError: ${err$1}`);
+          if (handler.raiseError)
             throw err$1;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleChainEnd(output, _runId, _parentRunId, _tags, kwargs) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback(async () => {
-      if (!handler2.ignoreChain)
+    await Promise.all(this.handlers.map((handler) => consumeCallback(async () => {
+      if (!handler.ignoreChain)
         try {
-          await handler2.handleChainEnd?.(output, this.runId, this._parentRunId, this.tags, kwargs);
+          await handler.handleChainEnd?.(output, this.runId, this._parentRunId, this.tags, kwargs);
         } catch (err) {
-          const logFunction = handler2.raiseError ? console.error : console.warn;
-          logFunction(`Error in handler ${handler2.constructor.name}, handleChainEnd: ${err}`);
-          if (handler2.raiseError)
+          const logFunction = handler.raiseError ? console.error : console.warn;
+          logFunction(`Error in handler ${handler.constructor.name}, handleChainEnd: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleAgentAction(action) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleAgentAction?.(action, this.runId, this._parentRunId, this.tags);
+          await handler.handleAgentAction?.(action, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          const logFunction = handler2.raiseError ? console.error : console.warn;
-          logFunction(`Error in handler ${handler2.constructor.name}, handleAgentAction: ${err}`);
-          if (handler2.raiseError)
+          const logFunction = handler.raiseError ? console.error : console.warn;
+          logFunction(`Error in handler ${handler.constructor.name}, handleAgentAction: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleAgentEnd(action) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleAgentEnd?.(action, this.runId, this._parentRunId, this.tags);
+          await handler.handleAgentEnd?.(action, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          const logFunction = handler2.raiseError ? console.error : console.warn;
-          logFunction(`Error in handler ${handler2.constructor.name}, handleAgentEnd: ${err}`);
-          if (handler2.raiseError)
+          const logFunction = handler.raiseError ? console.error : console.warn;
+          logFunction(`Error in handler ${handler.constructor.name}, handleAgentEnd: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManagerForToolRun = class extends BaseRunManager {
@@ -73077,30 +68631,30 @@ var CallbackManagerForToolRun = class extends BaseRunManager {
     return manager;
   }
   async handleToolError(err) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleToolError?.(err, this.runId, this._parentRunId, this.tags);
+          await handler.handleToolError?.(err, this.runId, this._parentRunId, this.tags);
         } catch (err$1) {
-          const logFunction = handler2.raiseError ? console.error : console.warn;
-          logFunction(`Error in handler ${handler2.constructor.name}, handleToolError: ${err$1}`);
-          if (handler2.raiseError)
+          const logFunction = handler.raiseError ? console.error : console.warn;
+          logFunction(`Error in handler ${handler.constructor.name}, handleToolError: ${err$1}`);
+          if (handler.raiseError)
             throw err$1;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleToolEnd(output) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleToolEnd?.(output, this.runId, this._parentRunId, this.tags);
+          await handler.handleToolEnd?.(output, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          const logFunction = handler2.raiseError ? console.error : console.warn;
-          logFunction(`Error in handler ${handler2.constructor.name}, handleToolEnd: ${err}`);
-          if (handler2.raiseError)
+          const logFunction = handler.raiseError ? console.error : console.warn;
+          logFunction(`Error in handler ${handler.constructor.name}, handleToolEnd: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManager = class CallbackManager2 extends BaseCallbackManager {
@@ -73128,21 +68682,21 @@ var CallbackManager = class CallbackManager2 extends BaseCallbackManager {
   async handleLLMStart(llm, prompts, runId = undefined, _parentRunId = undefined, extraParams = undefined, _tags = undefined, _metadata = undefined, runName = undefined) {
     return Promise.all(prompts.map(async (prompt, idx) => {
       const runId_ = idx === 0 && runId ? runId : v4();
-      await Promise.all(this.handlers.map((handler2) => {
-        if (handler2.ignoreLLM)
+      await Promise.all(this.handlers.map((handler) => {
+        if (handler.ignoreLLM)
           return;
-        if (isBaseTracer(handler2))
-          handler2._createRunForLLMStart(llm, [prompt], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+        if (isBaseTracer(handler))
+          handler._createRunForLLMStart(llm, [prompt], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
         return consumeCallback(async () => {
           try {
-            await handler2.handleLLMStart?.(llm, [prompt], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+            await handler.handleLLMStart?.(llm, [prompt], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
           } catch (err) {
-            const logFunction = handler2.raiseError ? console.error : console.warn;
-            logFunction(`Error in handler ${handler2.constructor.name}, handleLLMStart: ${err}`);
-            if (handler2.raiseError)
+            const logFunction = handler.raiseError ? console.error : console.warn;
+            logFunction(`Error in handler ${handler.constructor.name}, handleLLMStart: ${err}`);
+            if (handler.raiseError)
               throw err;
           }
-        }, handler2.awaitHandlers);
+        }, handler.awaitHandlers);
       }));
       return new CallbackManagerForLLMRun(runId_, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
     }));
@@ -73150,114 +68704,114 @@ var CallbackManager = class CallbackManager2 extends BaseCallbackManager {
   async handleChatModelStart(llm, messages, runId = undefined, _parentRunId = undefined, extraParams = undefined, _tags = undefined, _metadata = undefined, runName = undefined) {
     return Promise.all(messages.map(async (messageGroup, idx) => {
       const runId_ = idx === 0 && runId ? runId : v4();
-      await Promise.all(this.handlers.map((handler2) => {
-        if (handler2.ignoreLLM)
+      await Promise.all(this.handlers.map((handler) => {
+        if (handler.ignoreLLM)
           return;
-        if (isBaseTracer(handler2))
-          handler2._createRunForChatModelStart(llm, [messageGroup], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+        if (isBaseTracer(handler))
+          handler._createRunForChatModelStart(llm, [messageGroup], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
         return consumeCallback(async () => {
           try {
-            if (handler2.handleChatModelStart)
-              await handler2.handleChatModelStart?.(llm, [messageGroup], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
-            else if (handler2.handleLLMStart) {
+            if (handler.handleChatModelStart)
+              await handler.handleChatModelStart?.(llm, [messageGroup], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+            else if (handler.handleLLMStart) {
               const messageString = getBufferString(messageGroup);
-              await handler2.handleLLMStart?.(llm, [messageString], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+              await handler.handleLLMStart?.(llm, [messageString], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
             }
           } catch (err) {
-            const logFunction = handler2.raiseError ? console.error : console.warn;
-            logFunction(`Error in handler ${handler2.constructor.name}, handleLLMStart: ${err}`);
-            if (handler2.raiseError)
+            const logFunction = handler.raiseError ? console.error : console.warn;
+            logFunction(`Error in handler ${handler.constructor.name}, handleLLMStart: ${err}`);
+            if (handler.raiseError)
               throw err;
           }
-        }, handler2.awaitHandlers);
+        }, handler.awaitHandlers);
       }));
       return new CallbackManagerForLLMRun(runId_, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
     }));
   }
   async handleChainStart(chain, inputs, runId = v4(), runType = undefined, _tags = undefined, _metadata = undefined, runName = undefined) {
-    await Promise.all(this.handlers.map((handler2) => {
-      if (handler2.ignoreChain)
+    await Promise.all(this.handlers.map((handler) => {
+      if (handler.ignoreChain)
         return;
-      if (isBaseTracer(handler2))
-        handler2._createRunForChainStart(chain, inputs, runId, this._parentRunId, this.tags, this.metadata, runType, runName);
+      if (isBaseTracer(handler))
+        handler._createRunForChainStart(chain, inputs, runId, this._parentRunId, this.tags, this.metadata, runType, runName);
       return consumeCallback(async () => {
         try {
-          await handler2.handleChainStart?.(chain, inputs, runId, this._parentRunId, this.tags, this.metadata, runType, runName);
+          await handler.handleChainStart?.(chain, inputs, runId, this._parentRunId, this.tags, this.metadata, runType, runName);
         } catch (err) {
-          const logFunction = handler2.raiseError ? console.error : console.warn;
-          logFunction(`Error in handler ${handler2.constructor.name}, handleChainStart: ${err}`);
-          if (handler2.raiseError)
+          const logFunction = handler.raiseError ? console.error : console.warn;
+          logFunction(`Error in handler ${handler.constructor.name}, handleChainStart: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-      }, handler2.awaitHandlers);
+      }, handler.awaitHandlers);
     }));
     return new CallbackManagerForChainRun(runId, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
   }
   async handleToolStart(tool, input, runId = v4(), _parentRunId = undefined, _tags = undefined, _metadata = undefined, runName = undefined) {
-    await Promise.all(this.handlers.map((handler2) => {
-      if (handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => {
+      if (handler.ignoreAgent)
         return;
-      if (isBaseTracer(handler2))
-        handler2._createRunForToolStart(tool, input, runId, this._parentRunId, this.tags, this.metadata, runName);
+      if (isBaseTracer(handler))
+        handler._createRunForToolStart(tool, input, runId, this._parentRunId, this.tags, this.metadata, runName);
       return consumeCallback(async () => {
         try {
-          await handler2.handleToolStart?.(tool, input, runId, this._parentRunId, this.tags, this.metadata, runName);
+          await handler.handleToolStart?.(tool, input, runId, this._parentRunId, this.tags, this.metadata, runName);
         } catch (err) {
-          const logFunction = handler2.raiseError ? console.error : console.warn;
-          logFunction(`Error in handler ${handler2.constructor.name}, handleToolStart: ${err}`);
-          if (handler2.raiseError)
+          const logFunction = handler.raiseError ? console.error : console.warn;
+          logFunction(`Error in handler ${handler.constructor.name}, handleToolStart: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-      }, handler2.awaitHandlers);
+      }, handler.awaitHandlers);
     }));
     return new CallbackManagerForToolRun(runId, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
   }
   async handleRetrieverStart(retriever, query, runId = v4(), _parentRunId = undefined, _tags = undefined, _metadata = undefined, runName = undefined) {
-    await Promise.all(this.handlers.map((handler2) => {
-      if (handler2.ignoreRetriever)
+    await Promise.all(this.handlers.map((handler) => {
+      if (handler.ignoreRetriever)
         return;
-      if (isBaseTracer(handler2))
-        handler2._createRunForRetrieverStart(retriever, query, runId, this._parentRunId, this.tags, this.metadata, runName);
+      if (isBaseTracer(handler))
+        handler._createRunForRetrieverStart(retriever, query, runId, this._parentRunId, this.tags, this.metadata, runName);
       return consumeCallback(async () => {
         try {
-          await handler2.handleRetrieverStart?.(retriever, query, runId, this._parentRunId, this.tags, this.metadata, runName);
+          await handler.handleRetrieverStart?.(retriever, query, runId, this._parentRunId, this.tags, this.metadata, runName);
         } catch (err) {
-          const logFunction = handler2.raiseError ? console.error : console.warn;
-          logFunction(`Error in handler ${handler2.constructor.name}, handleRetrieverStart: ${err}`);
-          if (handler2.raiseError)
+          const logFunction = handler.raiseError ? console.error : console.warn;
+          logFunction(`Error in handler ${handler.constructor.name}, handleRetrieverStart: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-      }, handler2.awaitHandlers);
+      }, handler.awaitHandlers);
     }));
     return new CallbackManagerForRetrieverRun(runId, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
   }
   async handleCustomEvent(eventName, data, runId, _tags, _metadata) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback(async () => {
-      if (!handler2.ignoreCustomEvent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback(async () => {
+      if (!handler.ignoreCustomEvent)
         try {
-          await handler2.handleCustomEvent?.(eventName, data, runId, this.tags, this.metadata);
+          await handler.handleCustomEvent?.(eventName, data, runId, this.tags, this.metadata);
         } catch (err) {
-          const logFunction = handler2.raiseError ? console.error : console.warn;
-          logFunction(`Error in handler ${handler2.constructor.name}, handleCustomEvent: ${err}`);
-          if (handler2.raiseError)
+          const logFunction = handler.raiseError ? console.error : console.warn;
+          logFunction(`Error in handler ${handler.constructor.name}, handleCustomEvent: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
-  addHandler(handler2, inherit = true) {
-    this.handlers.push(handler2);
+  addHandler(handler, inherit = true) {
+    this.handlers.push(handler);
     if (inherit)
-      this.inheritableHandlers.push(handler2);
+      this.inheritableHandlers.push(handler);
   }
-  removeHandler(handler2) {
-    this.handlers = this.handlers.filter((_handler) => _handler !== handler2);
-    this.inheritableHandlers = this.inheritableHandlers.filter((_handler) => _handler !== handler2);
+  removeHandler(handler) {
+    this.handlers = this.handlers.filter((_handler) => _handler !== handler);
+    this.inheritableHandlers = this.inheritableHandlers.filter((_handler) => _handler !== handler);
   }
   setHandlers(handlers, inherit = true) {
     this.handlers = [];
     this.inheritableHandlers = [];
-    for (const handler2 of handlers)
-      this.addHandler(handler2, inherit);
+    for (const handler of handlers)
+      this.addHandler(handler, inherit);
   }
   addTags(tags, inherit = true) {
     this.removeTags(tags);
@@ -73288,9 +68842,9 @@ var CallbackManager = class CallbackManager2 extends BaseCallbackManager {
   }
   copy(additionalHandlers = [], inherit = true) {
     const manager = new CallbackManager2(this._parentRunId);
-    for (const handler2 of this.handlers) {
-      const inheritable = this.inheritableHandlers.includes(handler2);
-      manager.addHandler(handler2, inheritable);
+    for (const handler of this.handlers) {
+      const inheritable = this.inheritableHandlers.includes(handler);
+      manager.addHandler(handler, inheritable);
     }
     for (const tag of this.tags) {
       const inheritable = this.inheritableTags.includes(tag);
@@ -73300,10 +68854,10 @@ var CallbackManager = class CallbackManager2 extends BaseCallbackManager {
       const inheritable = Object.keys(this.inheritableMetadata).includes(key);
       manager.addMetadata({ [key]: this.metadata[key] }, inheritable);
     }
-    for (const handler2 of additionalHandlers) {
-      if (manager.handlers.filter((h) => h.name === "console_callback_handler").some((h) => h.name === handler2.name))
+    for (const handler of additionalHandlers) {
+      if (manager.handlers.filter((h) => h.name === "console_callback_handler").some((h) => h.name === handler.name))
         continue;
-      manager.addHandler(handler2, inherit);
+      manager.addHandler(handler, inherit);
     }
     return manager;
   }
@@ -73339,11 +68893,11 @@ var CallbackManager = class CallbackManager2 extends BaseCallbackManager {
     if (verboseEnabled || tracingEnabled) {
       if (!callbackManager)
         callbackManager = new CallbackManager2;
-      if (verboseEnabled && !callbackManager.handlers.some((handler2) => handler2.name === ConsoleCallbackHandler.prototype.name)) {
+      if (verboseEnabled && !callbackManager.handlers.some((handler) => handler.name === ConsoleCallbackHandler.prototype.name)) {
         const consoleHandler = new ConsoleCallbackHandler;
         callbackManager.addHandler(consoleHandler, true);
       }
-      if (tracingEnabled && !callbackManager.handlers.some((handler2) => handler2.name === "langchain_tracer")) {
+      if (tracingEnabled && !callbackManager.handlers.some((handler) => handler.name === "langchain_tracer")) {
         if (tracingV2Enabled) {
           const tracerV2 = new LangChainTracer;
           callbackManager.addHandler(tracerV2, true);
@@ -73353,24 +68907,24 @@ var CallbackManager = class CallbackManager2 extends BaseCallbackManager {
         const implicitRunTree = LangChainTracer.getTraceableRunTree();
         if (implicitRunTree && callbackManager._parentRunId === undefined) {
           callbackManager._parentRunId = implicitRunTree.id;
-          const tracerV2 = callbackManager.handlers.find((handler2) => handler2.name === "langchain_tracer");
+          const tracerV2 = callbackManager.handlers.find((handler) => handler.name === "langchain_tracer");
           tracerV2?.updateFromRunTree(implicitRunTree);
         }
       }
     }
     for (const { contextVar, inheritable = true, handlerClass, envVar } of _getConfigureHooks()) {
       const createIfNotInContext = envVar && getEnvironmentVariable(envVar) === "true" && handlerClass;
-      let handler2;
+      let handler;
       const contextVarValue = contextVar !== undefined ? getContextVariable(contextVar) : undefined;
       if (contextVarValue && isBaseCallbackHandler(contextVarValue))
-        handler2 = contextVarValue;
+        handler = contextVarValue;
       else if (createIfNotInContext)
-        handler2 = new handlerClass({});
-      if (handler2 !== undefined) {
+        handler = new handlerClass({});
+      if (handler !== undefined) {
         if (!callbackManager)
           callbackManager = new CallbackManager2;
-        if (!callbackManager.handlers.some((h) => h.name === handler2.name))
-          callbackManager.addHandler(handler2, inheritable);
+        if (!callbackManager.handlers.some((h) => h.name === handler.name))
+          callbackManager.addHandler(handler, inheritable);
       }
     }
     if (inheritableTags || localTags) {
@@ -73388,10 +68942,10 @@ var CallbackManager = class CallbackManager2 extends BaseCallbackManager {
     return callbackManager;
   }
 };
-function ensureHandler(handler2) {
-  if ("name" in handler2)
-    return handler2;
-  return BaseCallbackHandler.fromMethods(handler2);
+function ensureHandler(handler) {
+  if ("name" in handler)
+    return handler;
+  return BaseCallbackHandler.fromMethods(handler);
 }
 
 // node_modules/@langchain/core/dist/singletons/async_local_storage/index.js
@@ -73421,7 +68975,7 @@ var AsyncLocalStorageProvider2 = class {
     const storage = this.getInstance();
     const previousValue = storage.getStore();
     const parentRunId = callbackManager?.getParentRunId();
-    const langChainTracer = callbackManager?.handlers?.find((handler2) => handler2?.name === "langchain_tracer");
+    const langChainTracer = callbackManager?.handlers?.find((handler) => handler?.name === "langchain_tracer");
     let runTree;
     if (langChainTracer && parentRunId)
       runTree = langChainTracer.getRunTreeWithTracingConfig(parentRunId);
@@ -74388,7 +69942,7 @@ var RunLog = class RunLog2 extends RunLogPatch {
     });
   }
 };
-var isLogStreamHandler = (handler2) => handler2.name === "log_stream_tracer";
+var isLogStreamHandler = (handler) => handler.name === "log_stream_tracer";
 async function _getStandardizedInputs(run, schemaFormat) {
   if (schemaFormat === "original")
     throw new Error("Do not assign inputs with original schema drop the key for now. When inputs are added to streamLog they should be added with standardized schema for streaming events.");
@@ -74654,7 +70208,7 @@ function assignName({ name, serialized }) {
     return serialized.id[serialized.id.length - 1];
   return "Unnamed";
 }
-var isStreamEventsHandler = (handler2) => handler2.name === "event_stream_tracer";
+var isStreamEventsHandler = (handler) => handler.name === "event_stream_tracer";
 var EventStreamCallbackHandler = class extends BaseTracer {
   autoClose = true;
   includeNames;
@@ -75714,9 +71268,9 @@ function* consumeIteratorInContext(context, iter) {
   }
 }
 async function* consumeAsyncIterableInContext(context, iter) {
-  const iterator2 = iter[Symbol.asyncIterator]();
+  const iterator = iter[Symbol.asyncIterator]();
   while (true) {
-    const { value, done } = await AsyncLocalStorageProviderSingleton2.runWithConfig(pickRunnableConfigKeys(context), iterator2.next.bind(iter), true);
+    const { value, done } = await AsyncLocalStorageProviderSingleton2.runWithConfig(pickRunnableConfigKeys(context), iterator.next.bind(iter), true);
     if (done)
       break;
     else
@@ -75900,13 +71454,13 @@ var Runnable = class extends Serializable {
       delete config2.runId;
       runManager = pipe.setup;
       const streamEventsHandler = runManager?.handlers.find(isStreamEventsHandler);
-      let iterator2 = pipe.output;
+      let iterator = pipe.output;
       if (streamEventsHandler !== undefined && runManager !== undefined)
-        iterator2 = streamEventsHandler.tapOutputIterable(runManager.runId, iterator2);
+        iterator = streamEventsHandler.tapOutputIterable(runManager.runId, iterator);
       const streamLogHandler = runManager?.handlers.find(isLogStreamHandler);
       if (streamLogHandler !== undefined && runManager !== undefined)
-        iterator2 = streamLogHandler.tapOutputIterable(runManager.runId, iterator2);
-      for await (const chunk of iterator2) {
+        iterator = streamLogHandler.tapOutputIterable(runManager.runId, iterator);
+      for await (const chunk of iterator) {
         yield chunk;
         if (finalOutputSupported)
           if (finalOutput === undefined)
@@ -80238,7 +75792,7 @@ var initializeSax = function() {
     this._parser.end();
     return true;
   };
-  SAXStream.prototype.on = function(ev, handler2) {
+  SAXStream.prototype.on = function(ev, handler) {
     var me = this;
     if (!me._parser["on" + ev] && streamWraps.indexOf(ev) !== -1)
       me._parser["on" + ev] = function() {
@@ -80246,7 +75800,7 @@ var initializeSax = function() {
         args.splice(0, 0, ev);
         me.emit.apply(me, args);
       };
-    return Stream.prototype.on.call(me, ev, handler2);
+    return Stream.prototype.on.call(me, ev, handler);
   };
   var CDATA = "[CDATA[";
   var DOCTYPE = "DOCTYPE";
@@ -82129,12 +77683,12 @@ function formatSystemInstruction(input) {
     }
   }
 }
-function formatNewContent(request2) {
+function formatNewContent(request) {
   let newParts = [];
-  if (typeof request2 === "string") {
-    newParts = [{ text: request2 }];
+  if (typeof request === "string") {
+    newParts = [{ text: request }];
   } else {
-    for (const partOrString of request2) {
+    for (const partOrString of request) {
       if (typeof partOrString === "string") {
         newParts.push({ text: partOrString });
       } else {
@@ -82311,10 +77865,10 @@ class ChatSession {
     await this._sendPromise;
     return this._history;
   }
-  async sendMessage(request2, requestOptions = {}) {
+  async sendMessage(request, requestOptions = {}) {
     var _a2, _b, _c, _d, _e, _f;
     await this._sendPromise;
-    const newContent = formatNewContent(request2);
+    const newContent = formatNewContent(request);
     const generateContentRequest = {
       safetySettings: (_a2 = this.params) === null || _a2 === undefined ? undefined : _a2.safetySettings,
       generationConfig: (_b = this.params) === null || _b === undefined ? undefined : _b.generationConfig,
@@ -82349,10 +77903,10 @@ class ChatSession {
     await this._sendPromise;
     return finalResult;
   }
-  async sendMessageStream(request2, requestOptions = {}) {
+  async sendMessageStream(request, requestOptions = {}) {
     var _a2, _b, _c, _d, _e, _f;
     await this._sendPromise;
-    const newContent = formatNewContent(request2);
+    const newContent = formatNewContent(request);
     const generateContentRequest = {
       safetySettings: (_a2 = this.params) === null || _a2 === undefined ? undefined : _a2.safetySettings,
       generationConfig: (_b = this.params) === null || _b === undefined ? undefined : _b.generationConfig,
@@ -82397,8 +77951,8 @@ async function embedContent(apiKey, model, params, requestOptions) {
   return response.json();
 }
 async function batchEmbedContents(apiKey, model, params, requestOptions) {
-  const requestsWithModel = params.requests.map((request2) => {
-    return Object.assign(Object.assign({}, request2), { model });
+  const requestsWithModel = params.requests.map((request) => {
+    return Object.assign(Object.assign({}, request), { model });
   });
   const response = await makeModelRequest(model, Task.BATCH_EMBED_CONTENTS, apiKey, false, JSON.stringify({ requests: requestsWithModel }), requestOptions);
   return response.json();
@@ -82420,15 +77974,15 @@ class GenerativeModel {
     this.systemInstruction = formatSystemInstruction(modelParams.systemInstruction);
     this.cachedContent = modelParams.cachedContent;
   }
-  async generateContent(request2, requestOptions = {}) {
+  async generateContent(request, requestOptions = {}) {
     var _a2;
-    const formattedParams = formatGenerateContentInput(request2);
+    const formattedParams = formatGenerateContentInput(request);
     const generativeModelRequestOptions = Object.assign(Object.assign({}, this._requestOptions), requestOptions);
     return generateContent(this.apiKey, this.model, Object.assign({ generationConfig: this.generationConfig, safetySettings: this.safetySettings, tools: this.tools, toolConfig: this.toolConfig, systemInstruction: this.systemInstruction, cachedContent: (_a2 = this.cachedContent) === null || _a2 === undefined ? undefined : _a2.name }, formattedParams), generativeModelRequestOptions);
   }
-  async generateContentStream(request2, requestOptions = {}) {
+  async generateContentStream(request, requestOptions = {}) {
     var _a2;
-    const formattedParams = formatGenerateContentInput(request2);
+    const formattedParams = formatGenerateContentInput(request);
     const generativeModelRequestOptions = Object.assign(Object.assign({}, this._requestOptions), requestOptions);
     return generateContentStream(this.apiKey, this.model, Object.assign({ generationConfig: this.generationConfig, safetySettings: this.safetySettings, tools: this.tools, toolConfig: this.toolConfig, systemInstruction: this.systemInstruction, cachedContent: (_a2 = this.cachedContent) === null || _a2 === undefined ? undefined : _a2.name }, formattedParams), generativeModelRequestOptions);
   }
@@ -82436,8 +77990,8 @@ class GenerativeModel {
     var _a2;
     return new ChatSession(this.apiKey, this.model, Object.assign({ generationConfig: this.generationConfig, safetySettings: this.safetySettings, tools: this.tools, toolConfig: this.toolConfig, systemInstruction: this.systemInstruction, cachedContent: (_a2 = this.cachedContent) === null || _a2 === undefined ? undefined : _a2.name }, startChatParams), this._requestOptions);
   }
-  async countTokens(request2, requestOptions = {}) {
-    const formattedParams = formatCountTokensInput(request2, {
+  async countTokens(request, requestOptions = {}) {
+    const formattedParams = formatCountTokensInput(request, {
       model: this.model,
       generationConfig: this.generationConfig,
       safetySettings: this.safetySettings,
@@ -82449,8 +78003,8 @@ class GenerativeModel {
     const generativeModelRequestOptions = Object.assign(Object.assign({}, this._requestOptions), requestOptions);
     return countTokens(this.apiKey, this.model, formattedParams, generativeModelRequestOptions);
   }
-  async embedContent(request2, requestOptions = {}) {
-    const formattedParams = formatEmbedContentInput(request2);
+  async embedContent(request, requestOptions = {}) {
+    const formattedParams = formatEmbedContentInput(request);
     const generativeModelRequestOptions = Object.assign(Object.assign({}, this._requestOptions), requestOptions);
     return embedContent(this.apiKey, this.model, formattedParams, generativeModelRequestOptions);
   }
@@ -83521,12 +79075,12 @@ var ChatGoogleGenerativeAI = class extends BaseChatModel {
       actualPrompt = prompt.slice(1);
     }
     const parameters = this.invocationParams(options);
-    const request2 = {
+    const request = {
       ...parameters,
       contents: actualPrompt
     };
     const stream = await this.caller.callWithOptions({ signal: options?.signal }, async () => {
-      const { stream: stream$1 } = await this.client.generateContentStream(request2);
+      const { stream: stream$1 } = await this.client.generateContentStream(request);
       return stream$1;
     });
     let usageMetadata;
@@ -83558,10 +79112,10 @@ var ChatGoogleGenerativeAI = class extends BaseChatModel {
       await runManager?.handleLLMNewToken(chunk.text ?? "");
     }
   }
-  async completionWithRetry(request2, options) {
+  async completionWithRetry(request, options) {
     return this.caller.callWithOptions({ signal: options?.signal }, async () => {
       try {
-        return await this.client.generateContent(request2);
+        return await this.client.generateContent(request);
       } catch (e) {
         if (e.message?.includes("400 Bad Request"))
           e.status = 400;
@@ -83649,21 +79203,6 @@ var chunkArray = (arr2, chunkSize) => arr2.reduce((chunks, elem, index) => {
   return chunks;
 }, []);
 
-// app/providers/gemini.ts
-class GeminiProvider extends Provider {
-  gemini;
-  constructor(params) {
-    super();
-    this.gemini = new ChatGoogleGenerativeAI({
-      apiKey: params.apikey,
-      model: params.model
-    });
-  }
-  async invokeModel(prompt) {
-    const llmResponse = await this.gemini.invoke(prompt);
-    return llmResponse.content;
-  }
-}
 // node_modules/@langchain/openai/dist/utils/errors.js
 function addLangChainErrorFields2(error46, lc_error_code) {
   error46.lc_error_code = lc_error_code;
@@ -83902,7 +79441,7 @@ var safeJSON = (text) => {
 var sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // node_modules/openai/version.mjs
-var VERSION9 = "6.9.1";
+var VERSION = "6.9.1";
 
 // node_modules/openai/internal/detect-platform.mjs
 var isRunningInBrowser = () => {
@@ -83925,7 +79464,7 @@ var getPlatformProperties = () => {
   if (detectedPlatform === "deno") {
     return {
       "X-Stainless-Lang": "js",
-      "X-Stainless-Package-Version": VERSION9,
+      "X-Stainless-Package-Version": VERSION,
       "X-Stainless-OS": normalizePlatform(Deno.build.os),
       "X-Stainless-Arch": normalizeArch(Deno.build.arch),
       "X-Stainless-Runtime": "deno",
@@ -83935,7 +79474,7 @@ var getPlatformProperties = () => {
   if (typeof EdgeRuntime !== "undefined") {
     return {
       "X-Stainless-Lang": "js",
-      "X-Stainless-Package-Version": VERSION9,
+      "X-Stainless-Package-Version": VERSION,
       "X-Stainless-OS": "Unknown",
       "X-Stainless-Arch": `other:${EdgeRuntime}`,
       "X-Stainless-Runtime": "edge",
@@ -83945,7 +79484,7 @@ var getPlatformProperties = () => {
   if (detectedPlatform === "node") {
     return {
       "X-Stainless-Lang": "js",
-      "X-Stainless-Package-Version": VERSION9,
+      "X-Stainless-Package-Version": VERSION,
       "X-Stainless-OS": normalizePlatform(globalThis.process.platform ?? "unknown"),
       "X-Stainless-Arch": normalizeArch(globalThis.process.arch ?? "unknown"),
       "X-Stainless-Runtime": "node",
@@ -83956,7 +79495,7 @@ var getPlatformProperties = () => {
   if (browserInfo) {
     return {
       "X-Stainless-Lang": "js",
-      "X-Stainless-Package-Version": VERSION9,
+      "X-Stainless-Package-Version": VERSION,
       "X-Stainless-OS": "Unknown",
       "X-Stainless-Arch": "unknown",
       "X-Stainless-Runtime": `browser:${browserInfo.browser}`,
@@ -83965,7 +79504,7 @@ var getPlatformProperties = () => {
   }
   return {
     "X-Stainless-Lang": "js",
-    "X-Stainless-Package-Version": VERSION9,
+    "X-Stainless-Package-Version": VERSION,
     "X-Stainless-OS": "Unknown",
     "X-Stainless-Arch": "unknown",
     "X-Stainless-Runtime": "unknown",
@@ -84545,19 +80084,19 @@ var parseLogLevel = (maybeLevel, sourceName, client2) => {
   loggerFor(client2).warn(`${sourceName} was set to ${JSON.stringify(maybeLevel)}, expected one of ${JSON.stringify(Object.keys(levelNumbers))}`);
   return;
 };
-function noop3() {}
+function noop() {}
 function makeLogFn(fnLevel, logger, logLevel) {
   if (!logger || levelNumbers[fnLevel] > levelNumbers[logLevel]) {
-    return noop3;
+    return noop;
   } else {
     return logger[fnLevel].bind(logger);
   }
 }
 var noopLogger = {
-  error: noop3,
-  warn: noop3,
-  info: noop3,
-  debug: noop3
+  error: noop,
+  warn: noop,
+  info: noop,
+  debug: noop
 };
 var cachedLoggers = /* @__PURE__ */ new WeakMap;
 function loggerFor(client2) {
@@ -84603,8 +80142,8 @@ var formatRequestDetails = (details) => {
 var _Stream_client;
 
 class Stream {
-  constructor(iterator2, controller, client2) {
-    this.iterator = iterator2;
+  constructor(iterator, controller, client2) {
+    this.iterator = iterator;
     _Stream_client.set(this, undefined);
     this.controller = controller;
     __classPrivateFieldSet(this, _Stream_client, client2, "f");
@@ -84612,7 +80151,7 @@ class Stream {
   static fromSSEResponse(response, controller, client2) {
     let consumed = false;
     const logger = client2 ? loggerFor(client2) : console;
-    async function* iterator2() {
+    async function* iterator() {
       if (consumed) {
         throw new OpenAIError("Cannot iterate over a consumed stream, use `.tee()` to split the stream.");
       }
@@ -84664,7 +80203,7 @@ class Stream {
           controller.abort();
       }
     }
-    return new Stream(iterator2, controller, client2);
+    return new Stream(iterator, controller, client2);
   }
   static fromReadableStream(readableStream, controller, client2) {
     let consumed = false;
@@ -84680,7 +80219,7 @@ class Stream {
         yield line;
       }
     }
-    async function* iterator2() {
+    async function* iterator() {
       if (consumed) {
         throw new OpenAIError("Cannot iterate over a consumed stream, use `.tee()` to split the stream.");
       }
@@ -84703,7 +80242,7 @@ class Stream {
           controller.abort();
       }
     }
-    return new Stream(iterator2, controller, client2);
+    return new Stream(iterator, controller, client2);
   }
   [(_Stream_client = new WeakMap, Symbol.asyncIterator)]() {
     return this.iterator();
@@ -84711,12 +80250,12 @@ class Stream {
   tee() {
     const left = [];
     const right = [];
-    const iterator2 = this.iterator();
+    const iterator = this.iterator();
     const teeIterator = (queue2) => {
       return {
         next: () => {
           if (queue2.length === 0) {
-            const result = iterator2.next();
+            const result = iterator.next();
             left.push(result);
             right.push(result);
           }
@@ -84778,9 +80317,9 @@ async function* _iterSSEMessages(response, controller) {
       yield sse;
   }
 }
-async function* iterSSEChunks(iterator2) {
+async function* iterSSEChunks(iterator) {
   let data = new Uint8Array;
-  for await (const chunk of iterator2) {
+  for await (const chunk of iterator) {
     if (chunk == null) {
       continue;
     }
@@ -84977,8 +80516,8 @@ class AbstractPage {
 }
 
 class PagePromise extends APIPromise {
-  constructor(client2, request2, Page) {
-    super(client2, request2, async (client3, props) => new Page(client3, props.response, await defaultParseResponse(client3, props), props.options));
+  constructor(client2, request, Page) {
+    super(client2, request, async (client3, props) => new Page(client3, props.response, await defaultParseResponse(client3, props), props.options));
   }
   async* [Symbol.asyncIterator]() {
     const page = await this;
@@ -88631,8 +84170,8 @@ class FileBatches extends APIResource {
     const client2 = this._client;
     const fileIterator = files.values();
     const allFileIds = [...fileIds];
-    async function processFiles(iterator2) {
-      for (let item of iterator2) {
+    async function processFiles(iterator) {
+      for (let item of iterator) {
         const fileObj = await client2.files.create({ file: item, purpose: "assistants" }, options);
         allFileIds.push(fileObj.id);
       }
@@ -88980,7 +84519,7 @@ https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety
     return stringify3(query, { arrayFormat: "brackets" });
   }
   getUserAgent() {
-    return `${this.constructor.name}/JS ${VERSION9}`;
+    return `${this.constructor.name}/JS ${VERSION}`;
   }
   defaultIdempotencyKey() {
     return `stainless-node-retry-${uuid42()}`;
@@ -89021,7 +84560,7 @@ https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety
   async prepareOptions(options) {
     await this._callApiKey();
   }
-  async prepareRequest(request2, { url, options }) {}
+  async prepareRequest(request, { url, options }) {}
   get(path2, opts) {
     return this.methodRequest("get", path2, opts);
   }
@@ -89147,8 +84686,8 @@ https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety
     return this.requestAPIList(Page2, { method: "get", path: path2, ...opts });
   }
   requestAPIList(Page2, options) {
-    const request2 = this.makeRequest(options, null, undefined);
-    return new PagePromise(this, request2, Page2);
+    const request = this.makeRequest(options, null, undefined);
+    return new PagePromise(this, request, Page2);
   }
   async fetchWithTimeout(url, init, ms, controller) {
     const { signal, method, ...options } = init || {};
@@ -89656,7 +85195,7 @@ __export(exports_external2, {
   setErrorMap: () => setErrorMap2,
   set: () => set,
   safeParseAsync: () => safeParseAsync2,
-  safeParse: () => safeParse3,
+  safeParse: () => safeParse2,
   safeEncodeAsync: () => safeEncodeAsync2,
   safeEncode: () => safeEncode2,
   safeDecodeAsync: () => safeDecodeAsync2,
@@ -89676,7 +85215,7 @@ __export(exports_external2, {
   pipe: () => pipe,
   partialRecord: () => partialRecord,
   parseAsync: () => parseAsync2,
-  parse: () => parse6,
+  parse: () => parse5,
   overwrite: () => _overwrite,
   optional: () => optional,
   object: () => object,
@@ -89928,9 +85467,9 @@ var ZodRealError = $constructor("ZodError", initializer2, {
 });
 
 // node_modules/zod/v4/classic/parse.js
-var parse6 = /* @__PURE__ */ _parse(ZodRealError);
+var parse5 = /* @__PURE__ */ _parse(ZodRealError);
 var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
-var safeParse3 = /* @__PURE__ */ _safeParse(ZodRealError);
+var safeParse2 = /* @__PURE__ */ _safeParse(ZodRealError);
 var safeParseAsync2 = /* @__PURE__ */ _safeParseAsync(ZodRealError);
 var encode3 = /* @__PURE__ */ _encode(ZodRealError);
 var decode2 = /* @__PURE__ */ _decode(ZodRealError);
@@ -89961,8 +85500,8 @@ var ZodType2 = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
     reg.add(inst, meta2);
     return inst;
   };
-  inst.parse = (data, params) => parse6(inst, data, params, { callee: inst.parse });
-  inst.safeParse = (data, params) => safeParse3(inst, data, params);
+  inst.parse = (data, params) => parse5(inst, data, params, { callee: inst.parse });
+  inst.safeParse = (data, params) => safeParse2(inst, data, params);
   inst.parseAsync = async (data, params) => parseAsync2(inst, data, params, { callee: inst.parseAsync });
   inst.safeParseAsync = async (data, params) => safeParseAsync2(inst, data, params);
   inst.spa = inst.safeParseAsync;
@@ -92344,7 +87883,7 @@ function interopZodResponseFormat(zodSchema, name, props) {
           }
         })
       }
-    }, (content) => parse2(zodSchema, JSON.parse(content)));
+    }, (content) => parse(zodSchema, JSON.parse(content)));
   throw new Error("Unsupported schema response format");
 }
 function handleMultiModalOutput(content, messages) {
@@ -93312,10 +88851,10 @@ var BaseChatOpenAI = class extends BaseChatModel {
   _getClientOptions(options) {
     if (!this.client) {
       const openAIEndpointConfig = { baseURL: this.clientConfig.baseURL };
-      const endpoint2 = getEndpoint(openAIEndpointConfig);
+      const endpoint = getEndpoint(openAIEndpointConfig);
       const params = {
         ...this.clientConfig,
-        baseURL: endpoint2,
+        baseURL: endpoint,
         timeout: this.timeout,
         maxRetries: 0
       };
@@ -94163,15 +89702,15 @@ var ChatOpenAICompletions = class extends BaseChatOpenAI {
     if (options.signal?.aborted)
       throw new Error("AbortError");
   }
-  async completionWithRetry(request2, requestOptions) {
+  async completionWithRetry(request, requestOptions) {
     const clientOptions = this._getClientOptions(requestOptions);
-    const isParseableFormat = request2.response_format && request2.response_format.type === "json_schema";
+    const isParseableFormat = request.response_format && request.response_format.type === "json_schema";
     return this.caller.call(async () => {
       try {
-        if (isParseableFormat && !request2.stream)
-          return await this.client.chat.completions.parse(request2, clientOptions);
+        if (isParseableFormat && !request.stream)
+          return await this.client.chat.completions.parse(request, clientOptions);
         else
-          return await this.client.chat.completions.create(request2, clientOptions);
+          return await this.client.chat.completions.create(request, clientOptions);
       } catch (e) {
         const error47 = wrapOpenAIClientError(e);
         throw error47;
@@ -95013,13 +90552,13 @@ var ChatOpenAIResponses = class extends BaseChatOpenAI {
       }, undefined, undefined, undefined, { chunk });
     }
   }
-  async completionWithRetry(request2, requestOptions) {
+  async completionWithRetry(request, requestOptions) {
     return this.caller.call(async () => {
       const clientOptions = this._getClientOptions(requestOptions);
       try {
-        if (request2.text?.format?.type === "json_schema" && !request2.stream)
-          return await this.client.responses.parse(request2, clientOptions);
-        return await this.client.responses.create(request2, clientOptions);
+        if (request.text?.format?.type === "json_schema" && !request.stream)
+          return await this.client.responses.parse(request, clientOptions);
+        return await this.client.responses.create(request, clientOptions);
       } catch (e) {
         const error47 = wrapOpenAIClientError(e);
         throw error47;
@@ -95617,21 +91156,6 @@ function _stringify(content) {
   }
 }
 
-// app/providers/openai.ts
-class OpenAIProvider extends Provider {
-  openai;
-  constructor(params) {
-    super();
-    this.openai = new ChatOpenAI({
-      apiKey: params.apikey,
-      model: params.model
-    });
-  }
-  async invokeModel(prompt) {
-    const llmResponse = await this.openai.invoke(prompt);
-    return llmResponse.content;
-  }
-}
 // node_modules/langchain/node_modules/@langchain/core/dist/_virtual/_rolldown/runtime.js
 var __defProp4 = Object.defineProperty;
 var __exportAll = (all, no_symbols) => {
@@ -96623,9 +92147,9 @@ function convertToPrettyString2(message) {
   const lines = [];
   const title = ` ${message.type.charAt(0).toUpperCase() + message.type.slice(1)} Message `;
   const sepLen = Math.floor((80 - title.length) / 2);
-  const sep2 = "=".repeat(sepLen);
-  const secondSep = title.length % 2 === 0 ? sep2 : `${sep2}=`;
-  lines.push(`${sep2}${title}${secondSep}`);
+  const sep = "=".repeat(sepLen);
+  const secondSep = title.length % 2 === 0 ? sep : `${sep}=`;
+  lines.push(`${sep}${title}${secondSep}`);
   if (message.type === "ai") {
     const aiMessage = message;
     if (aiMessage.tool_calls && aiMessage.tool_calls.length > 0) {
@@ -98694,7 +94218,7 @@ var MAX3 = import_dist3.default.MAX;
 var version4 = import_dist3.default.version;
 var validate7 = import_dist3.default.validate;
 var stringify4 = import_dist3.default.stringify;
-var parse8 = import_dist3.default.parse;
+var parse7 = import_dist3.default.parse;
 
 // node_modules/langchain/node_modules/langsmith/dist/experimental/otel/constants.js
 var GEN_AI_OPERATION_NAME2 = "gen_ai.operation.name";
@@ -101277,12 +96801,12 @@ class Client2 {
     }
     return Promise.all(promises);
   }
-  static async _writeTraceToFallbackDir(directory, body, replayHeaders, endpoint2, maxBytes) {
+  static async _writeTraceToFallbackDir(directory, body, replayHeaders, endpoint, maxBytes) {
     try {
       const bodyBuffer = typeof body === "string" ? Buffer.from(body, "utf8") : Buffer.from(body);
       const envelope = JSON.stringify({
         version: 1,
-        endpoint: endpoint2,
+        endpoint,
         headers: replayHeaders,
         body_base64: bodyBuffer.toString("base64")
       });
@@ -102435,7 +97959,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
   }
   async createProject({ projectName, description = null, metadata = null, upsert = false, projectExtra = null, referenceDatasetId = null }) {
     const upsert_ = upsert ? `?upsert=true` : "";
-    const endpoint2 = `${this.apiUrl}/sessions${upsert_}`;
+    const endpoint = `${this.apiUrl}/sessions${upsert_}`;
     const extra = projectExtra || {};
     if (metadata) {
       extra["metadata"] = metadata;
@@ -102450,7 +97974,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
     }
     const serializedBody = JSON.stringify(body);
     const response = await this.caller.call(async () => {
-      const res = await this._fetch(endpoint2, {
+      const res = await this._fetch(endpoint, {
         method: "POST",
         headers: { ...this.headers, "Content-Type": "application/json" },
         signal: AbortSignal.timeout(this.timeout_ms),
@@ -102464,7 +97988,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
     return result;
   }
   async updateProject(projectId, { name = null, description = null, metadata = null, projectExtra = null, endTime = null }) {
-    const endpoint2 = `${this.apiUrl}/sessions/${projectId}`;
+    const endpoint = `${this.apiUrl}/sessions/${projectId}`;
     let extra = projectExtra;
     if (metadata) {
       extra = { ...extra || {}, metadata };
@@ -102476,7 +98000,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
       end_time: endTime ? new Date(endTime).toISOString() : null
     });
     const response = await this.caller.call(async () => {
-      const res = await this._fetch(endpoint2, {
+      const res = await this._fetch(endpoint, {
         method: "PATCH",
         headers: { ...this.headers, "Content-Type": "application/json" },
         signal: AbortSignal.timeout(this.timeout_ms),
@@ -104993,7 +100517,7 @@ class RunTree2 {
     let tracingEnabled = isTracingEnabled3();
     if (callbackManager) {
       const parentRunId = callbackManager?.getParentRunId?.() ?? "";
-      const langChainTracer = callbackManager?.handlers?.find((handler2) => handler2?.name == "langchain_tracer");
+      const langChainTracer = callbackManager?.handlers?.find((handler) => handler?.name == "langchain_tracer");
       parentRun = langChainTracer?.getRun?.(parentRunId);
       projectName = langChainTracer?.projectName;
       client2 = langChainTracer?.client;
@@ -105940,8 +101464,8 @@ function parseCallbackConfigArg2(arg) {
     return arg;
 }
 var BaseCallbackManager2 = class {
-  setHandler(handler2) {
-    return this.setHandlers([handler2]);
+  setHandler(handler) {
+    return this.setHandlers([handler]);
   }
 };
 var BaseRunManager2 = class {
@@ -105959,26 +101483,26 @@ var BaseRunManager2 = class {
     return this._parentRunId;
   }
   async handleText(text) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback2(async () => {
+    await Promise.all(this.handlers.map((handler) => consumeCallback2(async () => {
       try {
-        await handler2.handleText?.(text, this.runId, this._parentRunId, this.tags);
+        await handler.handleText?.(text, this.runId, this._parentRunId, this.tags);
       } catch (err) {
-        (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleText: ${err}`);
-        if (handler2.raiseError)
+        (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleText: ${err}`);
+        if (handler.raiseError)
           throw err;
       }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleCustomEvent(eventName, data, _runId, _tags, _metadata) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback2(async () => {
+    await Promise.all(this.handlers.map((handler) => consumeCallback2(async () => {
       try {
-        await handler2.handleCustomEvent?.(eventName, data, this.runId, this.tags, this.metadata);
+        await handler.handleCustomEvent?.(eventName, data, this.runId, this.tags, this.metadata);
       } catch (err) {
-        (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleCustomEvent: ${err}`);
-        if (handler2.raiseError)
+        (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleCustomEvent: ${err}`);
+        if (handler.raiseError)
           throw err;
       }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManagerForRetrieverRun2 = class extends BaseRunManager2 {
@@ -105992,69 +101516,69 @@ var CallbackManagerForRetrieverRun2 = class extends BaseRunManager2 {
     return manager;
   }
   async handleRetrieverEnd(documents) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback2(async () => {
-      if (!handler2.ignoreRetriever)
+    await Promise.all(this.handlers.map((handler) => consumeCallback2(async () => {
+      if (!handler.ignoreRetriever)
         try {
-          await handler2.handleRetrieverEnd?.(documents, this.runId, this._parentRunId, this.tags);
+          await handler.handleRetrieverEnd?.(documents, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleRetriever`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleRetriever`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleRetrieverError(err) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback2(async () => {
-      if (!handler2.ignoreRetriever)
+    await Promise.all(this.handlers.map((handler) => consumeCallback2(async () => {
+      if (!handler.ignoreRetriever)
         try {
-          await handler2.handleRetrieverError?.(err, this.runId, this._parentRunId, this.tags);
+          await handler.handleRetrieverError?.(err, this.runId, this._parentRunId, this.tags);
         } catch (error47) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleRetrieverError: ${error47}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleRetrieverError: ${error47}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManagerForLLMRun2 = class extends BaseRunManager2 {
   async handleLLMNewToken(token, idx, _runId, _parentRunId, _tags, fields) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback2(async () => {
-      if (!handler2.ignoreLLM)
+    await Promise.all(this.handlers.map((handler) => consumeCallback2(async () => {
+      if (!handler.ignoreLLM)
         try {
-          await handler2.handleLLMNewToken?.(token, idx ?? {
+          await handler.handleLLMNewToken?.(token, idx ?? {
             prompt: 0,
             completion: 0
           }, this.runId, this._parentRunId, this.tags, fields);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleLLMNewToken: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleLLMNewToken: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleLLMError(err, _runId, _parentRunId, _tags, extraParams) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback2(async () => {
-      if (!handler2.ignoreLLM)
+    await Promise.all(this.handlers.map((handler) => consumeCallback2(async () => {
+      if (!handler.ignoreLLM)
         try {
-          await handler2.handleLLMError?.(err, this.runId, this._parentRunId, this.tags, extraParams);
+          await handler.handleLLMError?.(err, this.runId, this._parentRunId, this.tags, extraParams);
         } catch (err2) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleLLMError: ${err2}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleLLMError: ${err2}`);
+          if (handler.raiseError)
             throw err2;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleLLMEnd(output, _runId, _parentRunId, _tags, extraParams) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback2(async () => {
-      if (!handler2.ignoreLLM)
+    await Promise.all(this.handlers.map((handler) => consumeCallback2(async () => {
+      if (!handler.ignoreLLM)
         try {
-          await handler2.handleLLMEnd?.(output, this.runId, this._parentRunId, this.tags, extraParams);
+          await handler.handleLLMEnd?.(output, this.runId, this._parentRunId, this.tags, extraParams);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleLLMEnd: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleLLMEnd: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManagerForChainRun2 = class extends BaseRunManager2 {
@@ -106068,52 +101592,52 @@ var CallbackManagerForChainRun2 = class extends BaseRunManager2 {
     return manager;
   }
   async handleChainError(err, _runId, _parentRunId, _tags, kwargs) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback2(async () => {
-      if (!handler2.ignoreChain)
+    await Promise.all(this.handlers.map((handler) => consumeCallback2(async () => {
+      if (!handler.ignoreChain)
         try {
-          await handler2.handleChainError?.(err, this.runId, this._parentRunId, this.tags, kwargs);
+          await handler.handleChainError?.(err, this.runId, this._parentRunId, this.tags, kwargs);
         } catch (err2) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleChainError: ${err2}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleChainError: ${err2}`);
+          if (handler.raiseError)
             throw err2;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleChainEnd(output, _runId, _parentRunId, _tags, kwargs) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback2(async () => {
-      if (!handler2.ignoreChain)
+    await Promise.all(this.handlers.map((handler) => consumeCallback2(async () => {
+      if (!handler.ignoreChain)
         try {
-          await handler2.handleChainEnd?.(output, this.runId, this._parentRunId, this.tags, kwargs);
+          await handler.handleChainEnd?.(output, this.runId, this._parentRunId, this.tags, kwargs);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleChainEnd: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleChainEnd: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleAgentAction(action) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback2(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback2(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleAgentAction?.(action, this.runId, this._parentRunId, this.tags);
+          await handler.handleAgentAction?.(action, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleAgentAction: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleAgentAction: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleAgentEnd(action) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback2(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback2(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleAgentEnd?.(action, this.runId, this._parentRunId, this.tags);
+          await handler.handleAgentEnd?.(action, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleAgentEnd: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleAgentEnd: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManagerForToolRun2 = class extends BaseRunManager2 {
@@ -106127,39 +101651,39 @@ var CallbackManagerForToolRun2 = class extends BaseRunManager2 {
     return manager;
   }
   async handleToolError(err) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback2(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback2(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleToolError?.(err, this.runId, this._parentRunId, this.tags);
+          await handler.handleToolError?.(err, this.runId, this._parentRunId, this.tags);
         } catch (err2) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleToolError: ${err2}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleToolError: ${err2}`);
+          if (handler.raiseError)
             throw err2;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleToolEvent(chunk) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback2(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback2(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleToolEvent?.(chunk, this.runId, this._parentRunId, this.tags);
+          await handler.handleToolEvent?.(chunk, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          if (handler2.raiseError)
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleToolEnd(output) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback2(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback2(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleToolEnd?.(output, this.runId, this._parentRunId, this.tags);
+          await handler.handleToolEnd?.(output, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleToolEnd: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleToolEnd: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManager3 = class CallbackManager4 extends BaseCallbackManager2 {
@@ -106187,20 +101711,20 @@ var CallbackManager3 = class CallbackManager4 extends BaseCallbackManager2 {
   async handleLLMStart(llm, prompts, runId = undefined, _parentRunId = undefined, extraParams = undefined, _tags = undefined, _metadata = undefined, runName = undefined) {
     return Promise.all(prompts.map(async (prompt, idx) => {
       const runId_ = idx === 0 && runId ? runId : v7_default2();
-      await Promise.all(this.handlers.map((handler2) => {
-        if (handler2.ignoreLLM)
+      await Promise.all(this.handlers.map((handler) => {
+        if (handler.ignoreLLM)
           return;
-        if (isBaseTracer2(handler2))
-          handler2._createRunForLLMStart(llm, [prompt], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+        if (isBaseTracer2(handler))
+          handler._createRunForLLMStart(llm, [prompt], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
         return consumeCallback2(async () => {
           try {
-            await handler2.handleLLMStart?.(llm, [prompt], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+            await handler.handleLLMStart?.(llm, [prompt], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
           } catch (err) {
-            (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleLLMStart: ${err}`);
-            if (handler2.raiseError)
+            (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleLLMStart: ${err}`);
+            if (handler.raiseError)
               throw err;
           }
-        }, handler2.awaitHandlers);
+        }, handler.awaitHandlers);
       }));
       return new CallbackManagerForLLMRun2(runId_, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
     }));
@@ -106208,109 +101732,109 @@ var CallbackManager3 = class CallbackManager4 extends BaseCallbackManager2 {
   async handleChatModelStart(llm, messages, runId = undefined, _parentRunId = undefined, extraParams = undefined, _tags = undefined, _metadata = undefined, runName = undefined) {
     return Promise.all(messages.map(async (messageGroup, idx) => {
       const runId_ = idx === 0 && runId ? runId : v7_default2();
-      await Promise.all(this.handlers.map((handler2) => {
-        if (handler2.ignoreLLM)
+      await Promise.all(this.handlers.map((handler) => {
+        if (handler.ignoreLLM)
           return;
-        if (isBaseTracer2(handler2))
-          handler2._createRunForChatModelStart(llm, [messageGroup], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+        if (isBaseTracer2(handler))
+          handler._createRunForChatModelStart(llm, [messageGroup], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
         return consumeCallback2(async () => {
           try {
-            if (handler2.handleChatModelStart)
-              await handler2.handleChatModelStart?.(llm, [messageGroup], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
-            else if (handler2.handleLLMStart) {
+            if (handler.handleChatModelStart)
+              await handler.handleChatModelStart?.(llm, [messageGroup], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+            else if (handler.handleLLMStart) {
               const messageString = getBufferString2(messageGroup);
-              await handler2.handleLLMStart?.(llm, [messageString], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+              await handler.handleLLMStart?.(llm, [messageString], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
             }
           } catch (err) {
-            (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleLLMStart: ${err}`);
-            if (handler2.raiseError)
+            (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleLLMStart: ${err}`);
+            if (handler.raiseError)
               throw err;
           }
-        }, handler2.awaitHandlers);
+        }, handler.awaitHandlers);
       }));
       return new CallbackManagerForLLMRun2(runId_, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
     }));
   }
   async handleChainStart(chain, inputs, runId = v7_default2(), runType = undefined, _tags = undefined, _metadata = undefined, runName = undefined, _parentRunId = undefined, extra = undefined) {
-    await Promise.all(this.handlers.map((handler2) => {
-      if (handler2.ignoreChain)
+    await Promise.all(this.handlers.map((handler) => {
+      if (handler.ignoreChain)
         return;
-      if (isBaseTracer2(handler2))
-        handler2._createRunForChainStart(chain, inputs, runId, this._parentRunId, this.tags, this.metadata, runType, runName, extra);
+      if (isBaseTracer2(handler))
+        handler._createRunForChainStart(chain, inputs, runId, this._parentRunId, this.tags, this.metadata, runType, runName, extra);
       return consumeCallback2(async () => {
         try {
-          await handler2.handleChainStart?.(chain, inputs, runId, this._parentRunId, this.tags, this.metadata, runType, runName, extra);
+          await handler.handleChainStart?.(chain, inputs, runId, this._parentRunId, this.tags, this.metadata, runType, runName, extra);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleChainStart: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleChainStart: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-      }, handler2.awaitHandlers);
+      }, handler.awaitHandlers);
     }));
     return new CallbackManagerForChainRun2(runId, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
   }
   async handleToolStart(tool2, input, runId = v7_default2(), _parentRunId = undefined, _tags = undefined, _metadata = undefined, runName = undefined, toolCallId = undefined) {
-    await Promise.all(this.handlers.map((handler2) => {
-      if (handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => {
+      if (handler.ignoreAgent)
         return;
-      if (isBaseTracer2(handler2))
-        handler2._createRunForToolStart(tool2, input, runId, this._parentRunId, this.tags, this.metadata, runName);
+      if (isBaseTracer2(handler))
+        handler._createRunForToolStart(tool2, input, runId, this._parentRunId, this.tags, this.metadata, runName);
       return consumeCallback2(async () => {
         try {
-          await handler2.handleToolStart?.(tool2, input, runId, this._parentRunId, this.tags, this.metadata, runName, toolCallId);
+          await handler.handleToolStart?.(tool2, input, runId, this._parentRunId, this.tags, this.metadata, runName, toolCallId);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleToolStart: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleToolStart: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-      }, handler2.awaitHandlers);
+      }, handler.awaitHandlers);
     }));
     return new CallbackManagerForToolRun2(runId, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
   }
   async handleRetrieverStart(retriever, query, runId = v7_default2(), _parentRunId = undefined, _tags = undefined, _metadata = undefined, runName = undefined) {
-    await Promise.all(this.handlers.map((handler2) => {
-      if (handler2.ignoreRetriever)
+    await Promise.all(this.handlers.map((handler) => {
+      if (handler.ignoreRetriever)
         return;
-      if (isBaseTracer2(handler2))
-        handler2._createRunForRetrieverStart(retriever, query, runId, this._parentRunId, this.tags, this.metadata, runName);
+      if (isBaseTracer2(handler))
+        handler._createRunForRetrieverStart(retriever, query, runId, this._parentRunId, this.tags, this.metadata, runName);
       return consumeCallback2(async () => {
         try {
-          await handler2.handleRetrieverStart?.(retriever, query, runId, this._parentRunId, this.tags, this.metadata, runName);
+          await handler.handleRetrieverStart?.(retriever, query, runId, this._parentRunId, this.tags, this.metadata, runName);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleRetrieverStart: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleRetrieverStart: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-      }, handler2.awaitHandlers);
+      }, handler.awaitHandlers);
     }));
     return new CallbackManagerForRetrieverRun2(runId, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
   }
   async handleCustomEvent(eventName, data, runId, _tags, _metadata) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback2(async () => {
-      if (!handler2.ignoreCustomEvent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback2(async () => {
+      if (!handler.ignoreCustomEvent)
         try {
-          await handler2.handleCustomEvent?.(eventName, data, runId, this.tags, this.metadata);
+          await handler.handleCustomEvent?.(eventName, data, runId, this.tags, this.metadata);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleCustomEvent: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleCustomEvent: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
-  addHandler(handler2, inherit = true) {
-    this.handlers.push(handler2);
+  addHandler(handler, inherit = true) {
+    this.handlers.push(handler);
     if (inherit)
-      this.inheritableHandlers.push(handler2);
+      this.inheritableHandlers.push(handler);
   }
-  removeHandler(handler2) {
-    this.handlers = this.handlers.filter((_handler) => _handler !== handler2);
-    this.inheritableHandlers = this.inheritableHandlers.filter((_handler) => _handler !== handler2);
+  removeHandler(handler) {
+    this.handlers = this.handlers.filter((_handler) => _handler !== handler);
+    this.inheritableHandlers = this.inheritableHandlers.filter((_handler) => _handler !== handler);
   }
   setHandlers(handlers, inherit = true) {
     this.handlers = [];
     this.inheritableHandlers = [];
-    for (const handler2 of handlers)
-      this.addHandler(handler2, inherit);
+    for (const handler of handlers)
+      this.addHandler(handler, inherit);
   }
   addTags(tags, inherit = true) {
     this.removeTags(tags);
@@ -106341,9 +101865,9 @@ var CallbackManager3 = class CallbackManager4 extends BaseCallbackManager2 {
   }
   copy(additionalHandlers = [], inherit = true) {
     const manager = new CallbackManager4(this._parentRunId);
-    for (const handler2 of this.handlers) {
-      const inheritable = this.inheritableHandlers.includes(handler2);
-      manager.addHandler(handler2, inheritable);
+    for (const handler of this.handlers) {
+      const inheritable = this.inheritableHandlers.includes(handler);
+      manager.addHandler(handler, inheritable);
     }
     for (const tag of this.tags) {
       const inheritable = this.inheritableTags.includes(tag);
@@ -106353,10 +101877,10 @@ var CallbackManager3 = class CallbackManager4 extends BaseCallbackManager2 {
       const inheritable = Object.keys(this.inheritableMetadata).includes(key);
       manager.addMetadata({ [key]: this.metadata[key] }, inheritable);
     }
-    for (const handler2 of additionalHandlers) {
-      if (manager.handlers.filter((h) => h.name === "console_callback_handler").some((h) => h.name === handler2.name))
+    for (const handler of additionalHandlers) {
+      if (manager.handlers.filter((h) => h.name === "console_callback_handler").some((h) => h.name === handler.name))
         continue;
-      manager.addHandler(handler2, inherit);
+      manager.addHandler(handler, inherit);
     }
     return manager;
   }
@@ -106390,7 +101914,7 @@ var CallbackManager3 = class CallbackManager4 extends BaseCallbackManager2 {
     const traceableRunTree = LangChainTracer3.getTraceableRunTree();
     const tracingV2Enabled = traceableRunTree?.tracingEnabled ?? isTracingEnabled4();
     if (traceableRunTree?.tracingEnabled === false && callbackManager) {
-      const inheritedTracers = callbackManager.handlers.filter((handler2) => handler2.name === "langchain_tracer");
+      const inheritedTracers = callbackManager.handlers.filter((handler) => handler.name === "langchain_tracer");
       for (const tracer of inheritedTracers)
         callbackManager.removeHandler(tracer);
     }
@@ -106398,11 +101922,11 @@ var CallbackManager3 = class CallbackManager4 extends BaseCallbackManager2 {
     if (verboseEnabled || tracingEnabled) {
       if (!callbackManager)
         callbackManager = new CallbackManager4;
-      if (verboseEnabled && !callbackManager.handlers.some((handler2) => handler2.name === ConsoleCallbackHandler2.prototype.name)) {
+      if (verboseEnabled && !callbackManager.handlers.some((handler) => handler.name === ConsoleCallbackHandler2.prototype.name)) {
         const consoleHandler = new ConsoleCallbackHandler2;
         callbackManager.addHandler(consoleHandler, true);
       }
-      if (tracingEnabled && !callbackManager.handlers.some((handler2) => handler2.name === "langchain_tracer")) {
+      if (tracingEnabled && !callbackManager.handlers.some((handler) => handler.name === "langchain_tracer")) {
         if (tracingV2Enabled) {
           const tracerV2 = new LangChainTracer3;
           callbackManager.addHandler(tracerV2, true);
@@ -106411,23 +101935,23 @@ var CallbackManager3 = class CallbackManager4 extends BaseCallbackManager2 {
       if (tracingV2Enabled) {
         if (traceableRunTree && callbackManager._parentRunId === undefined) {
           callbackManager._parentRunId = traceableRunTree.id;
-          callbackManager.handlers.find((handler2) => handler2.name === "langchain_tracer")?.updateFromRunTree(traceableRunTree);
+          callbackManager.handlers.find((handler) => handler.name === "langchain_tracer")?.updateFromRunTree(traceableRunTree);
         }
       }
     }
     for (const { contextVar, inheritable = true, handlerClass, envVar } of _getConfigureHooks2()) {
       const createIfNotInContext = envVar && getEnvironmentVariable3(envVar) === "true" && handlerClass;
-      let handler2;
+      let handler;
       const contextVarValue = contextVar !== undefined ? getContextVariable2(contextVar) : undefined;
       if (contextVarValue && isBaseCallbackHandler2(contextVarValue))
-        handler2 = contextVarValue;
+        handler = contextVarValue;
       else if (createIfNotInContext)
-        handler2 = new handlerClass({});
-      if (handler2 !== undefined) {
+        handler = new handlerClass({});
+      if (handler !== undefined) {
         if (!callbackManager)
           callbackManager = new CallbackManager4;
-        if (!callbackManager.handlers.some((h) => h.name === handler2.name))
-          callbackManager.addHandler(handler2, inheritable);
+        if (!callbackManager.handlers.some((h) => h.name === handler.name))
+          callbackManager.addHandler(handler, inheritable);
       }
     }
     if (inheritableTags || localTags) {
@@ -106445,10 +101969,10 @@ var CallbackManager3 = class CallbackManager4 extends BaseCallbackManager2 {
     return callbackManager;
   }
 };
-function ensureHandler2(handler2) {
-  if ("name" in handler2)
-    return handler2;
-  return BaseCallbackHandler2.fromMethods(handler2);
+function ensureHandler2(handler) {
+  if ("name" in handler)
+    return handler;
+  return BaseCallbackHandler2.fromMethods(handler);
 }
 
 // node_modules/langchain/node_modules/@langchain/core/dist/singletons/async_local_storage/index.js
@@ -106473,7 +101997,7 @@ var AsyncLocalStorageProvider4 = class {
     const storage = this.getInstance();
     const previousValue = storage.getStore();
     const parentRunId = callbackManager?.getParentRunId();
-    const langChainTracer = callbackManager?.handlers?.find((handler2) => handler2?.name === "langchain_tracer");
+    const langChainTracer = callbackManager?.handlers?.find((handler) => handler?.name === "langchain_tracer");
     let runTree;
     if (langChainTracer && parentRunId)
       runTree = langChainTracer.getRunTreeWithTracingConfig(parentRunId);
@@ -106903,7 +102427,7 @@ __export(exports_core4, {
   toJSONSchema: () => toJSONSchema2,
   toDotPath: () => toDotPath2,
   safeParseAsync: () => safeParseAsync3,
-  safeParse: () => safeParse4,
+  safeParse: () => safeParse3,
   safeEncodeAsync: () => safeEncodeAsync3,
   safeEncode: () => safeEncode3,
   safeDecodeAsync: () => safeDecodeAsync3,
@@ -106913,7 +102437,7 @@ __export(exports_core4, {
   process: () => process2,
   prettifyError: () => prettifyError2,
   parseAsync: () => parseAsync3,
-  parse: () => parse9,
+  parse: () => parse8,
   meta: () => meta3,
   locales: () => exports_locales2,
   isValidJWT: () => isValidJWT3,
@@ -107269,17 +102793,17 @@ __export(exports_util2, {
   partial: () => partial2,
   parsedType: () => parsedType8,
   optionalKeys: () => optionalKeys2,
-  omit: () => omit3,
+  omit: () => omit2,
   objectClone: () => objectClone2,
   numKeys: () => numKeys2,
   nullish: () => nullish3,
   normalizeParams: () => normalizeParams2,
   mergeDefs: () => mergeDefs2,
-  merge: () => merge3,
+  merge: () => merge2,
   jsonStringifyReplacer: () => jsonStringifyReplacer2,
   joinValues: () => joinValues2,
   issue: () => issue2,
-  isPlainObject: () => isPlainObject4,
+  isPlainObject: () => isPlainObject2,
   isObject: () => isObject3,
   hexToUint8Array: () => hexToUint8Array2,
   getSizableOrigin: () => getSizableOrigin2,
@@ -107464,7 +102988,7 @@ var allowsEval2 = cached2(() => {
     return false;
   }
 });
-function isPlainObject4(o) {
+function isPlainObject2(o) {
   if (isObject3(o) === false)
     return false;
   const ctor = o.constructor;
@@ -107481,7 +103005,7 @@ function isPlainObject4(o) {
   return true;
 }
 function shallowClone2(o) {
-  if (isPlainObject4(o))
+  if (isPlainObject2(o))
     return { ...o };
   if (Array.isArray(o))
     return [...o];
@@ -107648,7 +103172,7 @@ function pick2(schema, mask) {
   });
   return clone2(schema, def);
 }
-function omit3(schema, mask) {
+function omit2(schema, mask) {
   const currDef = schema._zod.def;
   const checks3 = currDef.checks;
   const hasChecks = checks3 && checks3.length > 0;
@@ -107674,7 +103198,7 @@ function omit3(schema, mask) {
   return clone2(schema, def);
 }
 function extend2(schema, shape) {
-  if (!isPlainObject4(shape)) {
+  if (!isPlainObject2(shape)) {
     throw new Error("Invalid input to extend: expected a plain object");
   }
   const checks3 = schema._zod.def.checks;
@@ -107697,7 +103221,7 @@ function extend2(schema, shape) {
   return clone2(schema, def);
 }
 function safeExtend2(schema, shape) {
-  if (!isPlainObject4(shape)) {
+  if (!isPlainObject2(shape)) {
     throw new Error("Invalid input to safeExtend: expected a plain object");
   }
   const def = mergeDefs2(schema._zod.def, {
@@ -107709,7 +103233,7 @@ function safeExtend2(schema, shape) {
   });
   return clone2(schema, def);
 }
-function merge3(a, b) {
+function merge2(a, b) {
   const def = mergeDefs2(a._zod.def, {
     get shape() {
       const _shape = { ...a._zod.def.shape, ...b._zod.def.shape };
@@ -108073,7 +103597,7 @@ var _parse2 = (_Err) => (schema, value, _ctx, _params) => {
   }
   return result.value;
 };
-var parse9 = /* @__PURE__ */ _parse2($ZodRealError2);
+var parse8 = /* @__PURE__ */ _parse2($ZodRealError2);
 var _parseAsync2 = (_Err) => async (schema, value, _ctx, params) => {
   const ctx = _ctx ? Object.assign(_ctx, { async: true }) : { async: true };
   let result = schema._zod.run({ value, issues: [] }, ctx);
@@ -108098,7 +103622,7 @@ var _safeParse2 = (_Err) => (schema, value, _ctx) => {
     error: new (_Err ?? $ZodError2)(result.issues.map((iss) => finalizeIssue2(iss, ctx, config2())))
   } : { success: true, data: result.value };
 };
-var safeParse4 = /* @__PURE__ */ _safeParse2($ZodRealError2);
+var safeParse3 = /* @__PURE__ */ _safeParse2($ZodRealError2);
 var _safeParseAsync2 = (_Err) => async (schema, value, _ctx) => {
   const ctx = _ctx ? Object.assign(_ctx, { async: true }) : { async: true };
   let result = schema._zod.run({ value, issues: [] }, ctx);
@@ -108995,7 +104519,7 @@ var $ZodType2 = /* @__PURE__ */ $constructor2("$ZodType", (inst, def) => {
   defineLazy2(inst, "~standard", () => ({
     validate: (value) => {
       try {
-        const r = safeParse4(inst, value);
+        const r = safeParse3(inst, value);
         return r.success ? { value: r.data } : { issues: r.error?.issues };
       } catch (_) {
         return safeParseAsync3(inst, value).then((r) => r.success ? { value: r.data } : { issues: r.error?.issues });
@@ -109967,7 +105491,7 @@ function mergeValues3(a, b) {
   if (a instanceof Date && b instanceof Date && +a === +b) {
     return { valid: true, data: a };
   }
-  if (isPlainObject4(a) && isPlainObject4(b)) {
+  if (isPlainObject2(a) && isPlainObject2(b)) {
     const bKeys = Object.keys(b);
     const sharedKeys = Object.keys(a).filter((key) => bKeys.indexOf(key) !== -1);
     const newObj = { ...a, ...b };
@@ -110121,7 +105645,7 @@ var $ZodRecord2 = /* @__PURE__ */ $constructor2("$ZodRecord", (inst, def) => {
   $ZodType2.init(inst, def);
   inst._zod.parse = (payload, ctx) => {
     const input = payload.value;
-    if (!isPlainObject4(input)) {
+    if (!isPlainObject2(input)) {
       payload.issues.push({
         expected: "record",
         code: "invalid_type",
@@ -110741,10 +106265,10 @@ var $ZodFunction2 = /* @__PURE__ */ $constructor2("$ZodFunction", (inst, def) =>
       throw new Error("implement() must be called with a function");
     }
     return function(...args) {
-      const parsedArgs = inst._def.input ? parse9(inst._def.input, args) : args;
+      const parsedArgs = inst._def.input ? parse8(inst._def.input, args) : args;
       const result = Reflect.apply(func, this, parsedArgs);
       if (inst._def.output) {
-        return parse9(inst._def.output, result);
+        return parse8(inst._def.output, result);
       }
       return result;
     };
@@ -118360,7 +113884,7 @@ async function interopParseAsync2(schema, input) {
 }
 function interopParse2(schema, input) {
   if (isZodSchemaV42(schema))
-    return parse9(schema, input);
+    return parse8(schema, input);
   if (isZodSchemaV32(schema))
     return schema.parse(input);
   throw new Error("Schema must be an instance of z3.ZodType or z4.$ZodType");
@@ -124266,7 +119790,7 @@ var RunLog3 = class RunLog4 extends RunLogPatch2 {
     });
   }
 };
-var isLogStreamHandler2 = (handler2) => handler2.name === "log_stream_tracer";
+var isLogStreamHandler2 = (handler) => handler.name === "log_stream_tracer";
 async function _getStandardizedInputs2(run, schemaFormat) {
   if (schemaFormat === "original")
     throw new Error("Do not assign inputs with original schema drop the key for now. When inputs are added to streamLog they should be added with standardized schema for streaming events.");
@@ -124489,7 +120013,7 @@ function assignName2({ name, serialized }) {
     return serialized.id[serialized.id.length - 1];
   return "Unnamed";
 }
-var isStreamEventsHandler2 = (handler2) => handler2.name === "event_stream_tracer";
+var isStreamEventsHandler2 = (handler) => handler.name === "event_stream_tracer";
 var EventStreamCallbackHandler2 = class extends BaseTracer2 {
   autoClose = true;
   includeNames;
@@ -125577,9 +121101,9 @@ function* consumeIteratorInContext2(context, iter) {
   }
 }
 async function* consumeAsyncIterableInContext2(context, iter) {
-  const iterator2 = iter[Symbol.asyncIterator]();
+  const iterator = iter[Symbol.asyncIterator]();
   while (true) {
-    const { value, done } = await AsyncLocalStorageProviderSingleton4.runWithConfig(pickRunnableConfigKeys2(context), iterator2.next.bind(iter), true);
+    const { value, done } = await AsyncLocalStorageProviderSingleton4.runWithConfig(pickRunnableConfigKeys2(context), iterator.next.bind(iter), true);
     if (done)
       break;
     else
@@ -125758,13 +121282,13 @@ var Runnable2 = class extends Serializable3 {
       delete config3.runId;
       runManager = pipe2.setup;
       const streamEventsHandler = runManager?.handlers.find(isStreamEventsHandler2);
-      let iterator2 = pipe2.output;
+      let iterator = pipe2.output;
       if (streamEventsHandler !== undefined && runManager !== undefined)
-        iterator2 = streamEventsHandler.tapOutputIterable(runManager.runId, iterator2);
+        iterator = streamEventsHandler.tapOutputIterable(runManager.runId, iterator);
       const streamLogHandler = runManager?.handlers.find(isLogStreamHandler2);
       if (streamLogHandler !== undefined && runManager !== undefined)
-        iterator2 = streamLogHandler.tapOutputIterable(runManager.runId, iterator2);
-      for await (const chunk of iterator2) {
+        iterator = streamLogHandler.tapOutputIterable(runManager.runId, iterator);
+      for await (const chunk of iterator) {
         yield chunk;
         if (finalOutputSupported)
           if (finalOutput === undefined)
@@ -129610,9 +125134,9 @@ function convertToPrettyString3(message) {
   const lines = [];
   const title = ` ${message.type.charAt(0).toUpperCase() + message.type.slice(1)} Message `;
   const sepLen = Math.floor((80 - title.length) / 2);
-  const sep2 = "=".repeat(sepLen);
-  const secondSep = title.length % 2 === 0 ? sep2 : `${sep2}=`;
-  lines.push(`${sep2}${title}${secondSep}`);
+  const sep = "=".repeat(sepLen);
+  const secondSep = title.length % 2 === 0 ? sep : `${sep}=`;
+  lines.push(`${sep}${title}${secondSep}`);
   if (message.type === "ai") {
     const aiMessage = message;
     if (aiMessage.tool_calls && aiMessage.tool_calls.length > 0) {
@@ -131433,7 +126957,7 @@ var MAX4 = import_dist4.default.MAX;
 var version6 = import_dist4.default.version;
 var validate10 = import_dist4.default.validate;
 var stringify5 = import_dist4.default.stringify;
-var parse11 = import_dist4.default.parse;
+var parse10 = import_dist4.default.parse;
 
 // node_modules/@langchain/langgraph/node_modules/@langchain/core/node_modules/langsmith/dist/experimental/otel/constants.js
 var GEN_AI_OPERATION_NAME3 = "gen_ai.operation.name";
@@ -134016,12 +129540,12 @@ class Client3 {
     }
     return Promise.all(promises);
   }
-  static async _writeTraceToFallbackDir(directory, body, replayHeaders, endpoint2, maxBytes) {
+  static async _writeTraceToFallbackDir(directory, body, replayHeaders, endpoint, maxBytes) {
     try {
       const bodyBuffer = typeof body === "string" ? Buffer.from(body, "utf8") : Buffer.from(body);
       const envelope = JSON.stringify({
         version: 1,
-        endpoint: endpoint2,
+        endpoint,
         headers: replayHeaders,
         body_base64: bodyBuffer.toString("base64")
       });
@@ -135174,7 +130698,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
   }
   async createProject({ projectName, description = null, metadata = null, upsert = false, projectExtra = null, referenceDatasetId = null }) {
     const upsert_ = upsert ? `?upsert=true` : "";
-    const endpoint2 = `${this.apiUrl}/sessions${upsert_}`;
+    const endpoint = `${this.apiUrl}/sessions${upsert_}`;
     const extra = projectExtra || {};
     if (metadata) {
       extra["metadata"] = metadata;
@@ -135189,7 +130713,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
     }
     const serializedBody = JSON.stringify(body);
     const response = await this.caller.call(async () => {
-      const res = await this._fetch(endpoint2, {
+      const res = await this._fetch(endpoint, {
         method: "POST",
         headers: { ...this.headers, "Content-Type": "application/json" },
         signal: AbortSignal.timeout(this.timeout_ms),
@@ -135203,7 +130727,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
     return result;
   }
   async updateProject(projectId, { name = null, description = null, metadata = null, projectExtra = null, endTime = null }) {
-    const endpoint2 = `${this.apiUrl}/sessions/${projectId}`;
+    const endpoint = `${this.apiUrl}/sessions/${projectId}`;
     let extra = projectExtra;
     if (metadata) {
       extra = { ...extra || {}, metadata };
@@ -135215,7 +130739,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
       end_time: endTime ? new Date(endTime).toISOString() : null
     });
     const response = await this.caller.call(async () => {
-      const res = await this._fetch(endpoint2, {
+      const res = await this._fetch(endpoint, {
         method: "PATCH",
         headers: { ...this.headers, "Content-Type": "application/json" },
         signal: AbortSignal.timeout(this.timeout_ms),
@@ -137732,7 +133256,7 @@ class RunTree3 {
     let tracingEnabled = isTracingEnabled5();
     if (callbackManager) {
       const parentRunId = callbackManager?.getParentRunId?.() ?? "";
-      const langChainTracer = callbackManager?.handlers?.find((handler2) => handler2?.name == "langchain_tracer");
+      const langChainTracer = callbackManager?.handlers?.find((handler) => handler?.name == "langchain_tracer");
       parentRun = langChainTracer?.getRun?.(parentRunId);
       projectName = langChainTracer?.projectName;
       client3 = langChainTracer?.client;
@@ -138661,8 +134185,8 @@ var _getConfigureHooks3 = () => getContextVariable3(LC_CONFIGURE_HOOKS_KEY3) || 
 
 // node_modules/@langchain/langgraph/node_modules/@langchain/core/dist/callbacks/manager.js
 var BaseCallbackManager3 = class {
-  setHandler(handler2) {
-    return this.setHandlers([handler2]);
+  setHandler(handler) {
+    return this.setHandlers([handler]);
   }
 };
 var BaseRunManager3 = class {
@@ -138680,26 +134204,26 @@ var BaseRunManager3 = class {
     return this._parentRunId;
   }
   async handleText(text) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback3(async () => {
+    await Promise.all(this.handlers.map((handler) => consumeCallback3(async () => {
       try {
-        await handler2.handleText?.(text, this.runId, this._parentRunId, this.tags);
+        await handler.handleText?.(text, this.runId, this._parentRunId, this.tags);
       } catch (err) {
-        (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleText: ${err}`);
-        if (handler2.raiseError)
+        (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleText: ${err}`);
+        if (handler.raiseError)
           throw err;
       }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleCustomEvent(eventName, data, _runId, _tags, _metadata) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback3(async () => {
+    await Promise.all(this.handlers.map((handler) => consumeCallback3(async () => {
       try {
-        await handler2.handleCustomEvent?.(eventName, data, this.runId, this.tags, this.metadata);
+        await handler.handleCustomEvent?.(eventName, data, this.runId, this.tags, this.metadata);
       } catch (err) {
-        (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleCustomEvent: ${err}`);
-        if (handler2.raiseError)
+        (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleCustomEvent: ${err}`);
+        if (handler.raiseError)
           throw err;
       }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManagerForRetrieverRun3 = class extends BaseRunManager3 {
@@ -138713,69 +134237,69 @@ var CallbackManagerForRetrieverRun3 = class extends BaseRunManager3 {
     return manager;
   }
   async handleRetrieverEnd(documents) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback3(async () => {
-      if (!handler2.ignoreRetriever)
+    await Promise.all(this.handlers.map((handler) => consumeCallback3(async () => {
+      if (!handler.ignoreRetriever)
         try {
-          await handler2.handleRetrieverEnd?.(documents, this.runId, this._parentRunId, this.tags);
+          await handler.handleRetrieverEnd?.(documents, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleRetriever`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleRetriever`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleRetrieverError(err) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback3(async () => {
-      if (!handler2.ignoreRetriever)
+    await Promise.all(this.handlers.map((handler) => consumeCallback3(async () => {
+      if (!handler.ignoreRetriever)
         try {
-          await handler2.handleRetrieverError?.(err, this.runId, this._parentRunId, this.tags);
+          await handler.handleRetrieverError?.(err, this.runId, this._parentRunId, this.tags);
         } catch (error94) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleRetrieverError: ${error94}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleRetrieverError: ${error94}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManagerForLLMRun3 = class extends BaseRunManager3 {
   async handleLLMNewToken(token, idx, _runId, _parentRunId, _tags, fields) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback3(async () => {
-      if (!handler2.ignoreLLM)
+    await Promise.all(this.handlers.map((handler) => consumeCallback3(async () => {
+      if (!handler.ignoreLLM)
         try {
-          await handler2.handleLLMNewToken?.(token, idx ?? {
+          await handler.handleLLMNewToken?.(token, idx ?? {
             prompt: 0,
             completion: 0
           }, this.runId, this._parentRunId, this.tags, fields);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleLLMNewToken: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleLLMNewToken: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleLLMError(err, _runId, _parentRunId, _tags, extraParams) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback3(async () => {
-      if (!handler2.ignoreLLM)
+    await Promise.all(this.handlers.map((handler) => consumeCallback3(async () => {
+      if (!handler.ignoreLLM)
         try {
-          await handler2.handleLLMError?.(err, this.runId, this._parentRunId, this.tags, extraParams);
+          await handler.handleLLMError?.(err, this.runId, this._parentRunId, this.tags, extraParams);
         } catch (err2) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleLLMError: ${err2}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleLLMError: ${err2}`);
+          if (handler.raiseError)
             throw err2;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleLLMEnd(output, _runId, _parentRunId, _tags, extraParams) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback3(async () => {
-      if (!handler2.ignoreLLM)
+    await Promise.all(this.handlers.map((handler) => consumeCallback3(async () => {
+      if (!handler.ignoreLLM)
         try {
-          await handler2.handleLLMEnd?.(output, this.runId, this._parentRunId, this.tags, extraParams);
+          await handler.handleLLMEnd?.(output, this.runId, this._parentRunId, this.tags, extraParams);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleLLMEnd: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleLLMEnd: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManagerForChainRun3 = class extends BaseRunManager3 {
@@ -138789,52 +134313,52 @@ var CallbackManagerForChainRun3 = class extends BaseRunManager3 {
     return manager;
   }
   async handleChainError(err, _runId, _parentRunId, _tags, kwargs) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback3(async () => {
-      if (!handler2.ignoreChain)
+    await Promise.all(this.handlers.map((handler) => consumeCallback3(async () => {
+      if (!handler.ignoreChain)
         try {
-          await handler2.handleChainError?.(err, this.runId, this._parentRunId, this.tags, kwargs);
+          await handler.handleChainError?.(err, this.runId, this._parentRunId, this.tags, kwargs);
         } catch (err2) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleChainError: ${err2}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleChainError: ${err2}`);
+          if (handler.raiseError)
             throw err2;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleChainEnd(output, _runId, _parentRunId, _tags, kwargs) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback3(async () => {
-      if (!handler2.ignoreChain)
+    await Promise.all(this.handlers.map((handler) => consumeCallback3(async () => {
+      if (!handler.ignoreChain)
         try {
-          await handler2.handleChainEnd?.(output, this.runId, this._parentRunId, this.tags, kwargs);
+          await handler.handleChainEnd?.(output, this.runId, this._parentRunId, this.tags, kwargs);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleChainEnd: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleChainEnd: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleAgentAction(action) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback3(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback3(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleAgentAction?.(action, this.runId, this._parentRunId, this.tags);
+          await handler.handleAgentAction?.(action, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleAgentAction: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleAgentAction: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleAgentEnd(action) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback3(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback3(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleAgentEnd?.(action, this.runId, this._parentRunId, this.tags);
+          await handler.handleAgentEnd?.(action, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleAgentEnd: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleAgentEnd: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManagerForToolRun3 = class extends BaseRunManager3 {
@@ -138848,39 +134372,39 @@ var CallbackManagerForToolRun3 = class extends BaseRunManager3 {
     return manager;
   }
   async handleToolError(err) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback3(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback3(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleToolError?.(err, this.runId, this._parentRunId, this.tags);
+          await handler.handleToolError?.(err, this.runId, this._parentRunId, this.tags);
         } catch (err2) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleToolError: ${err2}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleToolError: ${err2}`);
+          if (handler.raiseError)
             throw err2;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleToolEvent(chunk) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback3(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback3(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleToolEvent?.(chunk, this.runId, this._parentRunId, this.tags);
+          await handler.handleToolEvent?.(chunk, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          if (handler2.raiseError)
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleToolEnd(output) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback3(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback3(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleToolEnd?.(output, this.runId, this._parentRunId, this.tags);
+          await handler.handleToolEnd?.(output, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleToolEnd: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleToolEnd: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManager5 = class CallbackManager6 extends BaseCallbackManager3 {
@@ -138908,20 +134432,20 @@ var CallbackManager5 = class CallbackManager6 extends BaseCallbackManager3 {
   async handleLLMStart(llm, prompts, runId = undefined, _parentRunId = undefined, extraParams = undefined, _tags = undefined, _metadata = undefined, runName = undefined) {
     return Promise.all(prompts.map(async (prompt, idx) => {
       const runId_ = idx === 0 && runId ? runId : v7_default3();
-      await Promise.all(this.handlers.map((handler2) => {
-        if (handler2.ignoreLLM)
+      await Promise.all(this.handlers.map((handler) => {
+        if (handler.ignoreLLM)
           return;
-        if (isBaseTracer3(handler2))
-          handler2._createRunForLLMStart(llm, [prompt], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+        if (isBaseTracer3(handler))
+          handler._createRunForLLMStart(llm, [prompt], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
         return consumeCallback3(async () => {
           try {
-            await handler2.handleLLMStart?.(llm, [prompt], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+            await handler.handleLLMStart?.(llm, [prompt], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
           } catch (err) {
-            (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleLLMStart: ${err}`);
-            if (handler2.raiseError)
+            (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleLLMStart: ${err}`);
+            if (handler.raiseError)
               throw err;
           }
-        }, handler2.awaitHandlers);
+        }, handler.awaitHandlers);
       }));
       return new CallbackManagerForLLMRun3(runId_, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
     }));
@@ -138929,109 +134453,109 @@ var CallbackManager5 = class CallbackManager6 extends BaseCallbackManager3 {
   async handleChatModelStart(llm, messages, runId = undefined, _parentRunId = undefined, extraParams = undefined, _tags = undefined, _metadata = undefined, runName = undefined) {
     return Promise.all(messages.map(async (messageGroup, idx) => {
       const runId_ = idx === 0 && runId ? runId : v7_default3();
-      await Promise.all(this.handlers.map((handler2) => {
-        if (handler2.ignoreLLM)
+      await Promise.all(this.handlers.map((handler) => {
+        if (handler.ignoreLLM)
           return;
-        if (isBaseTracer3(handler2))
-          handler2._createRunForChatModelStart(llm, [messageGroup], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+        if (isBaseTracer3(handler))
+          handler._createRunForChatModelStart(llm, [messageGroup], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
         return consumeCallback3(async () => {
           try {
-            if (handler2.handleChatModelStart)
-              await handler2.handleChatModelStart?.(llm, [messageGroup], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
-            else if (handler2.handleLLMStart) {
+            if (handler.handleChatModelStart)
+              await handler.handleChatModelStart?.(llm, [messageGroup], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+            else if (handler.handleLLMStart) {
               const messageString = getBufferString3(messageGroup);
-              await handler2.handleLLMStart?.(llm, [messageString], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+              await handler.handleLLMStart?.(llm, [messageString], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
             }
           } catch (err) {
-            (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleLLMStart: ${err}`);
-            if (handler2.raiseError)
+            (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleLLMStart: ${err}`);
+            if (handler.raiseError)
               throw err;
           }
-        }, handler2.awaitHandlers);
+        }, handler.awaitHandlers);
       }));
       return new CallbackManagerForLLMRun3(runId_, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
     }));
   }
   async handleChainStart(chain, inputs, runId = v7_default3(), runType = undefined, _tags = undefined, _metadata = undefined, runName = undefined, _parentRunId = undefined, extra = undefined) {
-    await Promise.all(this.handlers.map((handler2) => {
-      if (handler2.ignoreChain)
+    await Promise.all(this.handlers.map((handler) => {
+      if (handler.ignoreChain)
         return;
-      if (isBaseTracer3(handler2))
-        handler2._createRunForChainStart(chain, inputs, runId, this._parentRunId, this.tags, this.metadata, runType, runName, extra);
+      if (isBaseTracer3(handler))
+        handler._createRunForChainStart(chain, inputs, runId, this._parentRunId, this.tags, this.metadata, runType, runName, extra);
       return consumeCallback3(async () => {
         try {
-          await handler2.handleChainStart?.(chain, inputs, runId, this._parentRunId, this.tags, this.metadata, runType, runName, extra);
+          await handler.handleChainStart?.(chain, inputs, runId, this._parentRunId, this.tags, this.metadata, runType, runName, extra);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleChainStart: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleChainStart: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-      }, handler2.awaitHandlers);
+      }, handler.awaitHandlers);
     }));
     return new CallbackManagerForChainRun3(runId, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
   }
   async handleToolStart(tool2, input, runId = v7_default3(), _parentRunId = undefined, _tags = undefined, _metadata = undefined, runName = undefined, toolCallId = undefined) {
-    await Promise.all(this.handlers.map((handler2) => {
-      if (handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => {
+      if (handler.ignoreAgent)
         return;
-      if (isBaseTracer3(handler2))
-        handler2._createRunForToolStart(tool2, input, runId, this._parentRunId, this.tags, this.metadata, runName);
+      if (isBaseTracer3(handler))
+        handler._createRunForToolStart(tool2, input, runId, this._parentRunId, this.tags, this.metadata, runName);
       return consumeCallback3(async () => {
         try {
-          await handler2.handleToolStart?.(tool2, input, runId, this._parentRunId, this.tags, this.metadata, runName, toolCallId);
+          await handler.handleToolStart?.(tool2, input, runId, this._parentRunId, this.tags, this.metadata, runName, toolCallId);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleToolStart: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleToolStart: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-      }, handler2.awaitHandlers);
+      }, handler.awaitHandlers);
     }));
     return new CallbackManagerForToolRun3(runId, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
   }
   async handleRetrieverStart(retriever, query, runId = v7_default3(), _parentRunId = undefined, _tags = undefined, _metadata = undefined, runName = undefined) {
-    await Promise.all(this.handlers.map((handler2) => {
-      if (handler2.ignoreRetriever)
+    await Promise.all(this.handlers.map((handler) => {
+      if (handler.ignoreRetriever)
         return;
-      if (isBaseTracer3(handler2))
-        handler2._createRunForRetrieverStart(retriever, query, runId, this._parentRunId, this.tags, this.metadata, runName);
+      if (isBaseTracer3(handler))
+        handler._createRunForRetrieverStart(retriever, query, runId, this._parentRunId, this.tags, this.metadata, runName);
       return consumeCallback3(async () => {
         try {
-          await handler2.handleRetrieverStart?.(retriever, query, runId, this._parentRunId, this.tags, this.metadata, runName);
+          await handler.handleRetrieverStart?.(retriever, query, runId, this._parentRunId, this.tags, this.metadata, runName);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleRetrieverStart: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleRetrieverStart: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-      }, handler2.awaitHandlers);
+      }, handler.awaitHandlers);
     }));
     return new CallbackManagerForRetrieverRun3(runId, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
   }
   async handleCustomEvent(eventName, data, runId, _tags, _metadata) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback3(async () => {
-      if (!handler2.ignoreCustomEvent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback3(async () => {
+      if (!handler.ignoreCustomEvent)
         try {
-          await handler2.handleCustomEvent?.(eventName, data, runId, this.tags, this.metadata);
+          await handler.handleCustomEvent?.(eventName, data, runId, this.tags, this.metadata);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleCustomEvent: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleCustomEvent: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
-  addHandler(handler2, inherit = true) {
-    this.handlers.push(handler2);
+  addHandler(handler, inherit = true) {
+    this.handlers.push(handler);
     if (inherit)
-      this.inheritableHandlers.push(handler2);
+      this.inheritableHandlers.push(handler);
   }
-  removeHandler(handler2) {
-    this.handlers = this.handlers.filter((_handler) => _handler !== handler2);
-    this.inheritableHandlers = this.inheritableHandlers.filter((_handler) => _handler !== handler2);
+  removeHandler(handler) {
+    this.handlers = this.handlers.filter((_handler) => _handler !== handler);
+    this.inheritableHandlers = this.inheritableHandlers.filter((_handler) => _handler !== handler);
   }
   setHandlers(handlers, inherit = true) {
     this.handlers = [];
     this.inheritableHandlers = [];
-    for (const handler2 of handlers)
-      this.addHandler(handler2, inherit);
+    for (const handler of handlers)
+      this.addHandler(handler, inherit);
   }
   addTags(tags, inherit = true) {
     this.removeTags(tags);
@@ -139062,9 +134586,9 @@ var CallbackManager5 = class CallbackManager6 extends BaseCallbackManager3 {
   }
   copy(additionalHandlers = [], inherit = true) {
     const manager = new CallbackManager6(this._parentRunId);
-    for (const handler2 of this.handlers) {
-      const inheritable = this.inheritableHandlers.includes(handler2);
-      manager.addHandler(handler2, inheritable);
+    for (const handler of this.handlers) {
+      const inheritable = this.inheritableHandlers.includes(handler);
+      manager.addHandler(handler, inheritable);
     }
     for (const tag of this.tags) {
       const inheritable = this.inheritableTags.includes(tag);
@@ -139074,10 +134598,10 @@ var CallbackManager5 = class CallbackManager6 extends BaseCallbackManager3 {
       const inheritable = Object.keys(this.inheritableMetadata).includes(key);
       manager.addMetadata({ [key]: this.metadata[key] }, inheritable);
     }
-    for (const handler2 of additionalHandlers) {
-      if (manager.handlers.filter((h) => h.name === "console_callback_handler").some((h) => h.name === handler2.name))
+    for (const handler of additionalHandlers) {
+      if (manager.handlers.filter((h) => h.name === "console_callback_handler").some((h) => h.name === handler.name))
         continue;
-      manager.addHandler(handler2, inherit);
+      manager.addHandler(handler, inherit);
     }
     return manager;
   }
@@ -139111,7 +134635,7 @@ var CallbackManager5 = class CallbackManager6 extends BaseCallbackManager3 {
     const traceableRunTree = LangChainTracer5.getTraceableRunTree();
     const tracingV2Enabled = traceableRunTree?.tracingEnabled ?? isTracingEnabled6();
     if (traceableRunTree?.tracingEnabled === false && callbackManager) {
-      const inheritedTracers = callbackManager.handlers.filter((handler2) => handler2.name === "langchain_tracer");
+      const inheritedTracers = callbackManager.handlers.filter((handler) => handler.name === "langchain_tracer");
       for (const tracer of inheritedTracers)
         callbackManager.removeHandler(tracer);
     }
@@ -139119,11 +134643,11 @@ var CallbackManager5 = class CallbackManager6 extends BaseCallbackManager3 {
     if (verboseEnabled || tracingEnabled) {
       if (!callbackManager)
         callbackManager = new CallbackManager6;
-      if (verboseEnabled && !callbackManager.handlers.some((handler2) => handler2.name === ConsoleCallbackHandler3.prototype.name)) {
+      if (verboseEnabled && !callbackManager.handlers.some((handler) => handler.name === ConsoleCallbackHandler3.prototype.name)) {
         const consoleHandler = new ConsoleCallbackHandler3;
         callbackManager.addHandler(consoleHandler, true);
       }
-      if (tracingEnabled && !callbackManager.handlers.some((handler2) => handler2.name === "langchain_tracer")) {
+      if (tracingEnabled && !callbackManager.handlers.some((handler) => handler.name === "langchain_tracer")) {
         if (tracingV2Enabled) {
           const tracerV2 = new LangChainTracer5;
           callbackManager.addHandler(tracerV2, true);
@@ -139132,23 +134656,23 @@ var CallbackManager5 = class CallbackManager6 extends BaseCallbackManager3 {
       if (tracingV2Enabled) {
         if (traceableRunTree && callbackManager._parentRunId === undefined) {
           callbackManager._parentRunId = traceableRunTree.id;
-          callbackManager.handlers.find((handler2) => handler2.name === "langchain_tracer")?.updateFromRunTree(traceableRunTree);
+          callbackManager.handlers.find((handler) => handler.name === "langchain_tracer")?.updateFromRunTree(traceableRunTree);
         }
       }
     }
     for (const { contextVar, inheritable = true, handlerClass, envVar } of _getConfigureHooks3()) {
       const createIfNotInContext = envVar && getEnvironmentVariable5(envVar) === "true" && handlerClass;
-      let handler2;
+      let handler;
       const contextVarValue = contextVar !== undefined ? getContextVariable3(contextVar) : undefined;
       if (contextVarValue && isBaseCallbackHandler3(contextVarValue))
-        handler2 = contextVarValue;
+        handler = contextVarValue;
       else if (createIfNotInContext)
-        handler2 = new handlerClass({});
-      if (handler2 !== undefined) {
+        handler = new handlerClass({});
+      if (handler !== undefined) {
         if (!callbackManager)
           callbackManager = new CallbackManager6;
-        if (!callbackManager.handlers.some((h) => h.name === handler2.name))
-          callbackManager.addHandler(handler2, inheritable);
+        if (!callbackManager.handlers.some((h) => h.name === handler.name))
+          callbackManager.addHandler(handler, inheritable);
       }
     }
     if (inheritableTags || localTags) {
@@ -139166,10 +134690,10 @@ var CallbackManager5 = class CallbackManager6 extends BaseCallbackManager3 {
     return callbackManager;
   }
 };
-function ensureHandler3(handler2) {
-  if ("name" in handler2)
-    return handler2;
-  return BaseCallbackHandler3.fromMethods(handler2);
+function ensureHandler3(handler) {
+  if ("name" in handler)
+    return handler;
+  return BaseCallbackHandler3.fromMethods(handler);
 }
 
 // node_modules/@langchain/langgraph/node_modules/@langchain/core/dist/singletons/async_local_storage/index.js
@@ -139194,7 +134718,7 @@ var AsyncLocalStorageProvider6 = class {
     const storage = this.getInstance();
     const previousValue = storage.getStore();
     const parentRunId = callbackManager?.getParentRunId();
-    const langChainTracer = callbackManager?.handlers?.find((handler2) => handler2?.name === "langchain_tracer");
+    const langChainTracer = callbackManager?.handlers?.find((handler) => handler?.name === "langchain_tracer");
     let runTree;
     if (langChainTracer && parentRunId)
       runTree = langChainTracer.getRunTreeWithTracingConfig(parentRunId);
@@ -139561,7 +135085,7 @@ var MAX5 = import_dist5.default.MAX;
 var version7 = import_dist5.default.version;
 var validate11 = import_dist5.default.validate;
 var stringify6 = import_dist5.default.stringify;
-var parse12 = import_dist5.default.parse;
+var parse11 = import_dist5.default.parse;
 
 // node_modules/@langchain/langgraph-checkpoint/dist/id.js
 function uuid63(clockseq) {
@@ -140834,7 +136358,7 @@ Writer.prototype.clearCache = function clearCache() {
     this.templateCache.clear();
   }
 };
-Writer.prototype.parse = function parse13(template, tags) {
+Writer.prototype.parse = function parse12(template, tags) {
   var cache3 = this.templateCache;
   var cacheKey = template + ":" + (tags || mustache.tags).join(":");
   var isCacheEnabled = typeof cache3 !== "undefined";
@@ -140987,7 +136511,7 @@ var defaultWriter = new Writer;
 mustache.clearCache = function clearCache2() {
   return defaultWriter.clearCache();
 };
-mustache.parse = function parse14(template, tags) {
+mustache.parse = function parse13(template, tags) {
   return defaultWriter.parse(template, tags);
 };
 mustache.render = function render2(template, view, partials, config3) {
@@ -145584,7 +141108,7 @@ var RunLog5 = class RunLog6 extends RunLogPatch3 {
     });
   }
 };
-var isLogStreamHandler3 = (handler2) => handler2.name === "log_stream_tracer";
+var isLogStreamHandler3 = (handler) => handler.name === "log_stream_tracer";
 async function _getStandardizedInputs3(run, schemaFormat) {
   if (schemaFormat === "original")
     throw new Error("Do not assign inputs with original schema drop the key for now. When inputs are added to streamLog they should be added with standardized schema for streaming events.");
@@ -145826,7 +141350,7 @@ function assignName3({ name, serialized }) {
     return serialized.id[serialized.id.length - 1];
   return "Unnamed";
 }
-var isStreamEventsHandler3 = (handler2) => handler2.name === "event_stream_tracer";
+var isStreamEventsHandler3 = (handler) => handler.name === "event_stream_tracer";
 var EventStreamCallbackHandler3 = class extends BaseTracer3 {
   autoClose = true;
   includeNames;
@@ -146554,7 +142078,7 @@ __export(exports_core6, {
   toJSONSchema: () => toJSONSchema3,
   toDotPath: () => toDotPath3,
   safeParseAsync: () => safeParseAsync4,
-  safeParse: () => safeParse5,
+  safeParse: () => safeParse4,
   safeEncodeAsync: () => safeEncodeAsync4,
   safeEncode: () => safeEncode4,
   safeDecodeAsync: () => safeDecodeAsync4,
@@ -146564,7 +142088,7 @@ __export(exports_core6, {
   process: () => process3,
   prettifyError: () => prettifyError3,
   parseAsync: () => parseAsync4,
-  parse: () => parse15,
+  parse: () => parse14,
   meta: () => meta4,
   locales: () => exports_locales3,
   isValidJWT: () => isValidJWT5,
@@ -146920,17 +142444,17 @@ __export(exports_util3, {
   partial: () => partial3,
   parsedType: () => parsedType9,
   optionalKeys: () => optionalKeys3,
-  omit: () => omit4,
+  omit: () => omit3,
   objectClone: () => objectClone3,
   numKeys: () => numKeys3,
   nullish: () => nullish4,
   normalizeParams: () => normalizeParams3,
   mergeDefs: () => mergeDefs3,
-  merge: () => merge4,
+  merge: () => merge3,
   jsonStringifyReplacer: () => jsonStringifyReplacer3,
   joinValues: () => joinValues3,
   issue: () => issue3,
-  isPlainObject: () => isPlainObject5,
+  isPlainObject: () => isPlainObject3,
   isObject: () => isObject5,
   hexToUint8Array: () => hexToUint8Array4,
   getSizableOrigin: () => getSizableOrigin3,
@@ -147115,7 +142639,7 @@ var allowsEval3 = cached3(() => {
     return false;
   }
 });
-function isPlainObject5(o) {
+function isPlainObject3(o) {
   if (isObject5(o) === false)
     return false;
   const ctor = o.constructor;
@@ -147132,7 +142656,7 @@ function isPlainObject5(o) {
   return true;
 }
 function shallowClone3(o) {
-  if (isPlainObject5(o))
+  if (isPlainObject3(o))
     return { ...o };
   if (Array.isArray(o))
     return [...o];
@@ -147299,7 +142823,7 @@ function pick3(schema, mask) {
   });
   return clone3(schema, def);
 }
-function omit4(schema, mask) {
+function omit3(schema, mask) {
   const currDef = schema._zod.def;
   const checks4 = currDef.checks;
   const hasChecks = checks4 && checks4.length > 0;
@@ -147325,7 +142849,7 @@ function omit4(schema, mask) {
   return clone3(schema, def);
 }
 function extend3(schema, shape) {
-  if (!isPlainObject5(shape)) {
+  if (!isPlainObject3(shape)) {
     throw new Error("Invalid input to extend: expected a plain object");
   }
   const checks4 = schema._zod.def.checks;
@@ -147348,7 +142872,7 @@ function extend3(schema, shape) {
   return clone3(schema, def);
 }
 function safeExtend3(schema, shape) {
-  if (!isPlainObject5(shape)) {
+  if (!isPlainObject3(shape)) {
     throw new Error("Invalid input to safeExtend: expected a plain object");
   }
   const def = mergeDefs3(schema._zod.def, {
@@ -147360,7 +142884,7 @@ function safeExtend3(schema, shape) {
   });
   return clone3(schema, def);
 }
-function merge4(a, b) {
+function merge3(a, b) {
   const def = mergeDefs3(a._zod.def, {
     get shape() {
       const _shape = { ...a._zod.def.shape, ...b._zod.def.shape };
@@ -147724,7 +143248,7 @@ var _parse3 = (_Err) => (schema, value, _ctx, _params) => {
   }
   return result.value;
 };
-var parse15 = /* @__PURE__ */ _parse3($ZodRealError3);
+var parse14 = /* @__PURE__ */ _parse3($ZodRealError3);
 var _parseAsync3 = (_Err) => async (schema, value, _ctx, params) => {
   const ctx = _ctx ? Object.assign(_ctx, { async: true }) : { async: true };
   let result = schema._zod.run({ value, issues: [] }, ctx);
@@ -147749,7 +143273,7 @@ var _safeParse3 = (_Err) => (schema, value, _ctx) => {
     error: new (_Err ?? $ZodError3)(result.issues.map((iss) => finalizeIssue3(iss, ctx, config3())))
   } : { success: true, data: result.value };
 };
-var safeParse5 = /* @__PURE__ */ _safeParse3($ZodRealError3);
+var safeParse4 = /* @__PURE__ */ _safeParse3($ZodRealError3);
 var _safeParseAsync3 = (_Err) => async (schema, value, _ctx) => {
   const ctx = _ctx ? Object.assign(_ctx, { async: true }) : { async: true };
   let result = schema._zod.run({ value, issues: [] }, ctx);
@@ -148646,7 +144170,7 @@ var $ZodType3 = /* @__PURE__ */ $constructor3("$ZodType", (inst, def) => {
   defineLazy3(inst, "~standard", () => ({
     validate: (value) => {
       try {
-        const r = safeParse5(inst, value);
+        const r = safeParse4(inst, value);
         return r.success ? { value: r.data } : { issues: r.error?.issues };
       } catch (_) {
         return safeParseAsync4(inst, value).then((r) => r.success ? { value: r.data } : { issues: r.error?.issues });
@@ -149618,7 +145142,7 @@ function mergeValues5(a, b) {
   if (a instanceof Date && b instanceof Date && +a === +b) {
     return { valid: true, data: a };
   }
-  if (isPlainObject5(a) && isPlainObject5(b)) {
+  if (isPlainObject3(a) && isPlainObject3(b)) {
     const bKeys = Object.keys(b);
     const sharedKeys = Object.keys(a).filter((key) => bKeys.indexOf(key) !== -1);
     const newObj = { ...a, ...b };
@@ -149772,7 +145296,7 @@ var $ZodRecord3 = /* @__PURE__ */ $constructor3("$ZodRecord", (inst, def) => {
   $ZodType3.init(inst, def);
   inst._zod.parse = (payload, ctx) => {
     const input = payload.value;
-    if (!isPlainObject5(input)) {
+    if (!isPlainObject3(input)) {
       payload.issues.push({
         expected: "record",
         code: "invalid_type",
@@ -150392,10 +145916,10 @@ var $ZodFunction3 = /* @__PURE__ */ $constructor3("$ZodFunction", (inst, def) =>
       throw new Error("implement() must be called with a function");
     }
     return function(...args) {
-      const parsedArgs = inst._def.input ? parse15(inst._def.input, args) : args;
+      const parsedArgs = inst._def.input ? parse14(inst._def.input, args) : args;
       const result = Reflect.apply(func, this, parsedArgs);
       if (inst._def.output) {
-        return parse15(inst._def.output, result);
+        return parse14(inst._def.output, result);
       }
       return result;
     };
@@ -157994,7 +153518,7 @@ async function interopParseAsync3(schema, input) {
 }
 function interopParse3(schema, input) {
   if (isZodSchemaV43(schema))
-    return parse15(schema, input);
+    return parse14(schema, input);
   if (isZodSchemaV33(schema))
     return schema.parse(input);
   throw new Error("Schema must be an instance of z3.ZodType or z4.$ZodType");
@@ -158122,7 +153646,7 @@ function getInteropZodDefaultGetter2(schema) {
     }
   if (isZodSchemaV43(schema))
     try {
-      const defaultValue = parse15(schema, undefined);
+      const defaultValue = parse14(schema, undefined);
       return () => defaultValue;
     } catch {
       return;
@@ -163731,9 +159255,9 @@ function* consumeIteratorInContext3(context, iter) {
   }
 }
 async function* consumeAsyncIterableInContext3(context, iter) {
-  const iterator2 = iter[Symbol.asyncIterator]();
+  const iterator = iter[Symbol.asyncIterator]();
   while (true) {
-    const { value, done } = await AsyncLocalStorageProviderSingleton6.runWithConfig(pickRunnableConfigKeys3(context), iterator2.next.bind(iter), true);
+    const { value, done } = await AsyncLocalStorageProviderSingleton6.runWithConfig(pickRunnableConfigKeys3(context), iterator.next.bind(iter), true);
     if (done)
       break;
     else
@@ -163912,13 +159436,13 @@ var Runnable3 = class extends Serializable5 {
       delete config4.runId;
       runManager = pipe2.setup;
       const streamEventsHandler = runManager?.handlers.find(isStreamEventsHandler3);
-      let iterator2 = pipe2.output;
+      let iterator = pipe2.output;
       if (streamEventsHandler !== undefined && runManager !== undefined)
-        iterator2 = streamEventsHandler.tapOutputIterable(runManager.runId, iterator2);
+        iterator = streamEventsHandler.tapOutputIterable(runManager.runId, iterator);
       const streamLogHandler = runManager?.handlers.find(isLogStreamHandler3);
       if (streamLogHandler !== undefined && runManager !== undefined)
-        iterator2 = streamLogHandler.tapOutputIterable(runManager.runId, iterator2);
-      for await (const chunk of iterator2) {
+        iterator = streamLogHandler.tapOutputIterable(runManager.runId, iterator);
+      for await (const chunk of iterator) {
         yield chunk;
         if (finalOutputSupported)
           if (finalOutput === undefined)
@@ -168968,7 +164492,7 @@ __export(exports_external5, {
   setErrorMap: () => setErrorMap5,
   set: () => set3,
   safeParseAsync: () => safeParseAsync5,
-  safeParse: () => safeParse6,
+  safeParse: () => safeParse5,
   safeEncodeAsync: () => safeEncodeAsync5,
   safeEncode: () => safeEncode5,
   safeDecodeAsync: () => safeDecodeAsync5,
@@ -168988,7 +164512,7 @@ __export(exports_external5, {
   pipe: () => pipe2,
   partialRecord: () => partialRecord2,
   parseAsync: () => parseAsync5,
-  parse: () => parse17,
+  parse: () => parse16,
   overwrite: () => _overwrite3,
   optional: () => optional3,
   object: () => object3,
@@ -169449,9 +164973,9 @@ var ZodRealError2 = $constructor3("ZodError", initializer5, {
 });
 
 // node_modules/@langchain/langgraph/node_modules/zod/v4/classic/parse.js
-var parse17 = /* @__PURE__ */ _parse3(ZodRealError2);
+var parse16 = /* @__PURE__ */ _parse3(ZodRealError2);
 var parseAsync5 = /* @__PURE__ */ _parseAsync3(ZodRealError2);
-var safeParse6 = /* @__PURE__ */ _safeParse3(ZodRealError2);
+var safeParse5 = /* @__PURE__ */ _safeParse3(ZodRealError2);
 var safeParseAsync5 = /* @__PURE__ */ _safeParseAsync3(ZodRealError2);
 var encode6 = /* @__PURE__ */ _encode3(ZodRealError2);
 var decode5 = /* @__PURE__ */ _decode3(ZodRealError2);
@@ -169492,8 +165016,8 @@ var ZodType5 = /* @__PURE__ */ $constructor3("ZodType", (inst, def) => {
     reg.add(inst, meta5);
     return inst;
   };
-  inst.parse = (data, params) => parse17(inst, data, params, { callee: inst.parse });
-  inst.safeParse = (data, params) => safeParse6(inst, data, params);
+  inst.parse = (data, params) => parse16(inst, data, params, { callee: inst.parse });
+  inst.safeParse = (data, params) => safeParse5(inst, data, params);
   inst.parseAsync = async (data, params) => parseAsync5(inst, data, params, { callee: inst.parseAsync });
   inst.safeParseAsync = async (data, params) => safeParseAsync5(inst, data, params);
   inst.spa = inst.safeParseAsync;
@@ -171050,23 +166574,6 @@ function date11(params) {
 
 // node_modules/@langchain/langgraph/node_modules/zod/v4/classic/external.js
 config3(en_default5());
-// node_modules/@langchain/langgraph/node_modules/uuid/wrapper.mjs
-var import_dist6 = __toESM(require_dist7(), 1);
-var v16 = import_dist6.default.v1;
-var v1ToV66 = import_dist6.default.v1ToV6;
-var v36 = import_dist6.default.v3;
-var v49 = import_dist6.default.v4;
-var v56 = import_dist6.default.v5;
-var v66 = import_dist6.default.v6;
-var v6ToV16 = import_dist6.default.v6ToV1;
-var v79 = import_dist6.default.v7;
-var NIL6 = import_dist6.default.NIL;
-var MAX6 = import_dist6.default.MAX;
-var version9 = import_dist6.default.version;
-var validate13 = import_dist6.default.validate;
-var stringify8 = import_dist6.default.stringify;
-var parse19 = import_dist6.default.parse;
-
 // node_modules/@langchain/langgraph/dist/graph/graph.js
 var Branch = class {
   path;
@@ -171361,7 +166868,7 @@ var CompiledGraph = class extends Pregel {
           let _isRunnableInterface = function(thing) {
             return thing ? thing.lc_runnable : false;
           }, _nodeDataStr = function(id, data) {
-            if (id !== undefined && !validate13(id))
+            if (id !== undefined && !validate_default(id))
               return id;
             else if (_isRunnableInterface(data))
               try {
@@ -171463,7 +166970,7 @@ var CompiledGraph = class extends Pregel {
           let _isRunnableInterface = function(thing) {
             return thing ? thing.lc_runnable : false;
           }, _nodeDataStr = function(id, data) {
-            if (id !== undefined && !validate13(id))
+            if (id !== undefined && !validate_default(id))
               return id;
             else if (_isRunnableInterface(data))
               try {
@@ -171873,14 +167380,14 @@ function messagesStateReducer(left, right) {
   const rightMessages = rightArray.map(coerceMessageLikeToMessage3);
   for (const m of leftMessages)
     if (m.id === null || m.id === undefined) {
-      m.id = v49();
+      m.id = v4_default();
       m.lc_kwargs.id = m.id;
     }
   let removeAllIdx;
   for (let i = 0;i < rightMessages.length; i += 1) {
     const m = rightMessages[i];
     if (m.id === null || m.id === undefined) {
-      m.id = v49();
+      m.id = v4_default();
       m.lc_kwargs.id = m.id;
     }
     if (RemoveMessage3.isInstance(m) && m.id === REMOVE_ALL_MESSAGES)
@@ -172847,7 +168354,7 @@ __export(exports_external6, {
   uuidv7: () => uuidv73,
   uuidv6: () => uuidv63,
   uuidv4: () => uuidv43,
-  uuid: () => uuid17,
+  uuid: () => uuid16,
   util: () => exports_util2,
   url: () => url3,
   uppercase: () => _uppercase2,
@@ -172878,7 +168385,7 @@ __export(exports_external6, {
   setErrorMap: () => setErrorMap6,
   set: () => set4,
   safeParseAsync: () => safeParseAsync6,
-  safeParse: () => safeParse7,
+  safeParse: () => safeParse6,
   safeEncodeAsync: () => safeEncodeAsync6,
   safeEncode: () => safeEncode6,
   safeDecodeAsync: () => safeDecodeAsync6,
@@ -172898,7 +168405,7 @@ __export(exports_external6, {
   pipe: () => pipe3,
   partialRecord: () => partialRecord3,
   parseAsync: () => parseAsync6,
-  parse: () => parse20,
+  parse: () => parse18,
   overwrite: () => _overwrite2,
   optional: () => optional4,
   object: () => object4,
@@ -173088,7 +168595,7 @@ __export(exports_schemas6, {
   uuidv7: () => uuidv73,
   uuidv6: () => uuidv63,
   uuidv4: () => uuidv43,
-  uuid: () => uuid17,
+  uuid: () => uuid16,
   url: () => url3,
   unknown: () => unknown4,
   union: () => union4,
@@ -173359,9 +168866,9 @@ var ZodRealError3 = $constructor2("ZodError", initializer6, {
 });
 
 // node_modules/langchain/node_modules/zod/v4/classic/parse.js
-var parse20 = /* @__PURE__ */ _parse2(ZodRealError3);
+var parse18 = /* @__PURE__ */ _parse2(ZodRealError3);
 var parseAsync6 = /* @__PURE__ */ _parseAsync2(ZodRealError3);
-var safeParse7 = /* @__PURE__ */ _safeParse2(ZodRealError3);
+var safeParse6 = /* @__PURE__ */ _safeParse2(ZodRealError3);
 var safeParseAsync6 = /* @__PURE__ */ _safeParseAsync2(ZodRealError3);
 var encode7 = /* @__PURE__ */ _encode2(ZodRealError3);
 var decode6 = /* @__PURE__ */ _decode2(ZodRealError3);
@@ -173402,8 +168909,8 @@ var ZodType6 = /* @__PURE__ */ $constructor2("ZodType", (inst, def) => {
     reg.add(inst, meta6);
     return inst;
   };
-  inst.parse = (data, params) => parse20(inst, data, params, { callee: inst.parse });
-  inst.safeParse = (data, params) => safeParse7(inst, data, params);
+  inst.parse = (data, params) => parse18(inst, data, params, { callee: inst.parse });
+  inst.safeParse = (data, params) => safeParse6(inst, data, params);
   inst.parseAsync = async (data, params) => parseAsync6(inst, data, params, { callee: inst.parseAsync });
   inst.safeParseAsync = async (data, params) => safeParseAsync6(inst, data, params);
   inst.spa = inst.safeParseAsync;
@@ -173536,7 +169043,7 @@ var ZodUUID3 = /* @__PURE__ */ $constructor2("ZodUUID", (inst, def) => {
   $ZodUUID2.init(inst, def);
   ZodStringFormat3.init(inst, def);
 });
-function uuid17(params) {
+function uuid16(params) {
   return _uuid2(ZodUUID3, params);
 }
 function uuidv43(params) {
@@ -174921,10 +170428,10 @@ function fromJSONSchema2(schema, params) {
   if (typeof schema === "boolean") {
     return schema ? z2.any() : z2.never();
   }
-  const version10 = detectVersion2(schema, params?.defaultTarget);
+  const version9 = detectVersion2(schema, params?.defaultTarget);
   const defs = schema.$defs || schema.definitions || {};
   const ctx = {
-    version: version10,
+    version: version9,
     defs,
     refs: new Map,
     processing: new Set,
@@ -175273,10 +170780,10 @@ function countTokensApproximately(messages, tools) {
   }
   return Math.ceil(totalChars / charsPerToken);
 }
-function getHookConstraint(hook2) {
-  if (!hook2 || typeof hook2 === "function")
+function getHookConstraint(hook) {
+  if (!hook || typeof hook === "function")
     return;
-  return hook2.canJumpTo;
+  return hook.canJumpTo;
 }
 function getHookFunction(arg) {
   if (typeof arg === "function")
@@ -175629,11 +171136,11 @@ function chainToolCallHandlers(handlers) {
   if (handlers.length === 1)
     return handlers[0];
   function composeTwo(outer, inner) {
-    return async (request2, handler2) => {
+    return async (request, handler) => {
       const innerHandler = async (passedRequest) => {
-        return inner(passedRequest, handler2);
+        return inner(passedRequest, handler);
       };
-      return outer(request2, innerHandler);
+      return outer(request, innerHandler);
     };
   }
   let result = handlers[handlers.length - 1];
@@ -175647,21 +171154,21 @@ function wrapToolCall(middleware) {
     return;
   return chainToolCallHandlers(middlewareWithWrapToolCall.map((m) => {
     const originalHandler = m.wrapToolCall;
-    const wrappedHandler = async (request2, handler2) => {
-      const originalState = request2.state;
+    const wrappedHandler = async (request, handler) => {
+      const originalState = request.state;
       const wrappedInnerHandler = async (passedRequest) => {
         const mergedState = {
           ...originalState,
           ...passedRequest.state
         };
-        return handler2({
+        return handler({
           ...passedRequest,
           state: mergedState
         });
       };
       try {
         const result = await originalHandler({
-          ...request2,
+          ...request,
           state: {
             messages: originalState.messages,
             ...m.stateSchema ? parseMiddlewareState(m.stateSchema, { ...originalState }) : {}
@@ -175917,11 +171424,11 @@ var AgentNode = class extends RunnableCallable2 {
     let currentSystemMessage = this.#systemMessage;
     let lastAiMessage = null;
     const collectedCommands = [];
-    const baseHandler = async (request2) => {
-      validateLLMHasNoBoundTools(request2.model);
-      const structuredResponseFormat = this.#getResponseFormat(request2.model);
-      const modelWithTools = await this.#bindTools(request2.model, request2, structuredResponseFormat);
-      const messages = [...currentSystemMessage.text === "" ? [] : [currentSystemMessage], ...request2.messages];
+    const baseHandler = async (request) => {
+      validateLLMHasNoBoundTools(request.model);
+      const structuredResponseFormat = this.#getResponseFormat(request.model);
+      const modelWithTools = await this.#bindTools(request.model, request, structuredResponseFormat);
+      const messages = [...currentSystemMessage.text === "" ? [] : [currentSystemMessage], ...request.messages];
       const signal = mergeAbortSignals(this.#options.signal, config4.signal);
       const response = await raceWithSignal2(modelWithTools.invoke(messages, {
         ...config4,
@@ -175955,7 +171462,7 @@ var AgentNode = class extends RunnableCallable2 {
         const innerHandler = wrappedHandler;
         const currentMiddleware = middleware;
         const currentGetState = getMiddlewareState;
-        wrappedHandler = async (request2) => {
+        wrappedHandler = async (request) => {
           const baselineSystemMessage = currentSystemMessage;
           const context = currentMiddleware.contextSchema ? interopParse2(currentMiddleware.contextSchema, lgConfig?.context || {}) : lgConfig?.context;
           const runtime = Object.freeze({
@@ -175965,7 +171472,7 @@ var AgentNode = class extends RunnableCallable2 {
             signal: lgConfig.signal
           });
           const requestWithStateAndRuntime = {
-            ...request2,
+            ...request,
             state: {
               ...middleware.stateSchema ? interopParse2(toPartialZodObject(middleware.stateSchema), state) : {},
               ...currentGetState(),
@@ -176237,8 +171744,8 @@ var ToolNode = class extends RunnableCallable2 {
       signal: lgConfig?.signal
     };
     const registeredTool = this.tools.find((t) => t.name === call3.name);
-    const baseHandler = async (request3) => {
-      const { toolCall, tool: requestTool } = request3;
+    const baseHandler = async (request2) => {
+      const { toolCall, tool: requestTool } = request2;
       const tool3 = requestTool ?? this.tools.find((t) => t.name === toolCall.name);
       if (tool3 === undefined) {
         const availableTools = this.tools.map((t) => t.name);
@@ -176274,7 +171781,7 @@ var ToolNode = class extends RunnableCallable2 {
         throw e;
       }
     };
-    const request2 = {
+    const request = {
       toolCall: call3,
       tool: registeredTool,
       state,
@@ -176282,7 +171789,7 @@ var ToolNode = class extends RunnableCallable2 {
     };
     if (this.wrapToolCall)
       try {
-        return await this.wrapToolCall(request2, baseHandler);
+        return await this.wrapToolCall(request, baseHandler);
       } catch (e) {
         return this.#handleError(e, call3, true);
       }
@@ -176296,7 +171803,7 @@ var ToolNode = class extends RunnableCallable2 {
       });
     }
     try {
-      return await baseHandler(request2);
+      return await baseHandler(request);
     } catch (e) {
       return this.#handleError(e, call3, false);
     }
@@ -177755,9 +173262,9 @@ function todoListMiddleware(options) {
     name: "todoListMiddleware",
     stateSchema: stateSchema2,
     tools: [writeTodos],
-    wrapModelCall: (request2, handler2) => handler2({
-      ...request2,
-      systemMessage: request2.systemMessage.concat(`
+    wrapModelCall: (request, handler) => handler({
+      ...request,
+      systemMessage: request.systemMessage.concat(`
 
 ${options?.systemPrompt ?? TODO_LIST_MIDDLEWARE_SYSTEM_PROMPT}`)
     }),
@@ -177848,28 +173355,28 @@ function anthropicPromptCachingMiddleware(middlewareOptions) {
   return createMiddleware({
     name: "PromptCachingMiddleware",
     contextSchema: contextSchema6,
-    wrapModelCall: (request2, handler2) => {
-      const enableCaching = request2.runtime.context.enableCaching ?? middlewareOptions?.enableCaching ?? DEFAULT_ENABLE_CACHING;
-      const ttl = request2.runtime.context.ttl ?? middlewareOptions?.ttl ?? DEFAULT_TTL;
-      const minMessagesToCache = request2.runtime.context.minMessagesToCache ?? middlewareOptions?.minMessagesToCache ?? DEFAULT_MIN_MESSAGES_TO_CACHE;
-      const unsupportedModelBehavior = request2.runtime.context.unsupportedModelBehavior ?? middlewareOptions?.unsupportedModelBehavior ?? DEFAULT_UNSUPPORTED_MODEL_BEHAVIOR;
-      if (!enableCaching || !request2.model)
-        return handler2(request2);
-      if (!(request2.model.getName() === "ChatAnthropic" || request2.model.getName() === "ConfigurableModel" && request2.model._defaultConfig?.modelProvider === "anthropic")) {
-        const modelName = request2.model.getName();
-        const baseMessage = `Unsupported model '${request2.model.getName() === "ConfigurableModel" ? `${modelName} (${request2.model._defaultConfig?.modelProvider})` : modelName}'. Prompt caching requires an Anthropic model`;
+    wrapModelCall: (request, handler) => {
+      const enableCaching = request.runtime.context.enableCaching ?? middlewareOptions?.enableCaching ?? DEFAULT_ENABLE_CACHING;
+      const ttl = request.runtime.context.ttl ?? middlewareOptions?.ttl ?? DEFAULT_TTL;
+      const minMessagesToCache = request.runtime.context.minMessagesToCache ?? middlewareOptions?.minMessagesToCache ?? DEFAULT_MIN_MESSAGES_TO_CACHE;
+      const unsupportedModelBehavior = request.runtime.context.unsupportedModelBehavior ?? middlewareOptions?.unsupportedModelBehavior ?? DEFAULT_UNSUPPORTED_MODEL_BEHAVIOR;
+      if (!enableCaching || !request.model)
+        return handler(request);
+      if (!(request.model.getName() === "ChatAnthropic" || request.model.getName() === "ConfigurableModel" && request.model._defaultConfig?.modelProvider === "anthropic")) {
+        const modelName = request.model.getName();
+        const baseMessage = `Unsupported model '${request.model.getName() === "ConfigurableModel" ? `${modelName} (${request.model._defaultConfig?.modelProvider})` : modelName}'. Prompt caching requires an Anthropic model`;
         if (unsupportedModelBehavior === "raise")
           throw new PromptCachingMiddlewareError(`${baseMessage} (e.g., 'anthropic:claude-4-0-sonnet').`);
         else if (unsupportedModelBehavior === "warn")
           console.warn(`PromptCachingMiddleware: Skipping caching for ${modelName}. Consider switching to an Anthropic model for caching benefits.`);
-        return handler2(request2);
+        return handler(request);
       }
-      if (request2.state.messages.length + (request2.systemPrompt ? 1 : 0) < minMessagesToCache)
-        return handler2(request2);
-      return handler2({
-        ...request2,
+      if (request.state.messages.length + (request.systemPrompt ? 1 : 0) < minMessagesToCache)
+        return handler(request);
+      return handler({
+        ...request,
         modelSettings: {
-          ...request2.modelSettings,
+          ...request.modelSettings,
           cache_control: {
             type: "ephemeral",
             ttl
@@ -179084,9 +174591,9 @@ function convertToPrettyString4(message) {
   const lines = [];
   const title = ` ${message.type.charAt(0).toUpperCase() + message.type.slice(1)} Message `;
   const sepLen = Math.floor((80 - title.length) / 2);
-  const sep2 = "=".repeat(sepLen);
-  const secondSep = title.length % 2 === 0 ? sep2 : `${sep2}=`;
-  lines.push(`${sep2}${title}${secondSep}`);
+  const sep = "=".repeat(sepLen);
+  const secondSep = title.length % 2 === 0 ? sep : `${sep}=`;
+  lines.push(`${sep}${title}${secondSep}`);
   if (message.type === "ai") {
     const aiMessage = message;
     if (aiMessage.tool_calls && aiMessage.tool_calls.length > 0) {
@@ -180593,21 +176100,21 @@ var isBaseCallbackHandler4 = (x) => {
 };
 
 // node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/node_modules/uuid/wrapper.mjs
-var import_dist7 = __toESM(require_dist8(), 1);
-var v17 = import_dist7.default.v1;
-var v1ToV67 = import_dist7.default.v1ToV6;
-var v37 = import_dist7.default.v3;
-var v410 = import_dist7.default.v4;
-var v57 = import_dist7.default.v5;
-var v67 = import_dist7.default.v6;
-var v6ToV17 = import_dist7.default.v6ToV1;
-var v710 = import_dist7.default.v7;
-var NIL7 = import_dist7.default.NIL;
-var MAX7 = import_dist7.default.MAX;
-var version10 = import_dist7.default.version;
-var validate14 = import_dist7.default.validate;
-var stringify9 = import_dist7.default.stringify;
-var parse22 = import_dist7.default.parse;
+var import_dist6 = __toESM(require_dist7(), 1);
+var v16 = import_dist6.default.v1;
+var v1ToV66 = import_dist6.default.v1ToV6;
+var v36 = import_dist6.default.v3;
+var v49 = import_dist6.default.v4;
+var v56 = import_dist6.default.v5;
+var v66 = import_dist6.default.v6;
+var v6ToV16 = import_dist6.default.v6ToV1;
+var v79 = import_dist6.default.v7;
+var NIL6 = import_dist6.default.NIL;
+var MAX6 = import_dist6.default.MAX;
+var version9 = import_dist6.default.version;
+var validate13 = import_dist6.default.validate;
+var stringify8 = import_dist6.default.stringify;
+var parse20 = import_dist6.default.parse;
 
 // node_modules/deepagents/node_modules/@langchain/core/node_modules/langsmith/dist/experimental/otel/constants.js
 var GEN_AI_OPERATION_NAME4 = "gen_ai.operation.name";
@@ -180971,7 +176478,7 @@ function assertUuid4(str2, which) {
 }
 function uuid7FromTime4(timestamp) {
   const msecs = typeof timestamp === "string" ? Date.parse(timestamp) : timestamp;
-  return v710({ msecs, seq: 0 });
+  return v79({ msecs, seq: 0 });
 }
 function getUuidVersion3(uuidStr) {
   if (!UUID_REGEX4.test(uuidStr)) {
@@ -181002,8 +176509,8 @@ function nonCryptographicUuid7Deterministic3(originalId, key) {
   const hashInput = `${originalId}:${key}`;
   const h = _fastHash1283(hashInput);
   const b = new Uint8Array(16);
-  const version11 = getUuidVersion3(originalId);
-  if (version11 === 7) {
+  const version10 = getUuidVersion3(originalId);
+  if (version10 === 7) {
     const originalBytes = uuidToBytes3(originalId);
     b.set(originalBytes.slice(0, 6), 0);
   } else {
@@ -183190,16 +178697,16 @@ class Client4 {
     }
     return Promise.all(promises);
   }
-  static async _writeTraceToFallbackDir(directory, body, replayHeaders, endpoint2, maxBytes) {
+  static async _writeTraceToFallbackDir(directory, body, replayHeaders, endpoint, maxBytes) {
     try {
       const bodyBuffer = typeof body === "string" ? Buffer.from(body, "utf8") : Buffer.from(body);
       const envelope = JSON.stringify({
         version: 1,
-        endpoint: endpoint2,
+        endpoint,
         headers: replayHeaders,
         body_base64: bodyBuffer.toString("base64")
       });
-      const filename = `trace_${Date.now()}_${v410().slice(0, 8)}.json`;
+      const filename = `trace_${Date.now()}_${v49().slice(0, 8)}.json`;
       const filepath = path4.join(directory, filename);
       if (!Client4._fallbackDirsCreated.has(directory)) {
         await mkdir6(directory);
@@ -184154,7 +179661,7 @@ Context: ${context2}`);
   async shareRun(runId, { shareId } = {}) {
     const data = {
       run_id: runId,
-      share_token: shareId || v410()
+      share_token: shareId || v49()
     };
     assertUuid4(runId);
     const body = JSON.stringify(data);
@@ -184348,7 +179855,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
   }
   async createProject({ projectName, description = null, metadata = null, upsert = false, projectExtra = null, referenceDatasetId = null }) {
     const upsert_ = upsert ? `?upsert=true` : "";
-    const endpoint2 = `${this.apiUrl}/sessions${upsert_}`;
+    const endpoint = `${this.apiUrl}/sessions${upsert_}`;
     const extra = projectExtra || {};
     if (metadata) {
       extra["metadata"] = metadata;
@@ -184363,7 +179870,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
     }
     const serializedBody = JSON.stringify(body);
     const response = await this.caller.call(async () => {
-      const res = await this._fetch(endpoint2, {
+      const res = await this._fetch(endpoint, {
         method: "POST",
         headers: { ...this.headers, "Content-Type": "application/json" },
         signal: AbortSignal.timeout(this.timeout_ms),
@@ -184377,7 +179884,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
     return result;
   }
   async updateProject(projectId, { name = null, description = null, metadata = null, projectExtra = null, endTime = null }) {
-    const endpoint2 = `${this.apiUrl}/sessions/${projectId}`;
+    const endpoint = `${this.apiUrl}/sessions/${projectId}`;
     let extra = projectExtra;
     if (metadata) {
       extra = { ...extra || {}, metadata };
@@ -184389,7 +179896,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
       end_time: endTime ? new Date(endTime).toISOString() : null
     });
     const response = await this.caller.call(async () => {
-      const res = await this._fetch(endpoint2, {
+      const res = await this._fetch(endpoint, {
         method: "PATCH",
         headers: { ...this.headers, "Content-Type": "application/json" },
         signal: AbortSignal.timeout(this.timeout_ms),
@@ -184864,7 +180371,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
       data = inputsOrUpdate;
     }
     const response = await this._uploadExamplesMultipart(datasetId_, [data]);
-    const example = await this.readExample(response.example_ids?.[0] ?? v410());
+    const example = await this.readExample(response.example_ids?.[0] ?? v49());
     return example;
   }
   async createExamples(propsOrUploads) {
@@ -185200,7 +180707,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
       assertUuid4(feedback_source.metadata["__run"].run_id);
     }
     const feedback = {
-      id: feedbackId ?? v410(),
+      id: feedbackId ?? v49(),
       run_id: runId,
       key,
       score: _formatFeedbackScore4(score),
@@ -185518,7 +181025,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
     const body = {
       name,
       description,
-      id: queueId || v410(),
+      id: queueId || v49(),
       rubric_instructions: rubricInstructions,
       rubric_items: rubricItems
     };
@@ -185894,7 +181401,7 @@ Message: ${Array.isArray(result.detail) ? result.detail.join(`
     }
     const formData = new FormData;
     for (const example of uploads) {
-      const exampleId = (example.id ?? v410()).toString();
+      const exampleId = (example.id ?? v49()).toString();
       const exampleBody = {
         created_at: example.created_at,
         ...example.metadata && { metadata: example.metadata },
@@ -186203,7 +181710,7 @@ var UUID_NAMESPACE_DNS4 = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
 function getReplicaKey4(replica) {
   const sortedKeys = Object.keys(replica).sort();
   const keyData = sortedKeys.map((key) => `${key}:${replica[key] ?? ""}`).join("|");
-  return v57(keyData, UUID_NAMESPACE_DNS4);
+  return v56(keyData, UUID_NAMESPACE_DNS4);
 }
 function stripNonAlphanumeric4(input) {
   return input.replace(/[-:.]/g, "");
@@ -186906,7 +182413,7 @@ class RunTree4 {
     let tracingEnabled = isTracingEnabled7();
     if (callbackManager) {
       const parentRunId = callbackManager?.getParentRunId?.() ?? "";
-      const langChainTracer = callbackManager?.handlers?.find((handler2) => handler2?.name == "langchain_tracer");
+      const langChainTracer = callbackManager?.handlers?.find((handler) => handler?.name == "langchain_tracer");
       parentRun = langChainTracer?.getRun?.(parentRunId);
       projectName = langChainTracer?.projectName;
       client4 = langChainTracer?.client;
@@ -187845,8 +183352,8 @@ var _getConfigureHooks4 = () => getContextVariable4(LC_CONFIGURE_HOOKS_KEY4) || 
 
 // node_modules/deepagents/node_modules/@langchain/core/dist/callbacks/manager.js
 var BaseCallbackManager4 = class {
-  setHandler(handler2) {
-    return this.setHandlers([handler2]);
+  setHandler(handler) {
+    return this.setHandlers([handler]);
   }
 };
 var BaseRunManager4 = class {
@@ -187864,26 +183371,26 @@ var BaseRunManager4 = class {
     return this._parentRunId;
   }
   async handleText(text) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback4(async () => {
+    await Promise.all(this.handlers.map((handler) => consumeCallback4(async () => {
       try {
-        await handler2.handleText?.(text, this.runId, this._parentRunId, this.tags);
+        await handler.handleText?.(text, this.runId, this._parentRunId, this.tags);
       } catch (err) {
-        (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleText: ${err}`);
-        if (handler2.raiseError)
+        (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleText: ${err}`);
+        if (handler.raiseError)
           throw err;
       }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleCustomEvent(eventName, data, _runId, _tags, _metadata) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback4(async () => {
+    await Promise.all(this.handlers.map((handler) => consumeCallback4(async () => {
       try {
-        await handler2.handleCustomEvent?.(eventName, data, this.runId, this.tags, this.metadata);
+        await handler.handleCustomEvent?.(eventName, data, this.runId, this.tags, this.metadata);
       } catch (err) {
-        (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleCustomEvent: ${err}`);
-        if (handler2.raiseError)
+        (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleCustomEvent: ${err}`);
+        if (handler.raiseError)
           throw err;
       }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManagerForRetrieverRun4 = class extends BaseRunManager4 {
@@ -187897,69 +183404,69 @@ var CallbackManagerForRetrieverRun4 = class extends BaseRunManager4 {
     return manager;
   }
   async handleRetrieverEnd(documents) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback4(async () => {
-      if (!handler2.ignoreRetriever)
+    await Promise.all(this.handlers.map((handler) => consumeCallback4(async () => {
+      if (!handler.ignoreRetriever)
         try {
-          await handler2.handleRetrieverEnd?.(documents, this.runId, this._parentRunId, this.tags);
+          await handler.handleRetrieverEnd?.(documents, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleRetriever`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleRetriever`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleRetrieverError(err) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback4(async () => {
-      if (!handler2.ignoreRetriever)
+    await Promise.all(this.handlers.map((handler) => consumeCallback4(async () => {
+      if (!handler.ignoreRetriever)
         try {
-          await handler2.handleRetrieverError?.(err, this.runId, this._parentRunId, this.tags);
+          await handler.handleRetrieverError?.(err, this.runId, this._parentRunId, this.tags);
         } catch (error141) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleRetrieverError: ${error141}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleRetrieverError: ${error141}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManagerForLLMRun4 = class extends BaseRunManager4 {
   async handleLLMNewToken(token, idx, _runId, _parentRunId, _tags, fields) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback4(async () => {
-      if (!handler2.ignoreLLM)
+    await Promise.all(this.handlers.map((handler) => consumeCallback4(async () => {
+      if (!handler.ignoreLLM)
         try {
-          await handler2.handleLLMNewToken?.(token, idx ?? {
+          await handler.handleLLMNewToken?.(token, idx ?? {
             prompt: 0,
             completion: 0
           }, this.runId, this._parentRunId, this.tags, fields);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleLLMNewToken: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleLLMNewToken: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleLLMError(err, _runId, _parentRunId, _tags, extraParams) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback4(async () => {
-      if (!handler2.ignoreLLM)
+    await Promise.all(this.handlers.map((handler) => consumeCallback4(async () => {
+      if (!handler.ignoreLLM)
         try {
-          await handler2.handleLLMError?.(err, this.runId, this._parentRunId, this.tags, extraParams);
+          await handler.handleLLMError?.(err, this.runId, this._parentRunId, this.tags, extraParams);
         } catch (err2) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleLLMError: ${err2}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleLLMError: ${err2}`);
+          if (handler.raiseError)
             throw err2;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleLLMEnd(output, _runId, _parentRunId, _tags, extraParams) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback4(async () => {
-      if (!handler2.ignoreLLM)
+    await Promise.all(this.handlers.map((handler) => consumeCallback4(async () => {
+      if (!handler.ignoreLLM)
         try {
-          await handler2.handleLLMEnd?.(output, this.runId, this._parentRunId, this.tags, extraParams);
+          await handler.handleLLMEnd?.(output, this.runId, this._parentRunId, this.tags, extraParams);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleLLMEnd: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleLLMEnd: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManagerForChainRun4 = class extends BaseRunManager4 {
@@ -187973,52 +183480,52 @@ var CallbackManagerForChainRun4 = class extends BaseRunManager4 {
     return manager;
   }
   async handleChainError(err, _runId, _parentRunId, _tags, kwargs) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback4(async () => {
-      if (!handler2.ignoreChain)
+    await Promise.all(this.handlers.map((handler) => consumeCallback4(async () => {
+      if (!handler.ignoreChain)
         try {
-          await handler2.handleChainError?.(err, this.runId, this._parentRunId, this.tags, kwargs);
+          await handler.handleChainError?.(err, this.runId, this._parentRunId, this.tags, kwargs);
         } catch (err2) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleChainError: ${err2}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleChainError: ${err2}`);
+          if (handler.raiseError)
             throw err2;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleChainEnd(output, _runId, _parentRunId, _tags, kwargs) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback4(async () => {
-      if (!handler2.ignoreChain)
+    await Promise.all(this.handlers.map((handler) => consumeCallback4(async () => {
+      if (!handler.ignoreChain)
         try {
-          await handler2.handleChainEnd?.(output, this.runId, this._parentRunId, this.tags, kwargs);
+          await handler.handleChainEnd?.(output, this.runId, this._parentRunId, this.tags, kwargs);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleChainEnd: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleChainEnd: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleAgentAction(action) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback4(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback4(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleAgentAction?.(action, this.runId, this._parentRunId, this.tags);
+          await handler.handleAgentAction?.(action, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleAgentAction: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleAgentAction: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleAgentEnd(action) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback4(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback4(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleAgentEnd?.(action, this.runId, this._parentRunId, this.tags);
+          await handler.handleAgentEnd?.(action, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleAgentEnd: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleAgentEnd: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManagerForToolRun4 = class extends BaseRunManager4 {
@@ -188032,39 +183539,39 @@ var CallbackManagerForToolRun4 = class extends BaseRunManager4 {
     return manager;
   }
   async handleToolError(err) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback4(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback4(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleToolError?.(err, this.runId, this._parentRunId, this.tags);
+          await handler.handleToolError?.(err, this.runId, this._parentRunId, this.tags);
         } catch (err2) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleToolError: ${err2}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleToolError: ${err2}`);
+          if (handler.raiseError)
             throw err2;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleToolEvent(chunk) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback4(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback4(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleToolEvent?.(chunk, this.runId, this._parentRunId, this.tags);
+          await handler.handleToolEvent?.(chunk, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          if (handler2.raiseError)
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
   async handleToolEnd(output) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback4(async () => {
-      if (!handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback4(async () => {
+      if (!handler.ignoreAgent)
         try {
-          await handler2.handleToolEnd?.(output, this.runId, this._parentRunId, this.tags);
+          await handler.handleToolEnd?.(output, this.runId, this._parentRunId, this.tags);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleToolEnd: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleToolEnd: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
 };
 var CallbackManager7 = class CallbackManager8 extends BaseCallbackManager4 {
@@ -188092,20 +183599,20 @@ var CallbackManager7 = class CallbackManager8 extends BaseCallbackManager4 {
   async handleLLMStart(llm, prompts, runId = undefined, _parentRunId = undefined, extraParams = undefined, _tags = undefined, _metadata = undefined, runName = undefined) {
     return Promise.all(prompts.map(async (prompt, idx) => {
       const runId_ = idx === 0 && runId ? runId : v7_default();
-      await Promise.all(this.handlers.map((handler2) => {
-        if (handler2.ignoreLLM)
+      await Promise.all(this.handlers.map((handler) => {
+        if (handler.ignoreLLM)
           return;
-        if (isBaseTracer4(handler2))
-          handler2._createRunForLLMStart(llm, [prompt], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+        if (isBaseTracer4(handler))
+          handler._createRunForLLMStart(llm, [prompt], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
         return consumeCallback4(async () => {
           try {
-            await handler2.handleLLMStart?.(llm, [prompt], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+            await handler.handleLLMStart?.(llm, [prompt], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
           } catch (err) {
-            (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleLLMStart: ${err}`);
-            if (handler2.raiseError)
+            (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleLLMStart: ${err}`);
+            if (handler.raiseError)
               throw err;
           }
-        }, handler2.awaitHandlers);
+        }, handler.awaitHandlers);
       }));
       return new CallbackManagerForLLMRun4(runId_, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
     }));
@@ -188113,109 +183620,109 @@ var CallbackManager7 = class CallbackManager8 extends BaseCallbackManager4 {
   async handleChatModelStart(llm, messages, runId = undefined, _parentRunId = undefined, extraParams = undefined, _tags = undefined, _metadata = undefined, runName = undefined) {
     return Promise.all(messages.map(async (messageGroup, idx) => {
       const runId_ = idx === 0 && runId ? runId : v7_default();
-      await Promise.all(this.handlers.map((handler2) => {
-        if (handler2.ignoreLLM)
+      await Promise.all(this.handlers.map((handler) => {
+        if (handler.ignoreLLM)
           return;
-        if (isBaseTracer4(handler2))
-          handler2._createRunForChatModelStart(llm, [messageGroup], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+        if (isBaseTracer4(handler))
+          handler._createRunForChatModelStart(llm, [messageGroup], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
         return consumeCallback4(async () => {
           try {
-            if (handler2.handleChatModelStart)
-              await handler2.handleChatModelStart?.(llm, [messageGroup], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
-            else if (handler2.handleLLMStart) {
+            if (handler.handleChatModelStart)
+              await handler.handleChatModelStart?.(llm, [messageGroup], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+            else if (handler.handleLLMStart) {
               const messageString = getBufferString4(messageGroup);
-              await handler2.handleLLMStart?.(llm, [messageString], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
+              await handler.handleLLMStart?.(llm, [messageString], runId_, this._parentRunId, extraParams, this.tags, this.metadata, runName);
             }
           } catch (err) {
-            (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleLLMStart: ${err}`);
-            if (handler2.raiseError)
+            (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleLLMStart: ${err}`);
+            if (handler.raiseError)
               throw err;
           }
-        }, handler2.awaitHandlers);
+        }, handler.awaitHandlers);
       }));
       return new CallbackManagerForLLMRun4(runId_, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
     }));
   }
   async handleChainStart(chain, inputs, runId = v7_default(), runType = undefined, _tags = undefined, _metadata = undefined, runName = undefined, _parentRunId = undefined, extra = undefined) {
-    await Promise.all(this.handlers.map((handler2) => {
-      if (handler2.ignoreChain)
+    await Promise.all(this.handlers.map((handler) => {
+      if (handler.ignoreChain)
         return;
-      if (isBaseTracer4(handler2))
-        handler2._createRunForChainStart(chain, inputs, runId, this._parentRunId, this.tags, this.metadata, runType, runName, extra);
+      if (isBaseTracer4(handler))
+        handler._createRunForChainStart(chain, inputs, runId, this._parentRunId, this.tags, this.metadata, runType, runName, extra);
       return consumeCallback4(async () => {
         try {
-          await handler2.handleChainStart?.(chain, inputs, runId, this._parentRunId, this.tags, this.metadata, runType, runName, extra);
+          await handler.handleChainStart?.(chain, inputs, runId, this._parentRunId, this.tags, this.metadata, runType, runName, extra);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleChainStart: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleChainStart: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-      }, handler2.awaitHandlers);
+      }, handler.awaitHandlers);
     }));
     return new CallbackManagerForChainRun4(runId, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
   }
   async handleToolStart(tool3, input, runId = v7_default(), _parentRunId = undefined, _tags = undefined, _metadata = undefined, runName = undefined, toolCallId = undefined) {
-    await Promise.all(this.handlers.map((handler2) => {
-      if (handler2.ignoreAgent)
+    await Promise.all(this.handlers.map((handler) => {
+      if (handler.ignoreAgent)
         return;
-      if (isBaseTracer4(handler2))
-        handler2._createRunForToolStart(tool3, input, runId, this._parentRunId, this.tags, this.metadata, runName);
+      if (isBaseTracer4(handler))
+        handler._createRunForToolStart(tool3, input, runId, this._parentRunId, this.tags, this.metadata, runName);
       return consumeCallback4(async () => {
         try {
-          await handler2.handleToolStart?.(tool3, input, runId, this._parentRunId, this.tags, this.metadata, runName, toolCallId);
+          await handler.handleToolStart?.(tool3, input, runId, this._parentRunId, this.tags, this.metadata, runName, toolCallId);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleToolStart: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleToolStart: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-      }, handler2.awaitHandlers);
+      }, handler.awaitHandlers);
     }));
     return new CallbackManagerForToolRun4(runId, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
   }
   async handleRetrieverStart(retriever, query, runId = v7_default(), _parentRunId = undefined, _tags = undefined, _metadata = undefined, runName = undefined) {
-    await Promise.all(this.handlers.map((handler2) => {
-      if (handler2.ignoreRetriever)
+    await Promise.all(this.handlers.map((handler) => {
+      if (handler.ignoreRetriever)
         return;
-      if (isBaseTracer4(handler2))
-        handler2._createRunForRetrieverStart(retriever, query, runId, this._parentRunId, this.tags, this.metadata, runName);
+      if (isBaseTracer4(handler))
+        handler._createRunForRetrieverStart(retriever, query, runId, this._parentRunId, this.tags, this.metadata, runName);
       return consumeCallback4(async () => {
         try {
-          await handler2.handleRetrieverStart?.(retriever, query, runId, this._parentRunId, this.tags, this.metadata, runName);
+          await handler.handleRetrieverStart?.(retriever, query, runId, this._parentRunId, this.tags, this.metadata, runName);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleRetrieverStart: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleRetrieverStart: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-      }, handler2.awaitHandlers);
+      }, handler.awaitHandlers);
     }));
     return new CallbackManagerForRetrieverRun4(runId, this.handlers, this.inheritableHandlers, this.tags, this.inheritableTags, this.metadata, this.inheritableMetadata, this._parentRunId);
   }
   async handleCustomEvent(eventName, data, runId, _tags, _metadata) {
-    await Promise.all(this.handlers.map((handler2) => consumeCallback4(async () => {
-      if (!handler2.ignoreCustomEvent)
+    await Promise.all(this.handlers.map((handler) => consumeCallback4(async () => {
+      if (!handler.ignoreCustomEvent)
         try {
-          await handler2.handleCustomEvent?.(eventName, data, runId, this.tags, this.metadata);
+          await handler.handleCustomEvent?.(eventName, data, runId, this.tags, this.metadata);
         } catch (err) {
-          (handler2.raiseError ? console.error : console.warn)(`Error in handler ${handler2.constructor.name}, handleCustomEvent: ${err}`);
-          if (handler2.raiseError)
+          (handler.raiseError ? console.error : console.warn)(`Error in handler ${handler.constructor.name}, handleCustomEvent: ${err}`);
+          if (handler.raiseError)
             throw err;
         }
-    }, handler2.awaitHandlers)));
+    }, handler.awaitHandlers)));
   }
-  addHandler(handler2, inherit = true) {
-    this.handlers.push(handler2);
+  addHandler(handler, inherit = true) {
+    this.handlers.push(handler);
     if (inherit)
-      this.inheritableHandlers.push(handler2);
+      this.inheritableHandlers.push(handler);
   }
-  removeHandler(handler2) {
-    this.handlers = this.handlers.filter((_handler) => _handler !== handler2);
-    this.inheritableHandlers = this.inheritableHandlers.filter((_handler) => _handler !== handler2);
+  removeHandler(handler) {
+    this.handlers = this.handlers.filter((_handler) => _handler !== handler);
+    this.inheritableHandlers = this.inheritableHandlers.filter((_handler) => _handler !== handler);
   }
   setHandlers(handlers, inherit = true) {
     this.handlers = [];
     this.inheritableHandlers = [];
-    for (const handler2 of handlers)
-      this.addHandler(handler2, inherit);
+    for (const handler of handlers)
+      this.addHandler(handler, inherit);
   }
   addTags(tags, inherit = true) {
     this.removeTags(tags);
@@ -188246,9 +183753,9 @@ var CallbackManager7 = class CallbackManager8 extends BaseCallbackManager4 {
   }
   copy(additionalHandlers = [], inherit = true) {
     const manager = new CallbackManager8(this._parentRunId);
-    for (const handler2 of this.handlers) {
-      const inheritable = this.inheritableHandlers.includes(handler2);
-      manager.addHandler(handler2, inheritable);
+    for (const handler of this.handlers) {
+      const inheritable = this.inheritableHandlers.includes(handler);
+      manager.addHandler(handler, inheritable);
     }
     for (const tag of this.tags) {
       const inheritable = this.inheritableTags.includes(tag);
@@ -188258,10 +183765,10 @@ var CallbackManager7 = class CallbackManager8 extends BaseCallbackManager4 {
       const inheritable = Object.keys(this.inheritableMetadata).includes(key);
       manager.addMetadata({ [key]: this.metadata[key] }, inheritable);
     }
-    for (const handler2 of additionalHandlers) {
-      if (manager.handlers.filter((h) => h.name === "console_callback_handler").some((h) => h.name === handler2.name))
+    for (const handler of additionalHandlers) {
+      if (manager.handlers.filter((h) => h.name === "console_callback_handler").some((h) => h.name === handler.name))
         continue;
-      manager.addHandler(handler2, inherit);
+      manager.addHandler(handler, inherit);
     }
     return manager;
   }
@@ -188295,7 +183802,7 @@ var CallbackManager7 = class CallbackManager8 extends BaseCallbackManager4 {
     const traceableRunTree = LangChainTracer7.getTraceableRunTree();
     const tracingV2Enabled = traceableRunTree?.tracingEnabled ?? isTracingEnabled8();
     if (traceableRunTree?.tracingEnabled === false && callbackManager) {
-      const inheritedTracers = callbackManager.handlers.filter((handler2) => handler2.name === "langchain_tracer");
+      const inheritedTracers = callbackManager.handlers.filter((handler) => handler.name === "langchain_tracer");
       for (const tracer of inheritedTracers)
         callbackManager.removeHandler(tracer);
     }
@@ -188303,11 +183810,11 @@ var CallbackManager7 = class CallbackManager8 extends BaseCallbackManager4 {
     if (verboseEnabled || tracingEnabled) {
       if (!callbackManager)
         callbackManager = new CallbackManager8;
-      if (verboseEnabled && !callbackManager.handlers.some((handler2) => handler2.name === ConsoleCallbackHandler4.prototype.name)) {
+      if (verboseEnabled && !callbackManager.handlers.some((handler) => handler.name === ConsoleCallbackHandler4.prototype.name)) {
         const consoleHandler = new ConsoleCallbackHandler4;
         callbackManager.addHandler(consoleHandler, true);
       }
-      if (tracingEnabled && !callbackManager.handlers.some((handler2) => handler2.name === "langchain_tracer")) {
+      if (tracingEnabled && !callbackManager.handlers.some((handler) => handler.name === "langchain_tracer")) {
         if (tracingV2Enabled) {
           const tracerV2 = new LangChainTracer7;
           callbackManager.addHandler(tracerV2, true);
@@ -188316,23 +183823,23 @@ var CallbackManager7 = class CallbackManager8 extends BaseCallbackManager4 {
       if (tracingV2Enabled) {
         if (traceableRunTree && callbackManager._parentRunId === undefined) {
           callbackManager._parentRunId = traceableRunTree.id;
-          callbackManager.handlers.find((handler2) => handler2.name === "langchain_tracer")?.updateFromRunTree(traceableRunTree);
+          callbackManager.handlers.find((handler) => handler.name === "langchain_tracer")?.updateFromRunTree(traceableRunTree);
         }
       }
     }
     for (const { contextVar, inheritable = true, handlerClass, envVar } of _getConfigureHooks4()) {
       const createIfNotInContext = envVar && getEnvironmentVariable7(envVar) === "true" && handlerClass;
-      let handler2;
+      let handler;
       const contextVarValue = contextVar !== undefined ? getContextVariable4(contextVar) : undefined;
       if (contextVarValue && isBaseCallbackHandler4(contextVarValue))
-        handler2 = contextVarValue;
+        handler = contextVarValue;
       else if (createIfNotInContext)
-        handler2 = new handlerClass({});
-      if (handler2 !== undefined) {
+        handler = new handlerClass({});
+      if (handler !== undefined) {
         if (!callbackManager)
           callbackManager = new CallbackManager8;
-        if (!callbackManager.handlers.some((h) => h.name === handler2.name))
-          callbackManager.addHandler(handler2, inheritable);
+        if (!callbackManager.handlers.some((h) => h.name === handler.name))
+          callbackManager.addHandler(handler, inheritable);
       }
     }
     if (inheritableTags || localTags) {
@@ -188350,10 +183857,10 @@ var CallbackManager7 = class CallbackManager8 extends BaseCallbackManager4 {
     return callbackManager;
   }
 };
-function ensureHandler4(handler2) {
-  if ("name" in handler2)
-    return handler2;
-  return BaseCallbackHandler4.fromMethods(handler2);
+function ensureHandler4(handler) {
+  if ("name" in handler)
+    return handler;
+  return BaseCallbackHandler4.fromMethods(handler);
 }
 
 // node_modules/deepagents/node_modules/@langchain/core/dist/singletons/async_local_storage/index.js
@@ -188378,7 +183885,7 @@ var AsyncLocalStorageProvider8 = class {
     const storage = this.getInstance();
     const previousValue = storage.getStore();
     const parentRunId = callbackManager?.getParentRunId();
-    const langChainTracer = callbackManager?.handlers?.find((handler2) => handler2?.name === "langchain_tracer");
+    const langChainTracer = callbackManager?.handlers?.find((handler) => handler?.name === "langchain_tracer");
     let runTree;
     if (langChainTracer && parentRunId)
       runTree = langChainTracer.getRunTreeWithTracingConfig(parentRunId);
@@ -188895,7 +184402,7 @@ var core_exports4 = /* @__PURE__ */ __exportAll4({
   applyReducer: () => applyReducer4,
   deepClone: () => deepClone4,
   getValueByPointer: () => getValueByPointer4,
-  validate: () => validate15,
+  validate: () => validate14,
   validator: () => validator4
 });
 var JsonPatchError4 = PatchError4;
@@ -189146,7 +184653,7 @@ function validator4(operation, index2, document, existingPathFragment) {
       if (operation.path !== existingPathFragment)
         throw new JsonPatchError4("Cannot perform the operation at a path that does not exist", "OPERATION_PATH_UNRESOLVABLE", index2, operation, document);
     } else if (operation.op === "move" || operation.op === "copy") {
-      var error141 = validate15([{
+      var error141 = validate14([{
         op: "_get",
         path: operation.from,
         value: undefined
@@ -189156,7 +184663,7 @@ function validator4(operation, index2, document, existingPathFragment) {
     }
   }
 }
-function validate15(sequence, document, externalValidator) {
+function validate14(sequence, document, externalValidator) {
   try {
     if (!Array.isArray(sequence))
       throw new JsonPatchError4("Patch sequence must be an array", "SEQUENCE_NOT_AN_ARRAY");
@@ -189260,7 +184767,7 @@ var RunLog7 = class RunLog8 extends RunLogPatch4 {
     });
   }
 };
-var isLogStreamHandler4 = (handler2) => handler2.name === "log_stream_tracer";
+var isLogStreamHandler4 = (handler) => handler.name === "log_stream_tracer";
 async function _getStandardizedInputs4(run, schemaFormat) {
   if (schemaFormat === "original")
     throw new Error("Do not assign inputs with original schema drop the key for now. When inputs are added to streamLog they should be added with standardized schema for streaming events.");
@@ -189502,7 +185009,7 @@ function assignName4({ name, serialized }) {
     return serialized.id[serialized.id.length - 1];
   return "Unnamed";
 }
-var isStreamEventsHandler4 = (handler2) => handler2.name === "event_stream_tracer";
+var isStreamEventsHandler4 = (handler) => handler.name === "event_stream_tracer";
 var EventStreamCallbackHandler4 = class extends BaseTracer4 {
   autoClose = true;
   includeNames;
@@ -190224,13 +185731,13 @@ var toBase64Url3 = (str2) => {
 // node_modules/deepagents/node_modules/zod/v4/core/index.js
 var exports_core8 = {};
 __export(exports_core8, {
-  version: () => version11,
+  version: () => version10,
   util: () => exports_util4,
   treeifyError: () => treeifyError4,
   toJSONSchema: () => toJSONSchema4,
   toDotPath: () => toDotPath4,
   safeParseAsync: () => safeParseAsync7,
-  safeParse: () => safeParse8,
+  safeParse: () => safeParse7,
   safeEncodeAsync: () => safeEncodeAsync7,
   safeEncode: () => safeEncode7,
   safeDecodeAsync: () => safeDecodeAsync7,
@@ -190240,7 +185747,7 @@ __export(exports_core8, {
   process: () => process4,
   prettifyError: () => prettifyError4,
   parseAsync: () => parseAsync7,
-  parse: () => parse23,
+  parse: () => parse21,
   meta: () => meta7,
   locales: () => exports_locales4,
   isValidJWT: () => isValidJWT7,
@@ -190596,17 +186103,17 @@ __export(exports_util4, {
   partial: () => partial4,
   parsedType: () => parsedType10,
   optionalKeys: () => optionalKeys4,
-  omit: () => omit5,
+  omit: () => omit4,
   objectClone: () => objectClone4,
   numKeys: () => numKeys4,
   nullish: () => nullish7,
   normalizeParams: () => normalizeParams4,
   mergeDefs: () => mergeDefs4,
-  merge: () => merge5,
+  merge: () => merge4,
   jsonStringifyReplacer: () => jsonStringifyReplacer4,
   joinValues: () => joinValues4,
   issue: () => issue4,
-  isPlainObject: () => isPlainObject6,
+  isPlainObject: () => isPlainObject4,
   isObject: () => isObject6,
   hexToUint8Array: () => hexToUint8Array5,
   getSizableOrigin: () => getSizableOrigin4,
@@ -190791,7 +186298,7 @@ var allowsEval4 = cached4(() => {
     return false;
   }
 });
-function isPlainObject6(o) {
+function isPlainObject4(o) {
   if (isObject6(o) === false)
     return false;
   const ctor = o.constructor;
@@ -190808,7 +186315,7 @@ function isPlainObject6(o) {
   return true;
 }
 function shallowClone4(o) {
-  if (isPlainObject6(o))
+  if (isPlainObject4(o))
     return { ...o };
   if (Array.isArray(o))
     return [...o];
@@ -190975,7 +186482,7 @@ function pick4(schema, mask) {
   });
   return clone4(schema, def);
 }
-function omit5(schema, mask) {
+function omit4(schema, mask) {
   const currDef = schema._zod.def;
   const checks7 = currDef.checks;
   const hasChecks = checks7 && checks7.length > 0;
@@ -191001,7 +186508,7 @@ function omit5(schema, mask) {
   return clone4(schema, def);
 }
 function extend4(schema, shape) {
-  if (!isPlainObject6(shape)) {
+  if (!isPlainObject4(shape)) {
     throw new Error("Invalid input to extend: expected a plain object");
   }
   const checks7 = schema._zod.def.checks;
@@ -191024,7 +186531,7 @@ function extend4(schema, shape) {
   return clone4(schema, def);
 }
 function safeExtend4(schema, shape) {
-  if (!isPlainObject6(shape)) {
+  if (!isPlainObject4(shape)) {
     throw new Error("Invalid input to safeExtend: expected a plain object");
   }
   const def = mergeDefs4(schema._zod.def, {
@@ -191036,7 +186543,7 @@ function safeExtend4(schema, shape) {
   });
   return clone4(schema, def);
 }
-function merge5(a, b) {
+function merge4(a, b) {
   const def = mergeDefs4(a._zod.def, {
     get shape() {
       const _shape = { ...a._zod.def.shape, ...b._zod.def.shape };
@@ -191400,7 +186907,7 @@ var _parse4 = (_Err) => (schema, value, _ctx, _params) => {
   }
   return result.value;
 };
-var parse23 = /* @__PURE__ */ _parse4($ZodRealError4);
+var parse21 = /* @__PURE__ */ _parse4($ZodRealError4);
 var _parseAsync4 = (_Err) => async (schema, value, _ctx, params) => {
   const ctx = _ctx ? Object.assign(_ctx, { async: true }) : { async: true };
   let result = schema._zod.run({ value, issues: [] }, ctx);
@@ -191425,7 +186932,7 @@ var _safeParse4 = (_Err) => (schema, value, _ctx) => {
     error: new (_Err ?? $ZodError4)(result.issues.map((iss) => finalizeIssue4(iss, ctx, config4())))
   } : { success: true, data: result.value };
 };
-var safeParse8 = /* @__PURE__ */ _safeParse4($ZodRealError4);
+var safeParse7 = /* @__PURE__ */ _safeParse4($ZodRealError4);
 var _safeParseAsync4 = (_Err) => async (schema, value, _ctx) => {
   const ctx = _ctx ? Object.assign(_ctx, { async: true }) : { async: true };
   let result = schema._zod.run({ value, issues: [] }, ctx);
@@ -191480,7 +186987,7 @@ __export(exports_regexes4, {
   uuid7: () => uuid78,
   uuid6: () => uuid65,
   uuid4: () => uuid45,
-  uuid: () => uuid19,
+  uuid: () => uuid18,
   uppercase: () => uppercase4,
   unicodeEmail: () => unicodeEmail4,
   undefined: () => _undefined10,
@@ -191544,14 +187051,14 @@ var nanoid7 = /^[a-zA-Z0-9_-]{21}$/;
 var duration7 = /^P(?:(\d+W)|(?!.*W)(?=\d|T\d)(\d+Y)?(\d+M)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+([.,]\d+)?S)?)?)$/;
 var extendedDuration4 = /^[-+]?P(?!$)(?:(?:[-+]?\d+Y)|(?:[-+]?\d+[.,]\d+Y$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:(?:[-+]?\d+W)|(?:[-+]?\d+[.,]\d+W$))?(?:(?:[-+]?\d+D)|(?:[-+]?\d+[.,]\d+D$))?(?:T(?=[\d+-])(?:(?:[-+]?\d+H)|(?:[-+]?\d+[.,]\d+H$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:[-+]?\d+(?:[.,]\d+)?S)?)??$/;
 var guid7 = /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/;
-var uuid19 = (version11) => {
-  if (!version11)
+var uuid18 = (version10) => {
+  if (!version10)
     return /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/;
-  return new RegExp(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-${version11}[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$`);
+  return new RegExp(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-${version10}[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$`);
 };
-var uuid45 = /* @__PURE__ */ uuid19(4);
-var uuid65 = /* @__PURE__ */ uuid19(6);
-var uuid78 = /* @__PURE__ */ uuid19(7);
+var uuid45 = /* @__PURE__ */ uuid18(4);
+var uuid65 = /* @__PURE__ */ uuid18(6);
+var uuid78 = /* @__PURE__ */ uuid18(7);
 var email7 = /^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$/;
 var html5Email4 = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 var rfc5322Email4 = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -192216,7 +187723,7 @@ class Doc4 {
 }
 
 // node_modules/deepagents/node_modules/zod/v4/core/versions.js
-var version11 = {
+var version10 = {
   major: 4,
   minor: 3,
   patch: 6
@@ -192228,7 +187735,7 @@ var $ZodType4 = /* @__PURE__ */ $constructor4("$ZodType", (inst, def) => {
   inst ?? (inst = {});
   inst._zod.def = def;
   inst._zod.bag = inst._zod.bag || {};
-  inst._zod.version = version11;
+  inst._zod.version = version10;
   const checks7 = [...inst._zod.def.checks ?? []];
   if (inst._zod.traits.has("$ZodCheck")) {
     checks7.unshift(inst);
@@ -192322,7 +187829,7 @@ var $ZodType4 = /* @__PURE__ */ $constructor4("$ZodType", (inst, def) => {
   defineLazy4(inst, "~standard", () => ({
     validate: (value) => {
       try {
-        const r = safeParse8(inst, value);
+        const r = safeParse7(inst, value);
         return r.success ? { value: r.data } : { issues: r.error?.issues };
       } catch (_) {
         return safeParseAsync7(inst, value).then((r) => r.success ? { value: r.data } : { issues: r.error?.issues });
@@ -192374,9 +187881,9 @@ var $ZodUUID4 = /* @__PURE__ */ $constructor4("$ZodUUID", (inst, def) => {
     const v = versionMap[def.version];
     if (v === undefined)
       throw new Error(`Invalid UUID version: "${def.version}"`);
-    def.pattern ?? (def.pattern = uuid19(v));
+    def.pattern ?? (def.pattern = uuid18(v));
   } else
-    def.pattern ?? (def.pattern = uuid19());
+    def.pattern ?? (def.pattern = uuid18());
   $ZodStringFormat4.init(inst, def);
 });
 var $ZodEmail4 = /* @__PURE__ */ $constructor4("$ZodEmail", (inst, def) => {
@@ -193294,7 +188801,7 @@ function mergeValues7(a, b) {
   if (a instanceof Date && b instanceof Date && +a === +b) {
     return { valid: true, data: a };
   }
-  if (isPlainObject6(a) && isPlainObject6(b)) {
+  if (isPlainObject4(a) && isPlainObject4(b)) {
     const bKeys = Object.keys(b);
     const sharedKeys = Object.keys(a).filter((key) => bKeys.indexOf(key) !== -1);
     const newObj = { ...a, ...b };
@@ -193448,7 +188955,7 @@ var $ZodRecord4 = /* @__PURE__ */ $constructor4("$ZodRecord", (inst, def) => {
   $ZodType4.init(inst, def);
   inst._zod.parse = (payload, ctx) => {
     const input = payload.value;
-    if (!isPlainObject6(input)) {
+    if (!isPlainObject4(input)) {
       payload.issues.push({
         expected: "record",
         code: "invalid_type",
@@ -194068,10 +189575,10 @@ var $ZodFunction4 = /* @__PURE__ */ $constructor4("$ZodFunction", (inst, def) =>
       throw new Error("implement() must be called with a function");
     }
     return function(...args) {
-      const parsedArgs = inst._def.input ? parse23(inst._def.input, args) : args;
+      const parsedArgs = inst._def.input ? parse21(inst._def.input, args) : args;
       const result = Reflect.apply(func, this, parsedArgs);
       if (inst._def.output) {
-        return parse23(inst._def.output, result);
+        return parse21(inst._def.output, result);
       }
       return result;
     };
@@ -202990,11 +198497,11 @@ function datetimeRegex4(args) {
   regex2 = `${regex2}(${opts.join("|")})`;
   return new RegExp(`^${regex2}$`);
 }
-function isValidIP4(ip, version12) {
-  if ((version12 === "v4" || !version12) && ipv4Regex4.test(ip)) {
+function isValidIP4(ip, version11) {
+  if ((version11 === "v4" || !version11) && ipv4Regex4.test(ip)) {
     return true;
   }
-  if ((version12 === "v6" || !version12) && ipv6Regex4.test(ip)) {
+  if ((version11 === "v6" || !version11) && ipv6Regex4.test(ip)) {
     return true;
   }
   return false;
@@ -203021,11 +198528,11 @@ function isValidJWT8(jwt4, alg) {
     return false;
   }
 }
-function isValidCidr4(ip, version12) {
-  if ((version12 === "v4" || !version12) && ipv4CidrRegex4.test(ip)) {
+function isValidCidr4(ip, version11) {
+  if ((version11 === "v4" || !version11) && ipv4CidrRegex4.test(ip)) {
     return true;
   }
-  if ((version12 === "v6" || !version12) && ipv6CidrRegex4.test(ip)) {
+  if ((version11 === "v6" || !version11) && ipv6CidrRegex4.test(ip)) {
     return true;
   }
   return false;
@@ -207351,9 +202858,9 @@ function* consumeIteratorInContext4(context2, iter) {
   }
 }
 async function* consumeAsyncIterableInContext4(context2, iter) {
-  const iterator2 = iter[Symbol.asyncIterator]();
+  const iterator = iter[Symbol.asyncIterator]();
   while (true) {
-    const { value, done } = await AsyncLocalStorageProviderSingleton8.runWithConfig(pickRunnableConfigKeys4(context2), iterator2.next.bind(iter), true);
+    const { value, done } = await AsyncLocalStorageProviderSingleton8.runWithConfig(pickRunnableConfigKeys4(context2), iterator.next.bind(iter), true);
     if (done)
       break;
     else
@@ -207532,13 +203039,13 @@ var Runnable4 = class extends Serializable7 {
       delete config5.runId;
       runManager = pipe4.setup;
       const streamEventsHandler = runManager?.handlers.find(isStreamEventsHandler4);
-      let iterator2 = pipe4.output;
+      let iterator = pipe4.output;
       if (streamEventsHandler !== undefined && runManager !== undefined)
-        iterator2 = streamEventsHandler.tapOutputIterable(runManager.runId, iterator2);
+        iterator = streamEventsHandler.tapOutputIterable(runManager.runId, iterator);
       const streamLogHandler = runManager?.handlers.find(isLogStreamHandler4);
       if (streamLogHandler !== undefined && runManager !== undefined)
-        iterator2 = streamLogHandler.tapOutputIterable(runManager.runId, iterator2);
-      for await (const chunk of iterator2) {
+        iterator = streamLogHandler.tapOutputIterable(runManager.runId, iterator);
+      for await (const chunk of iterator) {
         yield chunk;
         if (finalOutputSupported)
           if (finalOutput === undefined)
@@ -208726,7 +204233,7 @@ __export(exports_external8, {
   uuidv7: () => uuidv74,
   uuidv6: () => uuidv64,
   uuidv4: () => uuidv44,
-  uuid: () => uuid20,
+  uuid: () => uuid19,
   util: () => exports_util4,
   url: () => url4,
   uppercase: () => _uppercase4,
@@ -208757,7 +204264,7 @@ __export(exports_external8, {
   setErrorMap: () => setErrorMap8,
   set: () => set5,
   safeParseAsync: () => safeParseAsync8,
-  safeParse: () => safeParse9,
+  safeParse: () => safeParse8,
   safeEncodeAsync: () => safeEncodeAsync8,
   safeEncode: () => safeEncode8,
   safeDecodeAsync: () => safeDecodeAsync8,
@@ -208777,7 +204284,7 @@ __export(exports_external8, {
   pipe: () => pipe4,
   partialRecord: () => partialRecord4,
   parseAsync: () => parseAsync8,
-  parse: () => parse25,
+  parse: () => parse23,
   overwrite: () => _overwrite4,
   optional: () => optional5,
   object: () => object5,
@@ -208967,7 +204474,7 @@ __export(exports_schemas8, {
   uuidv7: () => uuidv74,
   uuidv6: () => uuidv64,
   uuidv4: () => uuidv44,
-  uuid: () => uuid20,
+  uuid: () => uuid19,
   url: () => url4,
   unknown: () => unknown5,
   union: () => union5,
@@ -209238,9 +204745,9 @@ var ZodRealError4 = $constructor4("ZodError", initializer8, {
 });
 
 // node_modules/deepagents/node_modules/zod/v4/classic/parse.js
-var parse25 = /* @__PURE__ */ _parse4(ZodRealError4);
+var parse23 = /* @__PURE__ */ _parse4(ZodRealError4);
 var parseAsync8 = /* @__PURE__ */ _parseAsync4(ZodRealError4);
-var safeParse9 = /* @__PURE__ */ _safeParse4(ZodRealError4);
+var safeParse8 = /* @__PURE__ */ _safeParse4(ZodRealError4);
 var safeParseAsync8 = /* @__PURE__ */ _safeParseAsync4(ZodRealError4);
 var encode9 = /* @__PURE__ */ _encode4(ZodRealError4);
 var decode8 = /* @__PURE__ */ _decode4(ZodRealError4);
@@ -209281,8 +204788,8 @@ var ZodType8 = /* @__PURE__ */ $constructor4("ZodType", (inst, def) => {
     reg.add(inst, meta8);
     return inst;
   };
-  inst.parse = (data, params) => parse25(inst, data, params, { callee: inst.parse });
-  inst.safeParse = (data, params) => safeParse9(inst, data, params);
+  inst.parse = (data, params) => parse23(inst, data, params, { callee: inst.parse });
+  inst.safeParse = (data, params) => safeParse8(inst, data, params);
   inst.parseAsync = async (data, params) => parseAsync8(inst, data, params, { callee: inst.parseAsync });
   inst.safeParseAsync = async (data, params) => safeParseAsync8(inst, data, params);
   inst.spa = inst.safeParseAsync;
@@ -209415,7 +204922,7 @@ var ZodUUID4 = /* @__PURE__ */ $constructor4("ZodUUID", (inst, def) => {
   $ZodUUID4.init(inst, def);
   ZodStringFormat4.init(inst, def);
 });
-function uuid20(params) {
+function uuid19(params) {
   return _uuid4(ZodUUID4, params);
 }
 function uuidv44(params) {
@@ -210800,10 +206307,10 @@ function fromJSONSchema3(schema, params) {
   if (typeof schema === "boolean") {
     return schema ? z3.any() : z3.never();
   }
-  const version12 = detectVersion3(schema, params?.defaultTarget);
+  const version11 = detectVersion3(schema, params?.defaultTarget);
   const defs = schema.$defs || schema.definitions || {};
   const ctx = {
-    version: version12,
+    version: version11,
     defs,
     refs: new Map,
     processing: new Set,
@@ -210842,7 +206349,7 @@ config4(en_default7());
 // node_modules/deepagents/dist/index.js
 var import_micromatch = __toESM(require_micromatch(), 1);
 import { basename } from "path";
-var import_yaml = __toESM(require_dist9(), 1);
+var import_yaml = __toESM(require_dist8(), 1);
 var import_fast_glob = __toESM(require_out4(), 1);
 import fs from "node:fs/promises";
 import fs$1 from "node:fs";
@@ -211575,12 +207082,12 @@ function createFilesystemMiddleware(options = {}) {
       createGrepTool(backend, { customDescription: customToolDescriptions?.grep }),
       createExecuteTool(backend, { customDescription: customToolDescriptions?.execute })
     ],
-    wrapModelCall: async (request2, handler2) => {
+    wrapModelCall: async (request, handler) => {
       const supportsExecution = isSandboxBackend(getBackend(backend, {
-        state: request2.state || {},
-        store: request2.config?.store
+        state: request.state || {},
+        store: request.config?.store
       }));
-      let tools = request2.tools;
+      let tools = request.tools;
       if (!supportsExecution)
         tools = tools.filter((t) => t.name !== "execute");
       let filesystemPrompt = baseSystemPrompt;
@@ -211588,27 +207095,27 @@ function createFilesystemMiddleware(options = {}) {
         filesystemPrompt = `${filesystemPrompt}
 
 ${EXECUTION_SYSTEM_PROMPT}`;
-      const newSystemMessage = request2.systemMessage.concat(filesystemPrompt);
-      return handler2({
-        ...request2,
+      const newSystemMessage = request.systemMessage.concat(filesystemPrompt);
+      return handler({
+        ...request,
         tools,
         systemMessage: newSystemMessage
       });
     },
-    wrapToolCall: async (request2, handler2) => {
+    wrapToolCall: async (request, handler) => {
       if (!toolTokenLimitBeforeEvict)
-        return handler2(request2);
-      const toolName = request2.toolCall?.name;
+        return handler(request);
+      const toolName = request.toolCall?.name;
       if (toolName && TOOLS_EXCLUDED_FROM_EVICTION.includes(toolName))
-        return handler2(request2);
-      const result = await handler2(request2);
+        return handler(request);
+      const result = await handler(request);
       async function processToolMessage(msg, toolTokenLimitBeforeEvict2) {
         if (typeof msg.content === "string" && msg.content.length > toolTokenLimitBeforeEvict2 * NUM_CHARS_PER_TOKEN) {
           const resolvedBackend = getBackend(backend, {
-            state: request2.state || {},
-            store: request2.config?.store
+            state: request.state || {},
+            store: request.config?.store
           });
-          const evictPath = `/large_tool_results/${sanitizeToolCallId(request2.toolCall?.id || msg.tool_call_id)}`;
+          const evictPath = `/large_tool_results/${sanitizeToolCallId(request.toolCall?.id || msg.tool_call_id)}`;
           const writeResult = await resolvedBackend.write(evictPath, msg.content);
           if (writeResult.error)
             return {
@@ -211942,13 +207449,13 @@ function createSubAgentMiddleware(options) {
       generalPurposeAgent,
       taskDescription
     })],
-    wrapModelCall: async (request2, handler2) => {
+    wrapModelCall: async (request, handler) => {
       if (systemPrompt !== null)
-        return handler2({
-          ...request2,
-          systemMessage: request2.systemMessage.concat(new SystemMessage3({ content: systemPrompt }))
+        return handler({
+          ...request,
+          systemMessage: request.systemMessage.concat(new SystemMessage3({ content: systemPrompt }))
         });
-      return handler2(request2);
+      return handler(request);
     }
   });
 }
@@ -211993,15 +207500,15 @@ function createPatchToolCallsMiddleware() {
         return;
       return { messages: [new RemoveMessage4({ id: REMOVE_ALL_MESSAGES }), ...patchedMessages] };
     },
-    wrapModelCall: async (request2, handler2) => {
-      const messages = request2.messages;
+    wrapModelCall: async (request, handler) => {
+      const messages = request.messages;
       if (!messages || messages.length === 0)
-        return handler2(request2);
+        return handler(request);
       const { patchedMessages, needsPatch } = patchDanglingToolCalls(messages);
       if (!needsPatch)
-        return handler2(request2);
-      return handler2({
-        ...request2,
+        return handler(request);
+      return handler({
+        ...request,
         messages: patchedMessages
       });
     }
@@ -212133,11 +207640,11 @@ function createMemoryMiddleware(options) {
         }
       return { memoryContents: contents };
     },
-    wrapModelCall(request2, handler2) {
-      const formattedContents = formatMemoryContents(request2.state?.memoryContents || {}, sources);
-      const newSystemMessage = new SystemMessage3(MEMORY_SYSTEM_PROMPT.replace("{memory_contents}", formattedContents)).concat(request2.systemMessage);
-      return handler2({
-        ...request2,
+    wrapModelCall(request, handler) {
+      const formattedContents = formatMemoryContents(request.state?.memoryContents || {}, sources);
+      const newSystemMessage = new SystemMessage3(MEMORY_SYSTEM_PROMPT.replace("{memory_contents}", formattedContents)).concat(request.systemMessage);
+      return handler({
+        ...request,
         systemMessage: newSystemMessage
       });
     }
@@ -212433,14 +207940,14 @@ function createSkillsMiddleware(options) {
       loadedSkills = Array.from(allSkills.values());
       return { skillsMetadata: loadedSkills };
     },
-    wrapModelCall(request2, handler2) {
-      const skillsMetadata = loadedSkills.length > 0 ? loadedSkills : request2.state?.skillsMetadata || [];
+    wrapModelCall(request, handler) {
+      const skillsMetadata = loadedSkills.length > 0 ? loadedSkills : request.state?.skillsMetadata || [];
       const skillsLocations = formatSkillsLocations(sources);
       const skillsList = formatSkillsList(skillsMetadata, sources);
       const skillsSection = SKILLS_SYSTEM_PROMPT.replace("{skills_locations}", skillsLocations).replace("{skills_list}", skillsList);
-      const newSystemMessage = request2.systemMessage.concat(skillsSection);
-      return handler2({
-        ...request2,
+      const newSystemMessage = request.systemMessage.concat(skillsSection);
+      return handler({
+        ...request,
         systemMessage: newSystemMessage
       });
     }
@@ -212893,21 +208400,21 @@ ${summary}`;
     }
     return false;
   }
-  async function performSummarization(request2, handler2, truncatedMessages, resolvedModel, maxInputTokens) {
+  async function performSummarization(request, handler, truncatedMessages, resolvedModel, maxInputTokens) {
     const cutoffIndex = determineCutoffIndex(truncatedMessages, maxInputTokens);
     if (cutoffIndex <= 0)
-      return handler2({
-        ...request2,
+      return handler({
+        ...request,
         messages: truncatedMessages
       });
     const messagesToSummarize = truncatedMessages.slice(0, cutoffIndex);
     const preservedMessages = truncatedMessages.slice(cutoffIndex);
     if (preservedMessages.length === 0 && maxInputTokens) {
-      const compact = compactToolResults(truncatedMessages, maxInputTokens, request2.systemMessage, request2.tools);
+      const compact = compactToolResults(truncatedMessages, maxInputTokens, request.systemMessage, request.tools);
       if (compact.modified)
         try {
-          return await handler2({
-            ...request2,
+          return await handler({
+            ...request,
             messages: compact.messages
           });
         } catch (err) {
@@ -212915,17 +208422,17 @@ ${summary}`;
             throw err;
         }
     }
-    const previousEvent = request2.state._summarizationEvent;
+    const previousEvent = request.state._summarizationEvent;
     const previousCutoffIndex = previousEvent != null ? previousEvent.cutoffIndex : undefined;
-    const { summaryMessage, filePath, stateCutoffIndex } = await summarizeMessages(messagesToSummarize, resolvedModel, request2.state, previousCutoffIndex, cutoffIndex);
+    const { summaryMessage, filePath, stateCutoffIndex } = await summarizeMessages(messagesToSummarize, resolvedModel, request.state, previousCutoffIndex, cutoffIndex);
     let modifiedMessages = [summaryMessage, ...preservedMessages];
-    const modifiedTokens = countTotalTokens(modifiedMessages, request2.systemMessage, request2.tools);
+    const modifiedTokens = countTotalTokens(modifiedMessages, request.systemMessage, request.tools);
     let finalStateCutoffIndex = stateCutoffIndex;
     let finalSummaryMessage = summaryMessage;
     let finalFilePath = filePath;
     try {
-      await handler2({
-        ...request2,
+      await handler({
+        ...request,
         messages: modifiedMessages
       });
     } catch (err) {
@@ -212936,13 +208443,13 @@ ${summary}`;
         if (observedRatio > tokenEstimationMultiplier)
           tokenEstimationMultiplier = observedRatio * 1.1;
       }
-      const reSumResult = await summarizeMessages([...messagesToSummarize, ...preservedMessages], resolvedModel, request2.state, previousCutoffIndex, truncatedMessages.length);
+      const reSumResult = await summarizeMessages([...messagesToSummarize, ...preservedMessages], resolvedModel, request.state, previousCutoffIndex, truncatedMessages.length);
       finalSummaryMessage = reSumResult.summaryMessage;
       finalFilePath = reSumResult.filePath;
       finalStateCutoffIndex = reSumResult.stateCutoffIndex;
       modifiedMessages = [reSumResult.summaryMessage];
-      await handler2({
-        ...request2,
+      await handler({
+        ...request,
         messages: modifiedMessages
       });
     }
@@ -212952,25 +208459,25 @@ ${summary}`;
         summaryMessage: finalSummaryMessage,
         filePath: finalFilePath
       },
-      _summarizationSessionId: getSessionId(request2.state)
+      _summarizationSessionId: getSessionId(request.state)
     } });
   }
   return createMiddleware({
     name: "SummarizationMiddleware",
     stateSchema: SummarizationStateSchema,
-    async wrapModelCall(request2, handler2) {
-      const effectiveMessages = getEffectiveMessages(request2.messages ?? [], request2.state);
+    async wrapModelCall(request, handler) {
+      const effectiveMessages = getEffectiveMessages(request.messages ?? [], request.state);
       if (effectiveMessages.length === 0)
-        return handler2(request2);
+        return handler(request);
       const resolvedModel = await getChatModel();
       const maxInputTokens = getMaxInputTokens(resolvedModel);
       applyModelDefaults(resolvedModel);
-      const { messages: truncatedMessages } = truncateArgs(effectiveMessages, maxInputTokens, request2.systemMessage, request2.tools);
-      const totalTokens = countTotalTokens(truncatedMessages, request2.systemMessage, request2.tools);
+      const { messages: truncatedMessages } = truncateArgs(effectiveMessages, maxInputTokens, request.systemMessage, request.tools);
+      const totalTokens = countTotalTokens(truncatedMessages, request.systemMessage, request.tools);
       if (!shouldSummarize(truncatedMessages, totalTokens, maxInputTokens))
         try {
-          return await handler2({
-            ...request2,
+          return await handler({
+            ...request,
             messages: truncatedMessages
           });
         } catch (err) {
@@ -212982,7 +208489,7 @@ ${summary}`;
               tokenEstimationMultiplier = observedRatio * 1.1;
           }
         }
-      return performSummarization(request2, handler2, truncatedMessages, resolvedModel, maxInputTokens);
+      return performSummarization(request, handler, truncatedMessages, resolvedModel, maxInputTokens);
     }
   });
 }
@@ -213764,15 +209271,126 @@ var AgentMemoryStateSchema = exports_external8.object({
 });
 var MAX_SKILL_FILE_SIZE$1 = 10 * 1024 * 1024;
 
+// app/patch.ts
+class ParsedPatchLineIndex {
+  linesByPath;
+  constructor(linesByPath) {
+    this.linesByPath = linesByPath;
+  }
+  has(path6, side, line) {
+    return this.linesByPath.get(path6)?.[side].has(line) ?? false;
+  }
+}
+var EXCLUDE_PATTERNS = [
+  /^package-lock.json$/i,
+  /^yarn.lock$/i,
+  /^pnpm-lock.yaml$/i,
+  /\.lock$/i,
+  /node_modules\//i,
+  /\.(png|jpe?g|gif|svg|ico|zip|tgz|gz|woff2?|ttf|map)$/i
+];
+var MAX_CHUNK_LENGTH = 20000;
+var MAX_ADDED_LINES = 500;
+function filterReviewPatch(patch) {
+  if (!patch)
+    return { filteredPatch: patch, removedFiles: [] };
+  const chunks = patch.split(/(?=^diff --git )/m);
+  const kept = [];
+  const removed = [];
+  for (const chunk of chunks) {
+    const match = chunk.match(/^diff --git a\/(.+?) b\/(.+?)(?:\s|$)/);
+    const filename = match ? match[2] : null;
+    let shouldExclude = false;
+    if (filename) {
+      shouldExclude = EXCLUDE_PATTERNS.some((pattern) => pattern.test(filename));
+    }
+    if (!shouldExclude && chunk.length > MAX_CHUNK_LENGTH) {
+      shouldExclude = true;
+    }
+    if (!shouldExclude) {
+      const addedLines = (chunk.match(/^\+[^+].*$/gm) || []).length;
+      if (addedLines > MAX_ADDED_LINES) {
+        shouldExclude = true;
+      }
+    }
+    if (shouldExclude) {
+      if (filename)
+        removed.push(filename);
+      continue;
+    }
+    kept.push(chunk);
+  }
+  return {
+    filteredPatch: kept.join(`
+`).trim(),
+    removedFiles: removed
+  };
+}
+function buildPatchLineIndex(patch) {
+  const linesByPath = new Map;
+  let currentPath = null;
+  let oldLine = 0;
+  let newLine = 0;
+  let inHunk = false;
+  const ensurePath = (path6) => {
+    let entry = linesByPath.get(path6);
+    if (!entry) {
+      entry = { LEFT: new Set, RIGHT: new Set };
+      linesByPath.set(path6, entry);
+    }
+    return entry;
+  };
+  for (const line of patch.split(`
+`)) {
+    if (line.startsWith("diff --git ")) {
+      const match = line.match(/^diff --git a\/(.+?) b\/(.+?)\s*$/);
+      currentPath = match?.[2] ?? null;
+      inHunk = false;
+      continue;
+    }
+    if (!currentPath)
+      continue;
+    if (line.startsWith("@@")) {
+      const match = line.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+      if (match) {
+        oldLine = Number(match[1]);
+        newLine = Number(match[2]);
+        inHunk = true;
+      }
+      continue;
+    }
+    if (!inHunk)
+      continue;
+    const entry = ensurePath(currentPath);
+    if (line.startsWith("+") && !line.startsWith("+++")) {
+      entry.RIGHT.add(newLine);
+      newLine += 1;
+      continue;
+    }
+    if (line.startsWith("-") && !line.startsWith("---")) {
+      entry.LEFT.add(oldLine);
+      oldLine += 1;
+      continue;
+    }
+    if (line.startsWith(" ")) {
+      entry.LEFT.add(oldLine);
+      entry.RIGHT.add(newLine);
+      oldLine += 1;
+      newLine += 1;
+    }
+  }
+  return new ParsedPatchLineIndex(linesByPath);
+}
+
 // app/agent.ts
 class Agent {
   platform;
   agent;
-  constructor(model, platform) {
+  constructor(model, platform, runtime) {
     this.platform = platform;
-    this.agent = createDeepAgent({
+    this.agent = runtime ?? createDeepAgent({
       model,
-      systemPrompt: `You are an expert Software Engineer and Code Reviewer responsible for reviewing GitHub Pull Requests. Your goal is to help maintain high code quality, reliability, and maintainability in the repository.`,
+      systemPrompt: "You are an expert Software Engineer and Code Reviewer responsible for reviewing GitHub Pull Requests. Your goal is to help maintain high code quality, reliability, and maintainability in the repository.",
       tools: [],
       subagents: []
     });
@@ -213781,88 +209399,197 @@ class Agent {
     const patch = await this.platform.fetchRawPatch({
       owner: params.owner,
       repo: params.repo,
-      pullno: params.pullNo,
+      pullNo: params.pullNo,
       token: params.token
     });
-    const fallbackLocation = this.pickReviewLocation(patch);
+    const { filteredPatch, removedFiles } = filterReviewPatch(patch);
+    const reviewPatch = removedFiles.length ? `${filteredPatch}
+
+[OMITTED FILE DIFFS: ${removedFiles.join(", ")}]` : filteredPatch;
     const response = await this.agent.invoke({
       messages: [
         {
           role: "user",
-          content: this.reviewPrompt(patch, fallbackLocation)
+          content: this.reviewPrompt(reviewPatch)
         }
       ]
     });
     const raw = this.extractAgentContent(response);
-    const review = this.parseReviewCommentPayload(raw, fallbackLocation);
-    await this.platform.createReviewComment({
-      owner: params.owner,
-      repo: params.repo,
-      pullNo: params.pullNo,
-      token: params.token,
-      commitId: params.commitId,
-      ...review
-    });
+    const review = this.parseReviewResult(raw, params.commitId, buildPatchLineIndex(filteredPatch));
+    for (const finding of review.findings) {
+      await this.platform.createReviewComment({
+        owner: params.owner,
+        repo: params.repo,
+        pullNo: params.pullNo,
+        token: params.token,
+        ...finding
+      });
+    }
+    const generalComment = this.buildGeneralComment(review);
+    if (generalComment) {
+      await this.platform.commentInPr({
+        owner: params.owner,
+        repo: params.repo,
+        pullNo: params.pullNo,
+        token: params.token,
+        summary: generalComment
+      });
+    }
   }
-  reviewPrompt(patch, fallback) {
+  reviewPrompt(patch) {
     return `You are reviewing a GitHub pull request patch.
-Return ONLY valid JSON with this shape (matching GitHub createReviewComment):
+Return ONLY valid JSON with this shape:
 {
-  "body": "Markdown review body",
-  "path": "file/path.ts",
-  "line": 123,
-  "side": "RIGHT"
+  "summary": "Optional short top-level review summary",
+  "findings": [
+    {
+      "body": "Markdown review body",
+      "path": "file/path.ts",
+      "line": 123,
+      "side": "RIGHT"
+    }
+  ]
 }
 
 Notes:
-- If you need a multi-line comment, include "startLine" and "startSide".
-- If you use "position" instead, omit line/side.
-- Keep the body concise: summary + bullet list of findings.
-- If no issues, say so clearly.
-- Prefer using this default location unless you have a better one from the patch:
-${fallback ? JSON.stringify(fallback, null, 2) : "null"}
+- Each finding must include a non-empty "body".
+- Use either "position" or "line"+"side", never both.
+- If you need a multi-line comment, include both "startLine" and "startSide".
+- If there are no actionable inline findings, return "findings": [] and put the explanation in "summary".
+- Keep findings concise and high signal.
 
 Patch:
 
 ${patch}`;
   }
-  parseReviewCommentPayload(raw, fallback) {
+  parseReviewResult(raw, commitId, lineIndex) {
     const json5 = this.extractJsonObject(raw);
-    if (json5) {
-      try {
-        const parsed = JSON.parse(json5);
-        const body = typeof parsed?.body === "string" ? parsed.body.trim() : "";
-        const path6 = typeof parsed?.path === "string" && parsed.path.trim() ? parsed.path.trim() : fallback?.path;
-        const position = typeof parsed?.position === "number" ? parsed.position : undefined;
-        const line = typeof parsed?.line === "number" ? parsed.line : undefined;
-        const side = this.normalizeSide(parsed?.side) ?? fallback?.side;
-        const startLine = typeof parsed?.startLine === "number" ? parsed.startLine : undefined;
-        const startSide = this.normalizeSide(parsed?.startSide);
-        if (body && path6 && (position || line && side)) {
-          return {
-            body,
-            path: path6,
-            position,
-            line,
-            side,
-            startLine,
-            startSide
-          };
-        }
-      } catch {}
+    if (!json5) {
+      return this.fallbackReviewResult(raw);
     }
-    if (!fallback?.path || !(fallback?.position || fallback?.line && fallback?.side)) {
-      throw new Error("Unable to determine a review comment location.");
+    try {
+      const parsed = JSON.parse(json5);
+      return this.normalizeReviewResult(parsed, commitId, lineIndex);
+    } catch {
+      return this.fallbackReviewResult(raw);
+    }
+  }
+  normalizeReviewResult(input, commitId, lineIndex) {
+    const parsed = input && typeof input === "object" ? input : {};
+    const findingsInput = Array.isArray(parsed.findings) ? parsed.findings : parsed.body ? [parsed] : [];
+    const findings = [];
+    const generalComments = [];
+    for (const findingInput of findingsInput) {
+      const finding = this.normalizeFinding(findingInput, commitId, lineIndex);
+      if (finding.validFinding) {
+        findings.push(finding.validFinding);
+      } else if (finding.generalComment) {
+        generalComments.push(finding.generalComment);
+      }
+    }
+    const summary = typeof parsed.summary === "string" && parsed.summary.trim() ? parsed.summary.trim() : undefined;
+    return { findings, summary, generalComments };
+  }
+  normalizeFinding(input, commitId, lineIndex) {
+    if (!input || typeof input !== "object") {
+      return {};
+    }
+    const parsed = input;
+    const body = typeof parsed.body === "string" ? parsed.body.trim() : "";
+    if (!body) {
+      return {};
+    }
+    const path6 = typeof parsed.path === "string" && parsed.path.trim() ? parsed.path.trim() : "";
+    const position = this.positiveInteger(parsed.position);
+    const line = this.positiveInteger(parsed.line);
+    const side = this.normalizeSide(parsed.side);
+    const startLine = this.positiveInteger(parsed.startLine);
+    const startSide = this.normalizeSide(parsed.startSide);
+    if (!path6) {
+      return { generalComment: body };
+    }
+    const hasPosition = position !== undefined;
+    const hasLineMode = line !== undefined && side !== undefined;
+    if (hasPosition === hasLineMode) {
+      return {
+        generalComment: `${body}
+
+Location could not be validated for \`${path6}\`.`
+      };
+    }
+    if (hasPosition) {
+      return {
+        validFinding: {
+          body,
+          commitId,
+          path: path6,
+          position
+        }
+      };
+    }
+    if (startLine === undefined !== (startSide === undefined)) {
+      return {
+        generalComment: `${body}
+
+Multi-line location was incomplete for \`${path6}\`.`
+      };
+    }
+    if (!line || !side || !lineIndex.has(path6, side, line)) {
+      return {
+        generalComment: `${body}
+
+Line ${line} on ${path6} (${side}) is not part of this diff.`
+      };
+    }
+    if (startLine !== undefined && startSide !== undefined && !lineIndex.has(path6, startSide, startLine)) {
+      return {
+        generalComment: `${body}
+
+Start line ${startLine} on ${path6} (${startSide}) is not part of this diff.`
+      };
     }
     return {
-      body: raw.trim(),
-      path: fallback.path,
-      position: fallback.position,
-      line: fallback.line,
-      side: fallback.side,
-      startLine: fallback.startLine,
-      startSide: fallback.startSide
+      validFinding: {
+        body,
+        commitId,
+        path: path6,
+        line,
+        side,
+        startLine,
+        startSide
+      }
     };
+  }
+  buildGeneralComment(review) {
+    const parts = [];
+    if (review.summary?.trim()) {
+      parts.push(review.summary.trim());
+    }
+    if (review.generalComments?.length) {
+      const formatted = review.generalComments.map((comment) => `- ${comment.replace(/\n{2,}/g, `
+`)}`);
+      parts.push([
+        "Additional findings that could not be placed inline:",
+        ...formatted
+      ].join(`
+`));
+    }
+    if (parts.length === 0 && review.findings.length === 0) {
+      return "No actionable issues found in this review.";
+    }
+    return parts.length ? parts.join(`
+
+`) : null;
+  }
+  fallbackReviewResult(raw) {
+    const summary = raw.trim();
+    return {
+      findings: [],
+      summary: summary || "No actionable issues found in this review."
+    };
+  }
+  positiveInteger(value) {
+    return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : undefined;
   }
   normalizeSide(value) {
     if (typeof value !== "string")
@@ -213874,92 +209601,43 @@ ${patch}`;
       return "RIGHT";
     return;
   }
-  pickReviewLocation(patch) {
-    if (!patch)
-      return null;
-    let currentPath = null;
-    let oldLine = 0;
-    let newLine = 0;
-    let inHunk = false;
-    let firstAdded = null;
-    let firstDeleted = null;
-    let firstContext = null;
-    const lines = patch.split(`
-`);
-    for (const line of lines) {
-      if (line.startsWith("diff --git ")) {
-        const match = line.match(/^diff --git a\/(.+?) b\/(.+?)\s*$/);
-        currentPath = match?.[2] ?? null;
-        inHunk = false;
-        continue;
-      }
-      if (!currentPath)
-        continue;
-      if (line.startsWith("@@")) {
-        const match = line.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
-        if (match) {
-          oldLine = Number(match[1]);
-          newLine = Number(match[2]);
-          inHunk = true;
-        }
-        continue;
-      }
-      if (!inHunk)
-        continue;
-      if (line.startsWith("+") && !line.startsWith("+++")) {
-        if (!firstAdded) {
-          firstAdded = { path: currentPath, line: newLine, side: "RIGHT" };
-        }
-        newLine += 1;
-        continue;
-      }
-      if (line.startsWith("-") && !line.startsWith("---")) {
-        if (!firstDeleted) {
-          firstDeleted = { path: currentPath, line: oldLine, side: "LEFT" };
-        }
-        oldLine += 1;
-        continue;
-      }
-      if (line.startsWith(" ")) {
-        if (!firstContext) {
-          firstContext = { path: currentPath, line: newLine, side: "RIGHT" };
-        }
-        oldLine += 1;
-        newLine += 1;
-        continue;
-      }
-    }
-    return firstAdded ?? firstDeleted ?? firstContext ?? {
-      path: currentPath ?? undefined,
-      line: newLine || undefined,
-      side: "RIGHT"
-    };
-  }
   extractAgentContent(response) {
-    const contentFromMessages = this.extractLastMessageContent(response?.messages);
+    const contentFromMessages = this.extractLastMessageContent(response);
     if (contentFromMessages)
       return contentFromMessages;
-    if (typeof response?.response === "string")
-      return response.response;
-    if (typeof response?.response?.content === "string") {
-      return response.response.content;
+    const responseRecord = response && typeof response === "object" ? response : null;
+    if (typeof responseRecord?.response === "string") {
+      return responseRecord.response;
     }
-    if (typeof response?.output === "string")
-      return response.output;
-    if (typeof response?.output?.content === "string") {
-      return response.output.content;
+    if (responseRecord?.response && typeof responseRecord.response === "object" && typeof responseRecord.response.content === "string") {
+      const content = responseRecord.response.content;
+      if (typeof content === "string") {
+        return content;
+      }
     }
-    return typeof response === "string" ? response : JSON.stringify(response);
+    if (typeof responseRecord?.output === "string") {
+      return responseRecord.output;
+    }
+    if (responseRecord?.output && typeof responseRecord.output === "object" && typeof responseRecord.output.content === "string") {
+      const content = responseRecord.output.content;
+      if (typeof content === "string") {
+        return content;
+      }
+    }
+    return JSON.stringify(response);
   }
-  extractLastMessageContent(messages) {
-    if (!Array.isArray(messages) || messages.length === 0)
+  extractLastMessageContent(response) {
+    if (!response || typeof response !== "object" || !("messages" in response) || !Array.isArray(response.messages) || response.messages.length === 0) {
       return null;
-    const last = messages[messages.length - 1];
-    if (typeof last?.content === "string")
-      return last.content;
-    if (Array.isArray(last?.content)) {
-      return last.content.map((part) => typeof part?.text === "string" ? part.text : "").filter(Boolean).join(`
+    }
+    const last = response.messages[response.messages.length - 1];
+    if (last && typeof last === "object" && "content" in last) {
+      if (typeof last.content === "string")
+        return last.content;
+      if (Array.isArray(last.content)) {
+        return last.content.map((part) => part && typeof part === "object" && ("text" in part) && typeof part.text === "string" ? part.text : "").filter(Boolean).join(`
 `);
+      }
     }
     return null;
   }
@@ -213995,42 +209673,3601 @@ ${patch}`;
   }
 }
 
+// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/universal-user-agent/index.js
+function getUserAgent() {
+  if (typeof navigator === "object" && "userAgent" in navigator) {
+    return navigator.userAgent;
+  }
+  if (typeof process === "object" && process.version !== undefined) {
+    return `Node.js/${process.version.substr(1)} (${process.platform}; ${process.arch})`;
+  }
+  return "<environment undetectable>";
+}
+
+// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/before-after-hook/lib/register.js
+function register(state, name, method, options) {
+  if (typeof method !== "function") {
+    throw new Error("method for before hook must be a function");
+  }
+  if (!options) {
+    options = {};
+  }
+  if (Array.isArray(name)) {
+    return name.reverse().reduce((callback, name2) => {
+      return register.bind(null, state, name2, callback, options);
+    }, method)();
+  }
+  return Promise.resolve().then(() => {
+    if (!state.registry[name]) {
+      return method(options);
+    }
+    return state.registry[name].reduce((method2, registered) => {
+      return registered.hook.bind(null, method2, options);
+    }, method)();
+  });
+}
+
+// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/before-after-hook/lib/add.js
+function addHook(state, kind, name, hook) {
+  const orig = hook;
+  if (!state.registry[name]) {
+    state.registry[name] = [];
+  }
+  if (kind === "before") {
+    hook = (method, options) => {
+      return Promise.resolve().then(orig.bind(null, options)).then(method.bind(null, options));
+    };
+  }
+  if (kind === "after") {
+    hook = (method, options) => {
+      let result;
+      return Promise.resolve().then(method.bind(null, options)).then((result_) => {
+        result = result_;
+        return orig(result, options);
+      }).then(() => {
+        return result;
+      });
+    };
+  }
+  if (kind === "error") {
+    hook = (method, options) => {
+      return Promise.resolve().then(method.bind(null, options)).catch((error188) => {
+        return orig(error188, options);
+      });
+    };
+  }
+  state.registry[name].push({
+    hook,
+    orig
+  });
+}
+
+// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/before-after-hook/lib/remove.js
+function removeHook(state, name, method) {
+  if (!state.registry[name]) {
+    return;
+  }
+  const index2 = state.registry[name].map((registered) => {
+    return registered.orig;
+  }).indexOf(method);
+  if (index2 === -1) {
+    return;
+  }
+  state.registry[name].splice(index2, 1);
+}
+
+// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/before-after-hook/index.js
+var bind2 = Function.bind;
+var bindable = bind2.bind(bind2);
+function bindApi(hook, state, name) {
+  const removeHookRef = bindable(removeHook, null).apply(null, name ? [state, name] : [state]);
+  hook.api = { remove: removeHookRef };
+  hook.remove = removeHookRef;
+  ["before", "error", "after", "wrap"].forEach((kind) => {
+    const args = name ? [state, kind, name] : [state, kind];
+    hook[kind] = hook.api[kind] = bindable(addHook, null).apply(null, args);
+  });
+}
+function Singular() {
+  const singularHookName = Symbol("Singular");
+  const singularHookState = {
+    registry: {}
+  };
+  const singularHook = register.bind(null, singularHookState, singularHookName);
+  bindApi(singularHook, singularHookState, singularHookName);
+  return singularHook;
+}
+function Collection() {
+  const state = {
+    registry: {}
+  };
+  const hook = register.bind(null, state);
+  bindApi(hook, state);
+  return hook;
+}
+var before_after_hook_default = { Singular, Collection };
+
+// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/@octokit/request/node_modules/@octokit/endpoint/dist-bundle/index.js
+var VERSION2 = "0.0.0-development";
+var userAgent = `octokit-endpoint.js/${VERSION2} ${getUserAgent()}`;
+var DEFAULTS = {
+  method: "GET",
+  baseUrl: "https://api.github.com",
+  headers: {
+    accept: "application/vnd.github.v3+json",
+    "user-agent": userAgent
+  },
+  mediaType: {
+    format: ""
+  }
+};
+function lowercaseKeys(object6) {
+  if (!object6) {
+    return {};
+  }
+  return Object.keys(object6).reduce((newObj, key) => {
+    newObj[key.toLowerCase()] = object6[key];
+    return newObj;
+  }, {});
+}
+function isPlainObject5(value) {
+  if (typeof value !== "object" || value === null)
+    return false;
+  if (Object.prototype.toString.call(value) !== "[object Object]")
+    return false;
+  const proto = Object.getPrototypeOf(value);
+  if (proto === null)
+    return true;
+  const Ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
+  return typeof Ctor === "function" && Ctor instanceof Ctor && Function.prototype.call(Ctor) === Function.prototype.call(value);
+}
+function mergeDeep(defaults2, options) {
+  const result = Object.assign({}, defaults2);
+  Object.keys(options).forEach((key) => {
+    if (isPlainObject5(options[key])) {
+      if (!(key in defaults2))
+        Object.assign(result, { [key]: options[key] });
+      else
+        result[key] = mergeDeep(defaults2[key], options[key]);
+    } else {
+      Object.assign(result, { [key]: options[key] });
+    }
+  });
+  return result;
+}
+function removeUndefinedProperties(obj) {
+  for (const key in obj) {
+    if (obj[key] === undefined) {
+      delete obj[key];
+    }
+  }
+  return obj;
+}
+function merge5(defaults2, route, options) {
+  if (typeof route === "string") {
+    let [method, url5] = route.split(" ");
+    options = Object.assign(url5 ? { method, url: url5 } : { url: method }, options);
+  } else {
+    options = Object.assign({}, route);
+  }
+  options.headers = lowercaseKeys(options.headers);
+  removeUndefinedProperties(options);
+  removeUndefinedProperties(options.headers);
+  const mergedOptions = mergeDeep(defaults2 || {}, options);
+  if (options.url === "/graphql") {
+    if (defaults2 && defaults2.mediaType.previews?.length) {
+      mergedOptions.mediaType.previews = defaults2.mediaType.previews.filter((preview) => !mergedOptions.mediaType.previews.includes(preview)).concat(mergedOptions.mediaType.previews);
+    }
+    mergedOptions.mediaType.previews = (mergedOptions.mediaType.previews || []).map((preview) => preview.replace(/-preview/, ""));
+  }
+  return mergedOptions;
+}
+function addQueryParameters(url5, parameters) {
+  const separator = /\?/.test(url5) ? "&" : "?";
+  const names = Object.keys(parameters);
+  if (names.length === 0) {
+    return url5;
+  }
+  return url5 + separator + names.map((name) => {
+    if (name === "q") {
+      return "q=" + parameters.q.split("+").map(encodeURIComponent).join("+");
+    }
+    return `${name}=${encodeURIComponent(parameters[name])}`;
+  }).join("&");
+}
+var urlVariableRegex = /\{[^{}}]+\}/g;
+function removeNonChars(variableName) {
+  return variableName.replace(/(?:^\W+)|(?:(?<!\W)\W+$)/g, "").split(/,/);
+}
+function extractUrlVariableNames(url5) {
+  const matches = url5.match(urlVariableRegex);
+  if (!matches) {
+    return [];
+  }
+  return matches.map(removeNonChars).reduce((a, b) => a.concat(b), []);
+}
+function omit5(object6, keysToOmit) {
+  const result = { __proto__: null };
+  for (const key of Object.keys(object6)) {
+    if (keysToOmit.indexOf(key) === -1) {
+      result[key] = object6[key];
+    }
+  }
+  return result;
+}
+function encodeReserved(str2) {
+  return str2.split(/(%[0-9A-Fa-f]{2})/g).map(function(part) {
+    if (!/%[0-9A-Fa-f]/.test(part)) {
+      part = encodeURI(part).replace(/%5B/g, "[").replace(/%5D/g, "]");
+    }
+    return part;
+  }).join("");
+}
+function encodeUnreserved(str2) {
+  return encodeURIComponent(str2).replace(/[!'()*]/g, function(c) {
+    return "%" + c.charCodeAt(0).toString(16).toUpperCase();
+  });
+}
+function encodeValue(operator, value, key) {
+  value = operator === "+" || operator === "#" ? encodeReserved(value) : encodeUnreserved(value);
+  if (key) {
+    return encodeUnreserved(key) + "=" + value;
+  } else {
+    return value;
+  }
+}
+function isDefined(value) {
+  return value !== undefined && value !== null;
+}
+function isKeyOperator(operator) {
+  return operator === ";" || operator === "&" || operator === "?";
+}
+function getValues(context2, operator, key, modifier) {
+  var value = context2[key], result = [];
+  if (isDefined(value) && value !== "") {
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+      value = value.toString();
+      if (modifier && modifier !== "*") {
+        value = value.substring(0, parseInt(modifier, 10));
+      }
+      result.push(encodeValue(operator, value, isKeyOperator(operator) ? key : ""));
+    } else {
+      if (modifier === "*") {
+        if (Array.isArray(value)) {
+          value.filter(isDefined).forEach(function(value2) {
+            result.push(encodeValue(operator, value2, isKeyOperator(operator) ? key : ""));
+          });
+        } else {
+          Object.keys(value).forEach(function(k) {
+            if (isDefined(value[k])) {
+              result.push(encodeValue(operator, value[k], k));
+            }
+          });
+        }
+      } else {
+        const tmp = [];
+        if (Array.isArray(value)) {
+          value.filter(isDefined).forEach(function(value2) {
+            tmp.push(encodeValue(operator, value2));
+          });
+        } else {
+          Object.keys(value).forEach(function(k) {
+            if (isDefined(value[k])) {
+              tmp.push(encodeUnreserved(k));
+              tmp.push(encodeValue(operator, value[k].toString()));
+            }
+          });
+        }
+        if (isKeyOperator(operator)) {
+          result.push(encodeUnreserved(key) + "=" + tmp.join(","));
+        } else if (tmp.length !== 0) {
+          result.push(tmp.join(","));
+        }
+      }
+    }
+  } else {
+    if (operator === ";") {
+      if (isDefined(value)) {
+        result.push(encodeUnreserved(key));
+      }
+    } else if (value === "" && (operator === "&" || operator === "?")) {
+      result.push(encodeUnreserved(key) + "=");
+    } else if (value === "") {
+      result.push("");
+    }
+  }
+  return result;
+}
+function parseUrl(template) {
+  return {
+    expand: expand.bind(null, template)
+  };
+}
+function expand(template, context2) {
+  var operators = ["+", "#", ".", "/", ";", "?", "&"];
+  template = template.replace(/\{([^\{\}]+)\}|([^\{\}]+)/g, function(_, expression, literal6) {
+    if (expression) {
+      let operator = "";
+      const values2 = [];
+      if (operators.indexOf(expression.charAt(0)) !== -1) {
+        operator = expression.charAt(0);
+        expression = expression.substr(1);
+      }
+      expression.split(/,/g).forEach(function(variable) {
+        var tmp = /([^:\*]*)(?::(\d+)|(\*))?/.exec(variable);
+        values2.push(getValues(context2, operator, tmp[1], tmp[2] || tmp[3]));
+      });
+      if (operator && operator !== "+") {
+        var separator = ",";
+        if (operator === "?") {
+          separator = "&";
+        } else if (operator !== "#") {
+          separator = operator;
+        }
+        return (values2.length !== 0 ? operator : "") + values2.join(separator);
+      } else {
+        return values2.join(",");
+      }
+    } else {
+      return encodeReserved(literal6);
+    }
+  });
+  if (template === "/") {
+    return template;
+  } else {
+    return template.replace(/\/$/, "");
+  }
+}
+function parse25(options) {
+  let method = options.method.toUpperCase();
+  let url5 = (options.url || "/").replace(/:([a-z]\w+)/g, "{$1}");
+  let headers = Object.assign({}, options.headers);
+  let body;
+  let parameters = omit5(options, [
+    "method",
+    "baseUrl",
+    "url",
+    "headers",
+    "request",
+    "mediaType"
+  ]);
+  const urlVariableNames = extractUrlVariableNames(url5);
+  url5 = parseUrl(url5).expand(parameters);
+  if (!/^http/.test(url5)) {
+    url5 = options.baseUrl + url5;
+  }
+  const omittedParameters = Object.keys(options).filter((option) => urlVariableNames.includes(option)).concat("baseUrl");
+  const remainingParameters = omit5(parameters, omittedParameters);
+  const isBinaryRequest = /application\/octet-stream/i.test(headers.accept);
+  if (!isBinaryRequest) {
+    if (options.mediaType.format) {
+      headers.accept = headers.accept.split(/,/).map((format2) => format2.replace(/application\/vnd(\.\w+)(\.v3)?(\.\w+)?(\+json)?$/, `application/vnd$1$2.${options.mediaType.format}`)).join(",");
+    }
+    if (url5.endsWith("/graphql")) {
+      if (options.mediaType.previews?.length) {
+        const previewsFromAcceptHeader = headers.accept.match(/(?<![\w-])[\w-]+(?=-preview)/g) || [];
+        headers.accept = previewsFromAcceptHeader.concat(options.mediaType.previews).map((preview) => {
+          const format2 = options.mediaType.format ? `.${options.mediaType.format}` : "+json";
+          return `application/vnd.github.${preview}-preview${format2}`;
+        }).join(",");
+      }
+    }
+  }
+  if (["GET", "HEAD"].includes(method)) {
+    url5 = addQueryParameters(url5, remainingParameters);
+  } else {
+    if ("data" in remainingParameters) {
+      body = remainingParameters.data;
+    } else {
+      if (Object.keys(remainingParameters).length) {
+        body = remainingParameters;
+      }
+    }
+  }
+  if (!headers["content-type"] && typeof body !== "undefined") {
+    headers["content-type"] = "application/json; charset=utf-8";
+  }
+  if (["PATCH", "PUT"].includes(method) && typeof body === "undefined") {
+    body = "";
+  }
+  return Object.assign({ method, url: url5, headers }, typeof body !== "undefined" ? { body } : null, options.request ? { request: options.request } : null);
+}
+function endpointWithDefaults(defaults2, route, options) {
+  return parse25(merge5(defaults2, route, options));
+}
+function withDefaults(oldDefaults, newDefaults) {
+  const DEFAULTS2 = merge5(oldDefaults, newDefaults);
+  const endpoint2 = endpointWithDefaults.bind(null, DEFAULTS2);
+  return Object.assign(endpoint2, {
+    DEFAULTS: DEFAULTS2,
+    defaults: withDefaults.bind(null, DEFAULTS2),
+    merge: merge5.bind(null, DEFAULTS2),
+    parse: parse25
+  });
+}
+var endpoint = withDefaults(null, DEFAULTS);
+
+// node_modules/fast-content-type-parse/index.js
+var NullObject = function NullObject2() {};
+NullObject.prototype = Object.create(null);
+var paramRE = /; *([!#$%&'*+.^\w`|~-]+)=("(?:[\v\u0020\u0021\u0023-\u005b\u005d-\u007e\u0080-\u00ff]|\\[\v\u0020-\u00ff])*"|[!#$%&'*+.^\w`|~-]+) */gu;
+var quotedPairRE = /\\([\v\u0020-\u00ff])/gu;
+var mediaTypeRE = /^[!#$%&'*+.^\w|~-]+\/[!#$%&'*+.^\w|~-]+$/u;
+var defaultContentType = { type: "", parameters: new NullObject };
+Object.freeze(defaultContentType.parameters);
+Object.freeze(defaultContentType);
+function safeParse9(header) {
+  if (typeof header !== "string") {
+    return defaultContentType;
+  }
+  let index2 = header.indexOf(";");
+  const type = index2 !== -1 ? header.slice(0, index2).trim() : header.trim();
+  if (mediaTypeRE.test(type) === false) {
+    return defaultContentType;
+  }
+  const result = {
+    type: type.toLowerCase(),
+    parameters: new NullObject
+  };
+  if (index2 === -1) {
+    return result;
+  }
+  let key;
+  let match;
+  let value;
+  paramRE.lastIndex = index2;
+  while (match = paramRE.exec(header)) {
+    if (match.index !== index2) {
+      return defaultContentType;
+    }
+    index2 += match[0].length;
+    key = match[1].toLowerCase();
+    value = match[2];
+    if (value[0] === '"') {
+      value = value.slice(1, value.length - 1);
+      quotedPairRE.test(value) && (value = value.replace(quotedPairRE, "$1"));
+    }
+    result.parameters[key] = value;
+  }
+  if (index2 !== header.length) {
+    return defaultContentType;
+  }
+  return result;
+}
+var $safeParse = safeParse9;
+
+// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/@octokit/request-error/dist-src/index.js
+class RequestError extends Error {
+  name;
+  status;
+  request;
+  response;
+  constructor(message, statusCode, options) {
+    super(message, { cause: options.cause });
+    this.name = "HttpError";
+    this.status = Number.parseInt(statusCode);
+    if (Number.isNaN(this.status)) {
+      this.status = 0;
+    }
+    if ("response" in options) {
+      this.response = options.response;
+    }
+    const requestCopy = Object.assign({}, options.request);
+    if (options.request.headers.authorization) {
+      requestCopy.headers = Object.assign({}, options.request.headers, {
+        authorization: options.request.headers.authorization.replace(/(?<! ) .*$/, " [REDACTED]")
+      });
+    }
+    requestCopy.url = requestCopy.url.replace(/\bclient_secret=\w+/g, "client_secret=[REDACTED]").replace(/\baccess_token=\w+/g, "access_token=[REDACTED]");
+    this.request = requestCopy;
+  }
+}
+
+// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/@octokit/request/dist-bundle/index.js
+var VERSION3 = "10.0.7";
+var defaults_default = {
+  headers: {
+    "user-agent": `octokit-request.js/${VERSION3} ${getUserAgent()}`
+  }
+};
+function isPlainObject6(value) {
+  if (typeof value !== "object" || value === null)
+    return false;
+  if (Object.prototype.toString.call(value) !== "[object Object]")
+    return false;
+  const proto = Object.getPrototypeOf(value);
+  if (proto === null)
+    return true;
+  const Ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
+  return typeof Ctor === "function" && Ctor instanceof Ctor && Function.prototype.call(Ctor) === Function.prototype.call(value);
+}
+var noop2 = () => "";
+async function fetchWrapper(requestOptions) {
+  const fetch2 = requestOptions.request?.fetch || globalThis.fetch;
+  if (!fetch2) {
+    throw new Error("fetch is not set. Please pass a fetch implementation as new Octokit({ request: { fetch }}). Learn more at https://github.com/octokit/octokit.js/#fetch-missing");
+  }
+  const log2 = requestOptions.request?.log || console;
+  const parseSuccessResponseBody = requestOptions.request?.parseSuccessResponseBody !== false;
+  const body = isPlainObject6(requestOptions.body) || Array.isArray(requestOptions.body) ? JSON.stringify(requestOptions.body) : requestOptions.body;
+  const requestHeaders = Object.fromEntries(Object.entries(requestOptions.headers).map(([name, value]) => [
+    name,
+    String(value)
+  ]));
+  let fetchResponse;
+  try {
+    fetchResponse = await fetch2(requestOptions.url, {
+      method: requestOptions.method,
+      body,
+      redirect: requestOptions.request?.redirect,
+      headers: requestHeaders,
+      signal: requestOptions.request?.signal,
+      ...requestOptions.body && { duplex: "half" }
+    });
+  } catch (error188) {
+    let message = "Unknown Error";
+    if (error188 instanceof Error) {
+      if (error188.name === "AbortError") {
+        error188.status = 500;
+        throw error188;
+      }
+      message = error188.message;
+      if (error188.name === "TypeError" && "cause" in error188) {
+        if (error188.cause instanceof Error) {
+          message = error188.cause.message;
+        } else if (typeof error188.cause === "string") {
+          message = error188.cause;
+        }
+      }
+    }
+    const requestError = new RequestError(message, 500, {
+      request: requestOptions
+    });
+    requestError.cause = error188;
+    throw requestError;
+  }
+  const status = fetchResponse.status;
+  const url5 = fetchResponse.url;
+  const responseHeaders = {};
+  for (const [key, value] of fetchResponse.headers) {
+    responseHeaders[key] = value;
+  }
+  const octokitResponse = {
+    url: url5,
+    status,
+    headers: responseHeaders,
+    data: ""
+  };
+  if ("deprecation" in responseHeaders) {
+    const matches = responseHeaders.link && responseHeaders.link.match(/<([^<>]+)>; rel="deprecation"/);
+    const deprecationLink = matches && matches.pop();
+    log2.warn(`[@octokit/request] "${requestOptions.method} ${requestOptions.url}" is deprecated. It is scheduled to be removed on ${responseHeaders.sunset}${deprecationLink ? `. See ${deprecationLink}` : ""}`);
+  }
+  if (status === 204 || status === 205) {
+    return octokitResponse;
+  }
+  if (requestOptions.method === "HEAD") {
+    if (status < 400) {
+      return octokitResponse;
+    }
+    throw new RequestError(fetchResponse.statusText, status, {
+      response: octokitResponse,
+      request: requestOptions
+    });
+  }
+  if (status === 304) {
+    octokitResponse.data = await getResponseData(fetchResponse);
+    throw new RequestError("Not modified", status, {
+      response: octokitResponse,
+      request: requestOptions
+    });
+  }
+  if (status >= 400) {
+    octokitResponse.data = await getResponseData(fetchResponse);
+    throw new RequestError(toErrorMessage(octokitResponse.data), status, {
+      response: octokitResponse,
+      request: requestOptions
+    });
+  }
+  octokitResponse.data = parseSuccessResponseBody ? await getResponseData(fetchResponse) : fetchResponse.body;
+  return octokitResponse;
+}
+async function getResponseData(response) {
+  const contentType = response.headers.get("content-type");
+  if (!contentType) {
+    return response.text().catch(noop2);
+  }
+  const mimetype = $safeParse(contentType);
+  if (isJSONResponse(mimetype)) {
+    let text = "";
+    try {
+      text = await response.text();
+      return JSON.parse(text);
+    } catch (err) {
+      return text;
+    }
+  } else if (mimetype.type.startsWith("text/") || mimetype.parameters.charset?.toLowerCase() === "utf-8") {
+    return response.text().catch(noop2);
+  } else {
+    return response.arrayBuffer().catch(() => new ArrayBuffer(0));
+  }
+}
+function isJSONResponse(mimetype) {
+  return mimetype.type === "application/json" || mimetype.type === "application/scim+json";
+}
+function toErrorMessage(data) {
+  if (typeof data === "string") {
+    return data;
+  }
+  if (data instanceof ArrayBuffer) {
+    return "Unknown error";
+  }
+  if ("message" in data) {
+    const suffix = "documentation_url" in data ? ` - ${data.documentation_url}` : "";
+    return Array.isArray(data.errors) ? `${data.message}: ${data.errors.map((v) => JSON.stringify(v)).join(", ")}${suffix}` : `${data.message}${suffix}`;
+  }
+  return `Unknown error: ${JSON.stringify(data)}`;
+}
+function withDefaults2(oldEndpoint, newDefaults) {
+  const endpoint2 = oldEndpoint.defaults(newDefaults);
+  const newApi = function(route, parameters) {
+    const endpointOptions = endpoint2.merge(route, parameters);
+    if (!endpointOptions.request || !endpointOptions.request.hook) {
+      return fetchWrapper(endpoint2.parse(endpointOptions));
+    }
+    const request2 = (route2, parameters2) => {
+      return fetchWrapper(endpoint2.parse(endpoint2.merge(route2, parameters2)));
+    };
+    Object.assign(request2, {
+      endpoint: endpoint2,
+      defaults: withDefaults2.bind(null, endpoint2)
+    });
+    return endpointOptions.request.hook(request2, endpointOptions);
+  };
+  return Object.assign(newApi, {
+    endpoint: endpoint2,
+    defaults: withDefaults2.bind(null, endpoint2)
+  });
+}
+var request = withDefaults2(endpoint, defaults_default);
+
+// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/@octokit/graphql/dist-bundle/index.js
+var VERSION4 = "0.0.0-development";
+function _buildMessageForResponseErrors(data) {
+  return `Request failed due to following response errors:
+` + data.errors.map((e) => ` - ${e.message}`).join(`
+`);
+}
+var GraphqlResponseError = class extends Error {
+  constructor(request2, headers, response) {
+    super(_buildMessageForResponseErrors(response));
+    this.request = request2;
+    this.headers = headers;
+    this.response = response;
+    this.errors = response.errors;
+    this.data = response.data;
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, this.constructor);
+    }
+  }
+  name = "GraphqlResponseError";
+  errors;
+  data;
+};
+var NON_VARIABLE_OPTIONS = [
+  "method",
+  "baseUrl",
+  "url",
+  "headers",
+  "request",
+  "query",
+  "mediaType",
+  "operationName"
+];
+var FORBIDDEN_VARIABLE_OPTIONS = ["query", "method", "url"];
+var GHES_V3_SUFFIX_REGEX = /\/api\/v3\/?$/;
+function graphql(request2, query, options) {
+  if (options) {
+    if (typeof query === "string" && "query" in options) {
+      return Promise.reject(new Error(`[@octokit/graphql] "query" cannot be used as variable name`));
+    }
+    for (const key in options) {
+      if (!FORBIDDEN_VARIABLE_OPTIONS.includes(key))
+        continue;
+      return Promise.reject(new Error(`[@octokit/graphql] "${key}" cannot be used as variable name`));
+    }
+  }
+  const parsedOptions = typeof query === "string" ? Object.assign({ query }, options) : query;
+  const requestOptions = Object.keys(parsedOptions).reduce((result, key) => {
+    if (NON_VARIABLE_OPTIONS.includes(key)) {
+      result[key] = parsedOptions[key];
+      return result;
+    }
+    if (!result.variables) {
+      result.variables = {};
+    }
+    result.variables[key] = parsedOptions[key];
+    return result;
+  }, {});
+  const baseUrl = parsedOptions.baseUrl || request2.endpoint.DEFAULTS.baseUrl;
+  if (GHES_V3_SUFFIX_REGEX.test(baseUrl)) {
+    requestOptions.url = baseUrl.replace(GHES_V3_SUFFIX_REGEX, "/api/graphql");
+  }
+  return request2(requestOptions).then((response) => {
+    if (response.data.errors) {
+      const headers = {};
+      for (const key of Object.keys(response.headers)) {
+        headers[key] = response.headers[key];
+      }
+      throw new GraphqlResponseError(requestOptions, headers, response.data);
+    }
+    return response.data.data;
+  });
+}
+function withDefaults3(request2, newDefaults) {
+  const newRequest = request2.defaults(newDefaults);
+  const newApi = (query, options) => {
+    return graphql(newRequest, query, options);
+  };
+  return Object.assign(newApi, {
+    defaults: withDefaults3.bind(null, newRequest),
+    endpoint: newRequest.endpoint
+  });
+}
+var graphql2 = withDefaults3(request, {
+  headers: {
+    "user-agent": `octokit-graphql.js/${VERSION4} ${getUserAgent()}`
+  },
+  method: "POST",
+  url: "/graphql"
+});
+function withCustomRequest(customRequest) {
+  return withDefaults3(customRequest, {
+    method: "POST",
+    url: "/graphql"
+  });
+}
+
+// node_modules/@octokit/rest/node_modules/@octokit/core/node_modules/@octokit/auth-token/dist-bundle/index.js
+var b64url = "(?:[a-zA-Z0-9_-]+)";
+var sep = "\\.";
+var jwtRE = new RegExp(`^${b64url}${sep}${b64url}${sep}${b64url}$`);
+var isJWT = jwtRE.test.bind(jwtRE);
+async function auth(token) {
+  const isApp = isJWT(token);
+  const isInstallation = token.startsWith("v1.") || token.startsWith("ghs_");
+  const isUserToServer = token.startsWith("ghu_");
+  const tokenType = isApp ? "app" : isInstallation ? "installation" : isUserToServer ? "user-to-server" : "oauth";
+  return {
+    type: "token",
+    token,
+    tokenType
+  };
+}
+function withAuthorizationPrefix(token) {
+  if (token.split(/\./).length === 3) {
+    return `bearer ${token}`;
+  }
+  return `token ${token}`;
+}
+async function hook(token, request2, route, parameters) {
+  const endpoint2 = request2.endpoint.merge(route, parameters);
+  endpoint2.headers.authorization = withAuthorizationPrefix(token);
+  return request2(endpoint2);
+}
+var createTokenAuth = function createTokenAuth2(token) {
+  if (!token) {
+    throw new Error("[@octokit/auth-token] No token passed to createTokenAuth");
+  }
+  if (typeof token !== "string") {
+    throw new Error("[@octokit/auth-token] Token passed to createTokenAuth is not a string");
+  }
+  token = token.replace(/^(token|bearer) +/i, "");
+  return Object.assign(auth.bind(null, token), {
+    hook: hook.bind(null, token)
+  });
+};
+
+// node_modules/@octokit/rest/node_modules/@octokit/core/dist-src/version.js
+var VERSION5 = "7.0.6";
+
+// node_modules/@octokit/rest/node_modules/@octokit/core/dist-src/index.js
+var noop3 = () => {};
+var consoleWarn = console.warn.bind(console);
+var consoleError = console.error.bind(console);
+function createLogger(logger = {}) {
+  if (typeof logger.debug !== "function") {
+    logger.debug = noop3;
+  }
+  if (typeof logger.info !== "function") {
+    logger.info = noop3;
+  }
+  if (typeof logger.warn !== "function") {
+    logger.warn = consoleWarn;
+  }
+  if (typeof logger.error !== "function") {
+    logger.error = consoleError;
+  }
+  return logger;
+}
+var userAgentTrail = `octokit-core.js/${VERSION5} ${getUserAgent()}`;
+
+class Octokit {
+  static VERSION = VERSION5;
+  static defaults(defaults2) {
+    const OctokitWithDefaults = class extends this {
+      constructor(...args) {
+        const options = args[0] || {};
+        if (typeof defaults2 === "function") {
+          super(defaults2(options));
+          return;
+        }
+        super(Object.assign({}, defaults2, options, options.userAgent && defaults2.userAgent ? {
+          userAgent: `${options.userAgent} ${defaults2.userAgent}`
+        } : null));
+      }
+    };
+    return OctokitWithDefaults;
+  }
+  static plugins = [];
+  static plugin(...newPlugins) {
+    const currentPlugins = this.plugins;
+    const NewOctokit = class extends this {
+      static plugins = currentPlugins.concat(newPlugins.filter((plugin) => !currentPlugins.includes(plugin)));
+    };
+    return NewOctokit;
+  }
+  constructor(options = {}) {
+    const hook2 = new before_after_hook_default.Collection;
+    const requestDefaults = {
+      baseUrl: request.endpoint.DEFAULTS.baseUrl,
+      headers: {},
+      request: Object.assign({}, options.request, {
+        hook: hook2.bind(null, "request")
+      }),
+      mediaType: {
+        previews: [],
+        format: ""
+      }
+    };
+    requestDefaults.headers["user-agent"] = options.userAgent ? `${options.userAgent} ${userAgentTrail}` : userAgentTrail;
+    if (options.baseUrl) {
+      requestDefaults.baseUrl = options.baseUrl;
+    }
+    if (options.previews) {
+      requestDefaults.mediaType.previews = options.previews;
+    }
+    if (options.timeZone) {
+      requestDefaults.headers["time-zone"] = options.timeZone;
+    }
+    this.request = request.defaults(requestDefaults);
+    this.graphql = withCustomRequest(this.request).defaults(requestDefaults);
+    this.log = createLogger(options.log);
+    this.hook = hook2;
+    if (!options.authStrategy) {
+      if (!options.auth) {
+        this.auth = async () => ({
+          type: "unauthenticated"
+        });
+      } else {
+        const auth2 = createTokenAuth(options.auth);
+        hook2.wrap("request", auth2.hook);
+        this.auth = auth2;
+      }
+    } else {
+      const { authStrategy, ...otherOptions } = options;
+      const auth2 = authStrategy(Object.assign({
+        request: this.request,
+        log: this.log,
+        octokit: this,
+        octokitOptions: otherOptions
+      }, options.auth));
+      hook2.wrap("request", auth2.hook);
+      this.auth = auth2;
+    }
+    const classConstructor = this.constructor;
+    for (let i = 0;i < classConstructor.plugins.length; ++i) {
+      Object.assign(this, classConstructor.plugins[i](this, options));
+    }
+  }
+  request;
+  graphql;
+  log;
+  hook;
+  auth;
+}
+
+// node_modules/@octokit/plugin-request-log/dist-src/version.js
+var VERSION6 = "6.0.0";
+
+// node_modules/@octokit/plugin-request-log/dist-src/index.js
+function requestLog(octokit) {
+  octokit.hook.wrap("request", (request2, options) => {
+    octokit.log.debug("request", options);
+    const start = Date.now();
+    const requestOptions = octokit.request.endpoint.parse(options);
+    const path6 = requestOptions.url.replace(options.baseUrl, "");
+    return request2(options).then((response) => {
+      const requestId = response.headers["x-github-request-id"];
+      octokit.log.info(`${requestOptions.method} ${path6} - ${response.status} with id ${requestId} in ${Date.now() - start}ms`);
+      return response;
+    }).catch((error188) => {
+      const requestId = error188.response?.headers["x-github-request-id"] || "UNKNOWN";
+      octokit.log.error(`${requestOptions.method} ${path6} - ${error188.status} with id ${requestId} in ${Date.now() - start}ms`);
+      throw error188;
+    });
+  });
+}
+requestLog.VERSION = VERSION6;
+
+// node_modules/@octokit/rest/node_modules/@octokit/plugin-paginate-rest/dist-bundle/index.js
+var VERSION7 = "0.0.0-development";
+function normalizePaginatedListResponse(response) {
+  if (!response.data) {
+    return {
+      ...response,
+      data: []
+    };
+  }
+  const responseNeedsNormalization = (("total_count" in response.data) || ("total_commits" in response.data)) && !("url" in response.data);
+  if (!responseNeedsNormalization)
+    return response;
+  const incompleteResults = response.data.incomplete_results;
+  const repositorySelection = response.data.repository_selection;
+  const totalCount = response.data.total_count;
+  const totalCommits = response.data.total_commits;
+  delete response.data.incomplete_results;
+  delete response.data.repository_selection;
+  delete response.data.total_count;
+  delete response.data.total_commits;
+  const namespaceKey = Object.keys(response.data)[0];
+  const data = response.data[namespaceKey];
+  response.data = data;
+  if (typeof incompleteResults !== "undefined") {
+    response.data.incomplete_results = incompleteResults;
+  }
+  if (typeof repositorySelection !== "undefined") {
+    response.data.repository_selection = repositorySelection;
+  }
+  response.data.total_count = totalCount;
+  response.data.total_commits = totalCommits;
+  return response;
+}
+function iterator(octokit, route, parameters) {
+  const options = typeof route === "function" ? route.endpoint(parameters) : octokit.request.endpoint(route, parameters);
+  const requestMethod = typeof route === "function" ? route : octokit.request;
+  const method = options.method;
+  const headers = options.headers;
+  let url5 = options.url;
+  return {
+    [Symbol.asyncIterator]: () => ({
+      async next() {
+        if (!url5)
+          return { done: true };
+        try {
+          const response = await requestMethod({ method, url: url5, headers });
+          const normalizedResponse = normalizePaginatedListResponse(response);
+          url5 = ((normalizedResponse.headers.link || "").match(/<([^<>]+)>;\s*rel="next"/) || [])[1];
+          if (!url5 && "total_commits" in normalizedResponse.data) {
+            const parsedUrl = new URL(normalizedResponse.url);
+            const params = parsedUrl.searchParams;
+            const page = parseInt(params.get("page") || "1", 10);
+            const per_page = parseInt(params.get("per_page") || "250", 10);
+            if (page * per_page < normalizedResponse.data.total_commits) {
+              params.set("page", String(page + 1));
+              url5 = parsedUrl.toString();
+            }
+          }
+          return { value: normalizedResponse };
+        } catch (error188) {
+          if (error188.status !== 409)
+            throw error188;
+          url5 = "";
+          return {
+            value: {
+              status: 200,
+              headers: {},
+              data: []
+            }
+          };
+        }
+      }
+    })
+  };
+}
+function paginate(octokit, route, parameters, mapFn) {
+  if (typeof parameters === "function") {
+    mapFn = parameters;
+    parameters = undefined;
+  }
+  return gather(octokit, [], iterator(octokit, route, parameters)[Symbol.asyncIterator](), mapFn);
+}
+function gather(octokit, results, iterator2, mapFn) {
+  return iterator2.next().then((result) => {
+    if (result.done) {
+      return results;
+    }
+    let earlyExit = false;
+    function done() {
+      earlyExit = true;
+    }
+    results = results.concat(mapFn ? mapFn(result.value, done) : result.value.data);
+    if (earlyExit) {
+      return results;
+    }
+    return gather(octokit, results, iterator2, mapFn);
+  });
+}
+var composePaginateRest = Object.assign(paginate, {
+  iterator
+});
+function paginateRest(octokit) {
+  return {
+    paginate: Object.assign(paginate.bind(null, octokit), {
+      iterator: iterator.bind(null, octokit)
+    })
+  };
+}
+paginateRest.VERSION = VERSION7;
+
+// node_modules/@octokit/rest/node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/version.js
+var VERSION8 = "17.0.0";
+
+// node_modules/@octokit/rest/node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/generated/endpoints.js
+var Endpoints = {
+  actions: {
+    addCustomLabelsToSelfHostedRunnerForOrg: [
+      "POST /orgs/{org}/actions/runners/{runner_id}/labels"
+    ],
+    addCustomLabelsToSelfHostedRunnerForRepo: [
+      "POST /repos/{owner}/{repo}/actions/runners/{runner_id}/labels"
+    ],
+    addRepoAccessToSelfHostedRunnerGroupInOrg: [
+      "PUT /orgs/{org}/actions/runner-groups/{runner_group_id}/repositories/{repository_id}"
+    ],
+    addSelectedRepoToOrgSecret: [
+      "PUT /orgs/{org}/actions/secrets/{secret_name}/repositories/{repository_id}"
+    ],
+    addSelectedRepoToOrgVariable: [
+      "PUT /orgs/{org}/actions/variables/{name}/repositories/{repository_id}"
+    ],
+    approveWorkflowRun: [
+      "POST /repos/{owner}/{repo}/actions/runs/{run_id}/approve"
+    ],
+    cancelWorkflowRun: [
+      "POST /repos/{owner}/{repo}/actions/runs/{run_id}/cancel"
+    ],
+    createEnvironmentVariable: [
+      "POST /repos/{owner}/{repo}/environments/{environment_name}/variables"
+    ],
+    createHostedRunnerForOrg: ["POST /orgs/{org}/actions/hosted-runners"],
+    createOrUpdateEnvironmentSecret: [
+      "PUT /repos/{owner}/{repo}/environments/{environment_name}/secrets/{secret_name}"
+    ],
+    createOrUpdateOrgSecret: ["PUT /orgs/{org}/actions/secrets/{secret_name}"],
+    createOrUpdateRepoSecret: [
+      "PUT /repos/{owner}/{repo}/actions/secrets/{secret_name}"
+    ],
+    createOrgVariable: ["POST /orgs/{org}/actions/variables"],
+    createRegistrationTokenForOrg: [
+      "POST /orgs/{org}/actions/runners/registration-token"
+    ],
+    createRegistrationTokenForRepo: [
+      "POST /repos/{owner}/{repo}/actions/runners/registration-token"
+    ],
+    createRemoveTokenForOrg: ["POST /orgs/{org}/actions/runners/remove-token"],
+    createRemoveTokenForRepo: [
+      "POST /repos/{owner}/{repo}/actions/runners/remove-token"
+    ],
+    createRepoVariable: ["POST /repos/{owner}/{repo}/actions/variables"],
+    createWorkflowDispatch: [
+      "POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches"
+    ],
+    deleteActionsCacheById: [
+      "DELETE /repos/{owner}/{repo}/actions/caches/{cache_id}"
+    ],
+    deleteActionsCacheByKey: [
+      "DELETE /repos/{owner}/{repo}/actions/caches{?key,ref}"
+    ],
+    deleteArtifact: [
+      "DELETE /repos/{owner}/{repo}/actions/artifacts/{artifact_id}"
+    ],
+    deleteCustomImageFromOrg: [
+      "DELETE /orgs/{org}/actions/hosted-runners/images/custom/{image_definition_id}"
+    ],
+    deleteCustomImageVersionFromOrg: [
+      "DELETE /orgs/{org}/actions/hosted-runners/images/custom/{image_definition_id}/versions/{version}"
+    ],
+    deleteEnvironmentSecret: [
+      "DELETE /repos/{owner}/{repo}/environments/{environment_name}/secrets/{secret_name}"
+    ],
+    deleteEnvironmentVariable: [
+      "DELETE /repos/{owner}/{repo}/environments/{environment_name}/variables/{name}"
+    ],
+    deleteHostedRunnerForOrg: [
+      "DELETE /orgs/{org}/actions/hosted-runners/{hosted_runner_id}"
+    ],
+    deleteOrgSecret: ["DELETE /orgs/{org}/actions/secrets/{secret_name}"],
+    deleteOrgVariable: ["DELETE /orgs/{org}/actions/variables/{name}"],
+    deleteRepoSecret: [
+      "DELETE /repos/{owner}/{repo}/actions/secrets/{secret_name}"
+    ],
+    deleteRepoVariable: [
+      "DELETE /repos/{owner}/{repo}/actions/variables/{name}"
+    ],
+    deleteSelfHostedRunnerFromOrg: [
+      "DELETE /orgs/{org}/actions/runners/{runner_id}"
+    ],
+    deleteSelfHostedRunnerFromRepo: [
+      "DELETE /repos/{owner}/{repo}/actions/runners/{runner_id}"
+    ],
+    deleteWorkflowRun: ["DELETE /repos/{owner}/{repo}/actions/runs/{run_id}"],
+    deleteWorkflowRunLogs: [
+      "DELETE /repos/{owner}/{repo}/actions/runs/{run_id}/logs"
+    ],
+    disableSelectedRepositoryGithubActionsOrganization: [
+      "DELETE /orgs/{org}/actions/permissions/repositories/{repository_id}"
+    ],
+    disableWorkflow: [
+      "PUT /repos/{owner}/{repo}/actions/workflows/{workflow_id}/disable"
+    ],
+    downloadArtifact: [
+      "GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/{archive_format}"
+    ],
+    downloadJobLogsForWorkflowRun: [
+      "GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs"
+    ],
+    downloadWorkflowRunAttemptLogs: [
+      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}/logs"
+    ],
+    downloadWorkflowRunLogs: [
+      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/logs"
+    ],
+    enableSelectedRepositoryGithubActionsOrganization: [
+      "PUT /orgs/{org}/actions/permissions/repositories/{repository_id}"
+    ],
+    enableWorkflow: [
+      "PUT /repos/{owner}/{repo}/actions/workflows/{workflow_id}/enable"
+    ],
+    forceCancelWorkflowRun: [
+      "POST /repos/{owner}/{repo}/actions/runs/{run_id}/force-cancel"
+    ],
+    generateRunnerJitconfigForOrg: [
+      "POST /orgs/{org}/actions/runners/generate-jitconfig"
+    ],
+    generateRunnerJitconfigForRepo: [
+      "POST /repos/{owner}/{repo}/actions/runners/generate-jitconfig"
+    ],
+    getActionsCacheList: ["GET /repos/{owner}/{repo}/actions/caches"],
+    getActionsCacheUsage: ["GET /repos/{owner}/{repo}/actions/cache/usage"],
+    getActionsCacheUsageByRepoForOrg: [
+      "GET /orgs/{org}/actions/cache/usage-by-repository"
+    ],
+    getActionsCacheUsageForOrg: ["GET /orgs/{org}/actions/cache/usage"],
+    getAllowedActionsOrganization: [
+      "GET /orgs/{org}/actions/permissions/selected-actions"
+    ],
+    getAllowedActionsRepository: [
+      "GET /repos/{owner}/{repo}/actions/permissions/selected-actions"
+    ],
+    getArtifact: ["GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}"],
+    getCustomImageForOrg: [
+      "GET /orgs/{org}/actions/hosted-runners/images/custom/{image_definition_id}"
+    ],
+    getCustomImageVersionForOrg: [
+      "GET /orgs/{org}/actions/hosted-runners/images/custom/{image_definition_id}/versions/{version}"
+    ],
+    getCustomOidcSubClaimForRepo: [
+      "GET /repos/{owner}/{repo}/actions/oidc/customization/sub"
+    ],
+    getEnvironmentPublicKey: [
+      "GET /repos/{owner}/{repo}/environments/{environment_name}/secrets/public-key"
+    ],
+    getEnvironmentSecret: [
+      "GET /repos/{owner}/{repo}/environments/{environment_name}/secrets/{secret_name}"
+    ],
+    getEnvironmentVariable: [
+      "GET /repos/{owner}/{repo}/environments/{environment_name}/variables/{name}"
+    ],
+    getGithubActionsDefaultWorkflowPermissionsOrganization: [
+      "GET /orgs/{org}/actions/permissions/workflow"
+    ],
+    getGithubActionsDefaultWorkflowPermissionsRepository: [
+      "GET /repos/{owner}/{repo}/actions/permissions/workflow"
+    ],
+    getGithubActionsPermissionsOrganization: [
+      "GET /orgs/{org}/actions/permissions"
+    ],
+    getGithubActionsPermissionsRepository: [
+      "GET /repos/{owner}/{repo}/actions/permissions"
+    ],
+    getHostedRunnerForOrg: [
+      "GET /orgs/{org}/actions/hosted-runners/{hosted_runner_id}"
+    ],
+    getHostedRunnersGithubOwnedImagesForOrg: [
+      "GET /orgs/{org}/actions/hosted-runners/images/github-owned"
+    ],
+    getHostedRunnersLimitsForOrg: [
+      "GET /orgs/{org}/actions/hosted-runners/limits"
+    ],
+    getHostedRunnersMachineSpecsForOrg: [
+      "GET /orgs/{org}/actions/hosted-runners/machine-sizes"
+    ],
+    getHostedRunnersPartnerImagesForOrg: [
+      "GET /orgs/{org}/actions/hosted-runners/images/partner"
+    ],
+    getHostedRunnersPlatformsForOrg: [
+      "GET /orgs/{org}/actions/hosted-runners/platforms"
+    ],
+    getJobForWorkflowRun: ["GET /repos/{owner}/{repo}/actions/jobs/{job_id}"],
+    getOrgPublicKey: ["GET /orgs/{org}/actions/secrets/public-key"],
+    getOrgSecret: ["GET /orgs/{org}/actions/secrets/{secret_name}"],
+    getOrgVariable: ["GET /orgs/{org}/actions/variables/{name}"],
+    getPendingDeploymentsForRun: [
+      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/pending_deployments"
+    ],
+    getRepoPermissions: [
+      "GET /repos/{owner}/{repo}/actions/permissions",
+      {},
+      { renamed: ["actions", "getGithubActionsPermissionsRepository"] }
+    ],
+    getRepoPublicKey: ["GET /repos/{owner}/{repo}/actions/secrets/public-key"],
+    getRepoSecret: ["GET /repos/{owner}/{repo}/actions/secrets/{secret_name}"],
+    getRepoVariable: ["GET /repos/{owner}/{repo}/actions/variables/{name}"],
+    getReviewsForRun: [
+      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/approvals"
+    ],
+    getSelfHostedRunnerForOrg: ["GET /orgs/{org}/actions/runners/{runner_id}"],
+    getSelfHostedRunnerForRepo: [
+      "GET /repos/{owner}/{repo}/actions/runners/{runner_id}"
+    ],
+    getWorkflow: ["GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}"],
+    getWorkflowAccessToRepository: [
+      "GET /repos/{owner}/{repo}/actions/permissions/access"
+    ],
+    getWorkflowRun: ["GET /repos/{owner}/{repo}/actions/runs/{run_id}"],
+    getWorkflowRunAttempt: [
+      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}"
+    ],
+    getWorkflowRunUsage: [
+      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/timing"
+    ],
+    getWorkflowUsage: [
+      "GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/timing"
+    ],
+    listArtifactsForRepo: ["GET /repos/{owner}/{repo}/actions/artifacts"],
+    listCustomImageVersionsForOrg: [
+      "GET /orgs/{org}/actions/hosted-runners/images/custom/{image_definition_id}/versions"
+    ],
+    listCustomImagesForOrg: [
+      "GET /orgs/{org}/actions/hosted-runners/images/custom"
+    ],
+    listEnvironmentSecrets: [
+      "GET /repos/{owner}/{repo}/environments/{environment_name}/secrets"
+    ],
+    listEnvironmentVariables: [
+      "GET /repos/{owner}/{repo}/environments/{environment_name}/variables"
+    ],
+    listGithubHostedRunnersInGroupForOrg: [
+      "GET /orgs/{org}/actions/runner-groups/{runner_group_id}/hosted-runners"
+    ],
+    listHostedRunnersForOrg: ["GET /orgs/{org}/actions/hosted-runners"],
+    listJobsForWorkflowRun: [
+      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs"
+    ],
+    listJobsForWorkflowRunAttempt: [
+      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}/jobs"
+    ],
+    listLabelsForSelfHostedRunnerForOrg: [
+      "GET /orgs/{org}/actions/runners/{runner_id}/labels"
+    ],
+    listLabelsForSelfHostedRunnerForRepo: [
+      "GET /repos/{owner}/{repo}/actions/runners/{runner_id}/labels"
+    ],
+    listOrgSecrets: ["GET /orgs/{org}/actions/secrets"],
+    listOrgVariables: ["GET /orgs/{org}/actions/variables"],
+    listRepoOrganizationSecrets: [
+      "GET /repos/{owner}/{repo}/actions/organization-secrets"
+    ],
+    listRepoOrganizationVariables: [
+      "GET /repos/{owner}/{repo}/actions/organization-variables"
+    ],
+    listRepoSecrets: ["GET /repos/{owner}/{repo}/actions/secrets"],
+    listRepoVariables: ["GET /repos/{owner}/{repo}/actions/variables"],
+    listRepoWorkflows: ["GET /repos/{owner}/{repo}/actions/workflows"],
+    listRunnerApplicationsForOrg: ["GET /orgs/{org}/actions/runners/downloads"],
+    listRunnerApplicationsForRepo: [
+      "GET /repos/{owner}/{repo}/actions/runners/downloads"
+    ],
+    listSelectedReposForOrgSecret: [
+      "GET /orgs/{org}/actions/secrets/{secret_name}/repositories"
+    ],
+    listSelectedReposForOrgVariable: [
+      "GET /orgs/{org}/actions/variables/{name}/repositories"
+    ],
+    listSelectedRepositoriesEnabledGithubActionsOrganization: [
+      "GET /orgs/{org}/actions/permissions/repositories"
+    ],
+    listSelfHostedRunnersForOrg: ["GET /orgs/{org}/actions/runners"],
+    listSelfHostedRunnersForRepo: ["GET /repos/{owner}/{repo}/actions/runners"],
+    listWorkflowRunArtifacts: [
+      "GET /repos/{owner}/{repo}/actions/runs/{run_id}/artifacts"
+    ],
+    listWorkflowRuns: [
+      "GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs"
+    ],
+    listWorkflowRunsForRepo: ["GET /repos/{owner}/{repo}/actions/runs"],
+    reRunJobForWorkflowRun: [
+      "POST /repos/{owner}/{repo}/actions/jobs/{job_id}/rerun"
+    ],
+    reRunWorkflow: ["POST /repos/{owner}/{repo}/actions/runs/{run_id}/rerun"],
+    reRunWorkflowFailedJobs: [
+      "POST /repos/{owner}/{repo}/actions/runs/{run_id}/rerun-failed-jobs"
+    ],
+    removeAllCustomLabelsFromSelfHostedRunnerForOrg: [
+      "DELETE /orgs/{org}/actions/runners/{runner_id}/labels"
+    ],
+    removeAllCustomLabelsFromSelfHostedRunnerForRepo: [
+      "DELETE /repos/{owner}/{repo}/actions/runners/{runner_id}/labels"
+    ],
+    removeCustomLabelFromSelfHostedRunnerForOrg: [
+      "DELETE /orgs/{org}/actions/runners/{runner_id}/labels/{name}"
+    ],
+    removeCustomLabelFromSelfHostedRunnerForRepo: [
+      "DELETE /repos/{owner}/{repo}/actions/runners/{runner_id}/labels/{name}"
+    ],
+    removeSelectedRepoFromOrgSecret: [
+      "DELETE /orgs/{org}/actions/secrets/{secret_name}/repositories/{repository_id}"
+    ],
+    removeSelectedRepoFromOrgVariable: [
+      "DELETE /orgs/{org}/actions/variables/{name}/repositories/{repository_id}"
+    ],
+    reviewCustomGatesForRun: [
+      "POST /repos/{owner}/{repo}/actions/runs/{run_id}/deployment_protection_rule"
+    ],
+    reviewPendingDeploymentsForRun: [
+      "POST /repos/{owner}/{repo}/actions/runs/{run_id}/pending_deployments"
+    ],
+    setAllowedActionsOrganization: [
+      "PUT /orgs/{org}/actions/permissions/selected-actions"
+    ],
+    setAllowedActionsRepository: [
+      "PUT /repos/{owner}/{repo}/actions/permissions/selected-actions"
+    ],
+    setCustomLabelsForSelfHostedRunnerForOrg: [
+      "PUT /orgs/{org}/actions/runners/{runner_id}/labels"
+    ],
+    setCustomLabelsForSelfHostedRunnerForRepo: [
+      "PUT /repos/{owner}/{repo}/actions/runners/{runner_id}/labels"
+    ],
+    setCustomOidcSubClaimForRepo: [
+      "PUT /repos/{owner}/{repo}/actions/oidc/customization/sub"
+    ],
+    setGithubActionsDefaultWorkflowPermissionsOrganization: [
+      "PUT /orgs/{org}/actions/permissions/workflow"
+    ],
+    setGithubActionsDefaultWorkflowPermissionsRepository: [
+      "PUT /repos/{owner}/{repo}/actions/permissions/workflow"
+    ],
+    setGithubActionsPermissionsOrganization: [
+      "PUT /orgs/{org}/actions/permissions"
+    ],
+    setGithubActionsPermissionsRepository: [
+      "PUT /repos/{owner}/{repo}/actions/permissions"
+    ],
+    setSelectedReposForOrgSecret: [
+      "PUT /orgs/{org}/actions/secrets/{secret_name}/repositories"
+    ],
+    setSelectedReposForOrgVariable: [
+      "PUT /orgs/{org}/actions/variables/{name}/repositories"
+    ],
+    setSelectedRepositoriesEnabledGithubActionsOrganization: [
+      "PUT /orgs/{org}/actions/permissions/repositories"
+    ],
+    setWorkflowAccessToRepository: [
+      "PUT /repos/{owner}/{repo}/actions/permissions/access"
+    ],
+    updateEnvironmentVariable: [
+      "PATCH /repos/{owner}/{repo}/environments/{environment_name}/variables/{name}"
+    ],
+    updateHostedRunnerForOrg: [
+      "PATCH /orgs/{org}/actions/hosted-runners/{hosted_runner_id}"
+    ],
+    updateOrgVariable: ["PATCH /orgs/{org}/actions/variables/{name}"],
+    updateRepoVariable: [
+      "PATCH /repos/{owner}/{repo}/actions/variables/{name}"
+    ]
+  },
+  activity: {
+    checkRepoIsStarredByAuthenticatedUser: ["GET /user/starred/{owner}/{repo}"],
+    deleteRepoSubscription: ["DELETE /repos/{owner}/{repo}/subscription"],
+    deleteThreadSubscription: [
+      "DELETE /notifications/threads/{thread_id}/subscription"
+    ],
+    getFeeds: ["GET /feeds"],
+    getRepoSubscription: ["GET /repos/{owner}/{repo}/subscription"],
+    getThread: ["GET /notifications/threads/{thread_id}"],
+    getThreadSubscriptionForAuthenticatedUser: [
+      "GET /notifications/threads/{thread_id}/subscription"
+    ],
+    listEventsForAuthenticatedUser: ["GET /users/{username}/events"],
+    listNotificationsForAuthenticatedUser: ["GET /notifications"],
+    listOrgEventsForAuthenticatedUser: [
+      "GET /users/{username}/events/orgs/{org}"
+    ],
+    listPublicEvents: ["GET /events"],
+    listPublicEventsForRepoNetwork: ["GET /networks/{owner}/{repo}/events"],
+    listPublicEventsForUser: ["GET /users/{username}/events/public"],
+    listPublicOrgEvents: ["GET /orgs/{org}/events"],
+    listReceivedEventsForUser: ["GET /users/{username}/received_events"],
+    listReceivedPublicEventsForUser: [
+      "GET /users/{username}/received_events/public"
+    ],
+    listRepoEvents: ["GET /repos/{owner}/{repo}/events"],
+    listRepoNotificationsForAuthenticatedUser: [
+      "GET /repos/{owner}/{repo}/notifications"
+    ],
+    listReposStarredByAuthenticatedUser: ["GET /user/starred"],
+    listReposStarredByUser: ["GET /users/{username}/starred"],
+    listReposWatchedByUser: ["GET /users/{username}/subscriptions"],
+    listStargazersForRepo: ["GET /repos/{owner}/{repo}/stargazers"],
+    listWatchedReposForAuthenticatedUser: ["GET /user/subscriptions"],
+    listWatchersForRepo: ["GET /repos/{owner}/{repo}/subscribers"],
+    markNotificationsAsRead: ["PUT /notifications"],
+    markRepoNotificationsAsRead: ["PUT /repos/{owner}/{repo}/notifications"],
+    markThreadAsDone: ["DELETE /notifications/threads/{thread_id}"],
+    markThreadAsRead: ["PATCH /notifications/threads/{thread_id}"],
+    setRepoSubscription: ["PUT /repos/{owner}/{repo}/subscription"],
+    setThreadSubscription: [
+      "PUT /notifications/threads/{thread_id}/subscription"
+    ],
+    starRepoForAuthenticatedUser: ["PUT /user/starred/{owner}/{repo}"],
+    unstarRepoForAuthenticatedUser: ["DELETE /user/starred/{owner}/{repo}"]
+  },
+  apps: {
+    addRepoToInstallation: [
+      "PUT /user/installations/{installation_id}/repositories/{repository_id}",
+      {},
+      { renamed: ["apps", "addRepoToInstallationForAuthenticatedUser"] }
+    ],
+    addRepoToInstallationForAuthenticatedUser: [
+      "PUT /user/installations/{installation_id}/repositories/{repository_id}"
+    ],
+    checkToken: ["POST /applications/{client_id}/token"],
+    createFromManifest: ["POST /app-manifests/{code}/conversions"],
+    createInstallationAccessToken: [
+      "POST /app/installations/{installation_id}/access_tokens"
+    ],
+    deleteAuthorization: ["DELETE /applications/{client_id}/grant"],
+    deleteInstallation: ["DELETE /app/installations/{installation_id}"],
+    deleteToken: ["DELETE /applications/{client_id}/token"],
+    getAuthenticated: ["GET /app"],
+    getBySlug: ["GET /apps/{app_slug}"],
+    getInstallation: ["GET /app/installations/{installation_id}"],
+    getOrgInstallation: ["GET /orgs/{org}/installation"],
+    getRepoInstallation: ["GET /repos/{owner}/{repo}/installation"],
+    getSubscriptionPlanForAccount: [
+      "GET /marketplace_listing/accounts/{account_id}"
+    ],
+    getSubscriptionPlanForAccountStubbed: [
+      "GET /marketplace_listing/stubbed/accounts/{account_id}"
+    ],
+    getUserInstallation: ["GET /users/{username}/installation"],
+    getWebhookConfigForApp: ["GET /app/hook/config"],
+    getWebhookDelivery: ["GET /app/hook/deliveries/{delivery_id}"],
+    listAccountsForPlan: ["GET /marketplace_listing/plans/{plan_id}/accounts"],
+    listAccountsForPlanStubbed: [
+      "GET /marketplace_listing/stubbed/plans/{plan_id}/accounts"
+    ],
+    listInstallationReposForAuthenticatedUser: [
+      "GET /user/installations/{installation_id}/repositories"
+    ],
+    listInstallationRequestsForAuthenticatedApp: [
+      "GET /app/installation-requests"
+    ],
+    listInstallations: ["GET /app/installations"],
+    listInstallationsForAuthenticatedUser: ["GET /user/installations"],
+    listPlans: ["GET /marketplace_listing/plans"],
+    listPlansStubbed: ["GET /marketplace_listing/stubbed/plans"],
+    listReposAccessibleToInstallation: ["GET /installation/repositories"],
+    listSubscriptionsForAuthenticatedUser: ["GET /user/marketplace_purchases"],
+    listSubscriptionsForAuthenticatedUserStubbed: [
+      "GET /user/marketplace_purchases/stubbed"
+    ],
+    listWebhookDeliveries: ["GET /app/hook/deliveries"],
+    redeliverWebhookDelivery: [
+      "POST /app/hook/deliveries/{delivery_id}/attempts"
+    ],
+    removeRepoFromInstallation: [
+      "DELETE /user/installations/{installation_id}/repositories/{repository_id}",
+      {},
+      { renamed: ["apps", "removeRepoFromInstallationForAuthenticatedUser"] }
+    ],
+    removeRepoFromInstallationForAuthenticatedUser: [
+      "DELETE /user/installations/{installation_id}/repositories/{repository_id}"
+    ],
+    resetToken: ["PATCH /applications/{client_id}/token"],
+    revokeInstallationAccessToken: ["DELETE /installation/token"],
+    scopeToken: ["POST /applications/{client_id}/token/scoped"],
+    suspendInstallation: ["PUT /app/installations/{installation_id}/suspended"],
+    unsuspendInstallation: [
+      "DELETE /app/installations/{installation_id}/suspended"
+    ],
+    updateWebhookConfigForApp: ["PATCH /app/hook/config"]
+  },
+  billing: {
+    getGithubActionsBillingOrg: ["GET /orgs/{org}/settings/billing/actions"],
+    getGithubActionsBillingUser: [
+      "GET /users/{username}/settings/billing/actions"
+    ],
+    getGithubBillingPremiumRequestUsageReportOrg: [
+      "GET /organizations/{org}/settings/billing/premium_request/usage"
+    ],
+    getGithubBillingPremiumRequestUsageReportUser: [
+      "GET /users/{username}/settings/billing/premium_request/usage"
+    ],
+    getGithubBillingUsageReportOrg: [
+      "GET /organizations/{org}/settings/billing/usage"
+    ],
+    getGithubBillingUsageReportUser: [
+      "GET /users/{username}/settings/billing/usage"
+    ],
+    getGithubPackagesBillingOrg: ["GET /orgs/{org}/settings/billing/packages"],
+    getGithubPackagesBillingUser: [
+      "GET /users/{username}/settings/billing/packages"
+    ],
+    getSharedStorageBillingOrg: [
+      "GET /orgs/{org}/settings/billing/shared-storage"
+    ],
+    getSharedStorageBillingUser: [
+      "GET /users/{username}/settings/billing/shared-storage"
+    ]
+  },
+  campaigns: {
+    createCampaign: ["POST /orgs/{org}/campaigns"],
+    deleteCampaign: ["DELETE /orgs/{org}/campaigns/{campaign_number}"],
+    getCampaignSummary: ["GET /orgs/{org}/campaigns/{campaign_number}"],
+    listOrgCampaigns: ["GET /orgs/{org}/campaigns"],
+    updateCampaign: ["PATCH /orgs/{org}/campaigns/{campaign_number}"]
+  },
+  checks: {
+    create: ["POST /repos/{owner}/{repo}/check-runs"],
+    createSuite: ["POST /repos/{owner}/{repo}/check-suites"],
+    get: ["GET /repos/{owner}/{repo}/check-runs/{check_run_id}"],
+    getSuite: ["GET /repos/{owner}/{repo}/check-suites/{check_suite_id}"],
+    listAnnotations: [
+      "GET /repos/{owner}/{repo}/check-runs/{check_run_id}/annotations"
+    ],
+    listForRef: ["GET /repos/{owner}/{repo}/commits/{ref}/check-runs"],
+    listForSuite: [
+      "GET /repos/{owner}/{repo}/check-suites/{check_suite_id}/check-runs"
+    ],
+    listSuitesForRef: ["GET /repos/{owner}/{repo}/commits/{ref}/check-suites"],
+    rerequestRun: [
+      "POST /repos/{owner}/{repo}/check-runs/{check_run_id}/rerequest"
+    ],
+    rerequestSuite: [
+      "POST /repos/{owner}/{repo}/check-suites/{check_suite_id}/rerequest"
+    ],
+    setSuitesPreferences: [
+      "PATCH /repos/{owner}/{repo}/check-suites/preferences"
+    ],
+    update: ["PATCH /repos/{owner}/{repo}/check-runs/{check_run_id}"]
+  },
+  codeScanning: {
+    commitAutofix: [
+      "POST /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}/autofix/commits"
+    ],
+    createAutofix: [
+      "POST /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}/autofix"
+    ],
+    createVariantAnalysis: [
+      "POST /repos/{owner}/{repo}/code-scanning/codeql/variant-analyses"
+    ],
+    deleteAnalysis: [
+      "DELETE /repos/{owner}/{repo}/code-scanning/analyses/{analysis_id}{?confirm_delete}"
+    ],
+    deleteCodeqlDatabase: [
+      "DELETE /repos/{owner}/{repo}/code-scanning/codeql/databases/{language}"
+    ],
+    getAlert: [
+      "GET /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}",
+      {},
+      { renamedParameters: { alert_id: "alert_number" } }
+    ],
+    getAnalysis: [
+      "GET /repos/{owner}/{repo}/code-scanning/analyses/{analysis_id}"
+    ],
+    getAutofix: [
+      "GET /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}/autofix"
+    ],
+    getCodeqlDatabase: [
+      "GET /repos/{owner}/{repo}/code-scanning/codeql/databases/{language}"
+    ],
+    getDefaultSetup: ["GET /repos/{owner}/{repo}/code-scanning/default-setup"],
+    getSarif: ["GET /repos/{owner}/{repo}/code-scanning/sarifs/{sarif_id}"],
+    getVariantAnalysis: [
+      "GET /repos/{owner}/{repo}/code-scanning/codeql/variant-analyses/{codeql_variant_analysis_id}"
+    ],
+    getVariantAnalysisRepoTask: [
+      "GET /repos/{owner}/{repo}/code-scanning/codeql/variant-analyses/{codeql_variant_analysis_id}/repos/{repo_owner}/{repo_name}"
+    ],
+    listAlertInstances: [
+      "GET /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}/instances"
+    ],
+    listAlertsForOrg: ["GET /orgs/{org}/code-scanning/alerts"],
+    listAlertsForRepo: ["GET /repos/{owner}/{repo}/code-scanning/alerts"],
+    listAlertsInstances: [
+      "GET /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}/instances",
+      {},
+      { renamed: ["codeScanning", "listAlertInstances"] }
+    ],
+    listCodeqlDatabases: [
+      "GET /repos/{owner}/{repo}/code-scanning/codeql/databases"
+    ],
+    listRecentAnalyses: ["GET /repos/{owner}/{repo}/code-scanning/analyses"],
+    updateAlert: [
+      "PATCH /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}"
+    ],
+    updateDefaultSetup: [
+      "PATCH /repos/{owner}/{repo}/code-scanning/default-setup"
+    ],
+    uploadSarif: ["POST /repos/{owner}/{repo}/code-scanning/sarifs"]
+  },
+  codeSecurity: {
+    attachConfiguration: [
+      "POST /orgs/{org}/code-security/configurations/{configuration_id}/attach"
+    ],
+    attachEnterpriseConfiguration: [
+      "POST /enterprises/{enterprise}/code-security/configurations/{configuration_id}/attach"
+    ],
+    createConfiguration: ["POST /orgs/{org}/code-security/configurations"],
+    createConfigurationForEnterprise: [
+      "POST /enterprises/{enterprise}/code-security/configurations"
+    ],
+    deleteConfiguration: [
+      "DELETE /orgs/{org}/code-security/configurations/{configuration_id}"
+    ],
+    deleteConfigurationForEnterprise: [
+      "DELETE /enterprises/{enterprise}/code-security/configurations/{configuration_id}"
+    ],
+    detachConfiguration: [
+      "DELETE /orgs/{org}/code-security/configurations/detach"
+    ],
+    getConfiguration: [
+      "GET /orgs/{org}/code-security/configurations/{configuration_id}"
+    ],
+    getConfigurationForRepository: [
+      "GET /repos/{owner}/{repo}/code-security-configuration"
+    ],
+    getConfigurationsForEnterprise: [
+      "GET /enterprises/{enterprise}/code-security/configurations"
+    ],
+    getConfigurationsForOrg: ["GET /orgs/{org}/code-security/configurations"],
+    getDefaultConfigurations: [
+      "GET /orgs/{org}/code-security/configurations/defaults"
+    ],
+    getDefaultConfigurationsForEnterprise: [
+      "GET /enterprises/{enterprise}/code-security/configurations/defaults"
+    ],
+    getRepositoriesForConfiguration: [
+      "GET /orgs/{org}/code-security/configurations/{configuration_id}/repositories"
+    ],
+    getRepositoriesForEnterpriseConfiguration: [
+      "GET /enterprises/{enterprise}/code-security/configurations/{configuration_id}/repositories"
+    ],
+    getSingleConfigurationForEnterprise: [
+      "GET /enterprises/{enterprise}/code-security/configurations/{configuration_id}"
+    ],
+    setConfigurationAsDefault: [
+      "PUT /orgs/{org}/code-security/configurations/{configuration_id}/defaults"
+    ],
+    setConfigurationAsDefaultForEnterprise: [
+      "PUT /enterprises/{enterprise}/code-security/configurations/{configuration_id}/defaults"
+    ],
+    updateConfiguration: [
+      "PATCH /orgs/{org}/code-security/configurations/{configuration_id}"
+    ],
+    updateEnterpriseConfiguration: [
+      "PATCH /enterprises/{enterprise}/code-security/configurations/{configuration_id}"
+    ]
+  },
+  codesOfConduct: {
+    getAllCodesOfConduct: ["GET /codes_of_conduct"],
+    getConductCode: ["GET /codes_of_conduct/{key}"]
+  },
+  codespaces: {
+    addRepositoryForSecretForAuthenticatedUser: [
+      "PUT /user/codespaces/secrets/{secret_name}/repositories/{repository_id}"
+    ],
+    addSelectedRepoToOrgSecret: [
+      "PUT /orgs/{org}/codespaces/secrets/{secret_name}/repositories/{repository_id}"
+    ],
+    checkPermissionsForDevcontainer: [
+      "GET /repos/{owner}/{repo}/codespaces/permissions_check"
+    ],
+    codespaceMachinesForAuthenticatedUser: [
+      "GET /user/codespaces/{codespace_name}/machines"
+    ],
+    createForAuthenticatedUser: ["POST /user/codespaces"],
+    createOrUpdateOrgSecret: [
+      "PUT /orgs/{org}/codespaces/secrets/{secret_name}"
+    ],
+    createOrUpdateRepoSecret: [
+      "PUT /repos/{owner}/{repo}/codespaces/secrets/{secret_name}"
+    ],
+    createOrUpdateSecretForAuthenticatedUser: [
+      "PUT /user/codespaces/secrets/{secret_name}"
+    ],
+    createWithPrForAuthenticatedUser: [
+      "POST /repos/{owner}/{repo}/pulls/{pull_number}/codespaces"
+    ],
+    createWithRepoForAuthenticatedUser: [
+      "POST /repos/{owner}/{repo}/codespaces"
+    ],
+    deleteForAuthenticatedUser: ["DELETE /user/codespaces/{codespace_name}"],
+    deleteFromOrganization: [
+      "DELETE /orgs/{org}/members/{username}/codespaces/{codespace_name}"
+    ],
+    deleteOrgSecret: ["DELETE /orgs/{org}/codespaces/secrets/{secret_name}"],
+    deleteRepoSecret: [
+      "DELETE /repos/{owner}/{repo}/codespaces/secrets/{secret_name}"
+    ],
+    deleteSecretForAuthenticatedUser: [
+      "DELETE /user/codespaces/secrets/{secret_name}"
+    ],
+    exportForAuthenticatedUser: [
+      "POST /user/codespaces/{codespace_name}/exports"
+    ],
+    getCodespacesForUserInOrg: [
+      "GET /orgs/{org}/members/{username}/codespaces"
+    ],
+    getExportDetailsForAuthenticatedUser: [
+      "GET /user/codespaces/{codespace_name}/exports/{export_id}"
+    ],
+    getForAuthenticatedUser: ["GET /user/codespaces/{codespace_name}"],
+    getOrgPublicKey: ["GET /orgs/{org}/codespaces/secrets/public-key"],
+    getOrgSecret: ["GET /orgs/{org}/codespaces/secrets/{secret_name}"],
+    getPublicKeyForAuthenticatedUser: [
+      "GET /user/codespaces/secrets/public-key"
+    ],
+    getRepoPublicKey: [
+      "GET /repos/{owner}/{repo}/codespaces/secrets/public-key"
+    ],
+    getRepoSecret: [
+      "GET /repos/{owner}/{repo}/codespaces/secrets/{secret_name}"
+    ],
+    getSecretForAuthenticatedUser: [
+      "GET /user/codespaces/secrets/{secret_name}"
+    ],
+    listDevcontainersInRepositoryForAuthenticatedUser: [
+      "GET /repos/{owner}/{repo}/codespaces/devcontainers"
+    ],
+    listForAuthenticatedUser: ["GET /user/codespaces"],
+    listInOrganization: [
+      "GET /orgs/{org}/codespaces",
+      {},
+      { renamedParameters: { org_id: "org" } }
+    ],
+    listInRepositoryForAuthenticatedUser: [
+      "GET /repos/{owner}/{repo}/codespaces"
+    ],
+    listOrgSecrets: ["GET /orgs/{org}/codespaces/secrets"],
+    listRepoSecrets: ["GET /repos/{owner}/{repo}/codespaces/secrets"],
+    listRepositoriesForSecretForAuthenticatedUser: [
+      "GET /user/codespaces/secrets/{secret_name}/repositories"
+    ],
+    listSecretsForAuthenticatedUser: ["GET /user/codespaces/secrets"],
+    listSelectedReposForOrgSecret: [
+      "GET /orgs/{org}/codespaces/secrets/{secret_name}/repositories"
+    ],
+    preFlightWithRepoForAuthenticatedUser: [
+      "GET /repos/{owner}/{repo}/codespaces/new"
+    ],
+    publishForAuthenticatedUser: [
+      "POST /user/codespaces/{codespace_name}/publish"
+    ],
+    removeRepositoryForSecretForAuthenticatedUser: [
+      "DELETE /user/codespaces/secrets/{secret_name}/repositories/{repository_id}"
+    ],
+    removeSelectedRepoFromOrgSecret: [
+      "DELETE /orgs/{org}/codespaces/secrets/{secret_name}/repositories/{repository_id}"
+    ],
+    repoMachinesForAuthenticatedUser: [
+      "GET /repos/{owner}/{repo}/codespaces/machines"
+    ],
+    setRepositoriesForSecretForAuthenticatedUser: [
+      "PUT /user/codespaces/secrets/{secret_name}/repositories"
+    ],
+    setSelectedReposForOrgSecret: [
+      "PUT /orgs/{org}/codespaces/secrets/{secret_name}/repositories"
+    ],
+    startForAuthenticatedUser: ["POST /user/codespaces/{codespace_name}/start"],
+    stopForAuthenticatedUser: ["POST /user/codespaces/{codespace_name}/stop"],
+    stopInOrganization: [
+      "POST /orgs/{org}/members/{username}/codespaces/{codespace_name}/stop"
+    ],
+    updateForAuthenticatedUser: ["PATCH /user/codespaces/{codespace_name}"]
+  },
+  copilot: {
+    addCopilotSeatsForTeams: [
+      "POST /orgs/{org}/copilot/billing/selected_teams"
+    ],
+    addCopilotSeatsForUsers: [
+      "POST /orgs/{org}/copilot/billing/selected_users"
+    ],
+    cancelCopilotSeatAssignmentForTeams: [
+      "DELETE /orgs/{org}/copilot/billing/selected_teams"
+    ],
+    cancelCopilotSeatAssignmentForUsers: [
+      "DELETE /orgs/{org}/copilot/billing/selected_users"
+    ],
+    copilotMetricsForOrganization: ["GET /orgs/{org}/copilot/metrics"],
+    copilotMetricsForTeam: ["GET /orgs/{org}/team/{team_slug}/copilot/metrics"],
+    getCopilotOrganizationDetails: ["GET /orgs/{org}/copilot/billing"],
+    getCopilotSeatDetailsForUser: [
+      "GET /orgs/{org}/members/{username}/copilot"
+    ],
+    listCopilotSeats: ["GET /orgs/{org}/copilot/billing/seats"]
+  },
+  credentials: { revoke: ["POST /credentials/revoke"] },
+  dependabot: {
+    addSelectedRepoToOrgSecret: [
+      "PUT /orgs/{org}/dependabot/secrets/{secret_name}/repositories/{repository_id}"
+    ],
+    createOrUpdateOrgSecret: [
+      "PUT /orgs/{org}/dependabot/secrets/{secret_name}"
+    ],
+    createOrUpdateRepoSecret: [
+      "PUT /repos/{owner}/{repo}/dependabot/secrets/{secret_name}"
+    ],
+    deleteOrgSecret: ["DELETE /orgs/{org}/dependabot/secrets/{secret_name}"],
+    deleteRepoSecret: [
+      "DELETE /repos/{owner}/{repo}/dependabot/secrets/{secret_name}"
+    ],
+    getAlert: ["GET /repos/{owner}/{repo}/dependabot/alerts/{alert_number}"],
+    getOrgPublicKey: ["GET /orgs/{org}/dependabot/secrets/public-key"],
+    getOrgSecret: ["GET /orgs/{org}/dependabot/secrets/{secret_name}"],
+    getRepoPublicKey: [
+      "GET /repos/{owner}/{repo}/dependabot/secrets/public-key"
+    ],
+    getRepoSecret: [
+      "GET /repos/{owner}/{repo}/dependabot/secrets/{secret_name}"
+    ],
+    listAlertsForEnterprise: [
+      "GET /enterprises/{enterprise}/dependabot/alerts"
+    ],
+    listAlertsForOrg: ["GET /orgs/{org}/dependabot/alerts"],
+    listAlertsForRepo: ["GET /repos/{owner}/{repo}/dependabot/alerts"],
+    listOrgSecrets: ["GET /orgs/{org}/dependabot/secrets"],
+    listRepoSecrets: ["GET /repos/{owner}/{repo}/dependabot/secrets"],
+    listSelectedReposForOrgSecret: [
+      "GET /orgs/{org}/dependabot/secrets/{secret_name}/repositories"
+    ],
+    removeSelectedRepoFromOrgSecret: [
+      "DELETE /orgs/{org}/dependabot/secrets/{secret_name}/repositories/{repository_id}"
+    ],
+    repositoryAccessForOrg: [
+      "GET /organizations/{org}/dependabot/repository-access"
+    ],
+    setRepositoryAccessDefaultLevel: [
+      "PUT /organizations/{org}/dependabot/repository-access/default-level"
+    ],
+    setSelectedReposForOrgSecret: [
+      "PUT /orgs/{org}/dependabot/secrets/{secret_name}/repositories"
+    ],
+    updateAlert: [
+      "PATCH /repos/{owner}/{repo}/dependabot/alerts/{alert_number}"
+    ],
+    updateRepositoryAccessForOrg: [
+      "PATCH /organizations/{org}/dependabot/repository-access"
+    ]
+  },
+  dependencyGraph: {
+    createRepositorySnapshot: [
+      "POST /repos/{owner}/{repo}/dependency-graph/snapshots"
+    ],
+    diffRange: [
+      "GET /repos/{owner}/{repo}/dependency-graph/compare/{basehead}"
+    ],
+    exportSbom: ["GET /repos/{owner}/{repo}/dependency-graph/sbom"]
+  },
+  emojis: { get: ["GET /emojis"] },
+  enterpriseTeamMemberships: {
+    add: [
+      "PUT /enterprises/{enterprise}/teams/{enterprise-team}/memberships/{username}"
+    ],
+    bulkAdd: [
+      "POST /enterprises/{enterprise}/teams/{enterprise-team}/memberships/add"
+    ],
+    bulkRemove: [
+      "POST /enterprises/{enterprise}/teams/{enterprise-team}/memberships/remove"
+    ],
+    get: [
+      "GET /enterprises/{enterprise}/teams/{enterprise-team}/memberships/{username}"
+    ],
+    list: ["GET /enterprises/{enterprise}/teams/{enterprise-team}/memberships"],
+    remove: [
+      "DELETE /enterprises/{enterprise}/teams/{enterprise-team}/memberships/{username}"
+    ]
+  },
+  enterpriseTeamOrganizations: {
+    add: [
+      "PUT /enterprises/{enterprise}/teams/{enterprise-team}/organizations/{org}"
+    ],
+    bulkAdd: [
+      "POST /enterprises/{enterprise}/teams/{enterprise-team}/organizations/add"
+    ],
+    bulkRemove: [
+      "POST /enterprises/{enterprise}/teams/{enterprise-team}/organizations/remove"
+    ],
+    delete: [
+      "DELETE /enterprises/{enterprise}/teams/{enterprise-team}/organizations/{org}"
+    ],
+    getAssignment: [
+      "GET /enterprises/{enterprise}/teams/{enterprise-team}/organizations/{org}"
+    ],
+    getAssignments: [
+      "GET /enterprises/{enterprise}/teams/{enterprise-team}/organizations"
+    ]
+  },
+  enterpriseTeams: {
+    create: ["POST /enterprises/{enterprise}/teams"],
+    delete: ["DELETE /enterprises/{enterprise}/teams/{team_slug}"],
+    get: ["GET /enterprises/{enterprise}/teams/{team_slug}"],
+    list: ["GET /enterprises/{enterprise}/teams"],
+    update: ["PATCH /enterprises/{enterprise}/teams/{team_slug}"]
+  },
+  gists: {
+    checkIsStarred: ["GET /gists/{gist_id}/star"],
+    create: ["POST /gists"],
+    createComment: ["POST /gists/{gist_id}/comments"],
+    delete: ["DELETE /gists/{gist_id}"],
+    deleteComment: ["DELETE /gists/{gist_id}/comments/{comment_id}"],
+    fork: ["POST /gists/{gist_id}/forks"],
+    get: ["GET /gists/{gist_id}"],
+    getComment: ["GET /gists/{gist_id}/comments/{comment_id}"],
+    getRevision: ["GET /gists/{gist_id}/{sha}"],
+    list: ["GET /gists"],
+    listComments: ["GET /gists/{gist_id}/comments"],
+    listCommits: ["GET /gists/{gist_id}/commits"],
+    listForUser: ["GET /users/{username}/gists"],
+    listForks: ["GET /gists/{gist_id}/forks"],
+    listPublic: ["GET /gists/public"],
+    listStarred: ["GET /gists/starred"],
+    star: ["PUT /gists/{gist_id}/star"],
+    unstar: ["DELETE /gists/{gist_id}/star"],
+    update: ["PATCH /gists/{gist_id}"],
+    updateComment: ["PATCH /gists/{gist_id}/comments/{comment_id}"]
+  },
+  git: {
+    createBlob: ["POST /repos/{owner}/{repo}/git/blobs"],
+    createCommit: ["POST /repos/{owner}/{repo}/git/commits"],
+    createRef: ["POST /repos/{owner}/{repo}/git/refs"],
+    createTag: ["POST /repos/{owner}/{repo}/git/tags"],
+    createTree: ["POST /repos/{owner}/{repo}/git/trees"],
+    deleteRef: ["DELETE /repos/{owner}/{repo}/git/refs/{ref}"],
+    getBlob: ["GET /repos/{owner}/{repo}/git/blobs/{file_sha}"],
+    getCommit: ["GET /repos/{owner}/{repo}/git/commits/{commit_sha}"],
+    getRef: ["GET /repos/{owner}/{repo}/git/ref/{ref}"],
+    getTag: ["GET /repos/{owner}/{repo}/git/tags/{tag_sha}"],
+    getTree: ["GET /repos/{owner}/{repo}/git/trees/{tree_sha}"],
+    listMatchingRefs: ["GET /repos/{owner}/{repo}/git/matching-refs/{ref}"],
+    updateRef: ["PATCH /repos/{owner}/{repo}/git/refs/{ref}"]
+  },
+  gitignore: {
+    getAllTemplates: ["GET /gitignore/templates"],
+    getTemplate: ["GET /gitignore/templates/{name}"]
+  },
+  hostedCompute: {
+    createNetworkConfigurationForOrg: [
+      "POST /orgs/{org}/settings/network-configurations"
+    ],
+    deleteNetworkConfigurationFromOrg: [
+      "DELETE /orgs/{org}/settings/network-configurations/{network_configuration_id}"
+    ],
+    getNetworkConfigurationForOrg: [
+      "GET /orgs/{org}/settings/network-configurations/{network_configuration_id}"
+    ],
+    getNetworkSettingsForOrg: [
+      "GET /orgs/{org}/settings/network-settings/{network_settings_id}"
+    ],
+    listNetworkConfigurationsForOrg: [
+      "GET /orgs/{org}/settings/network-configurations"
+    ],
+    updateNetworkConfigurationForOrg: [
+      "PATCH /orgs/{org}/settings/network-configurations/{network_configuration_id}"
+    ]
+  },
+  interactions: {
+    getRestrictionsForAuthenticatedUser: ["GET /user/interaction-limits"],
+    getRestrictionsForOrg: ["GET /orgs/{org}/interaction-limits"],
+    getRestrictionsForRepo: ["GET /repos/{owner}/{repo}/interaction-limits"],
+    getRestrictionsForYourPublicRepos: [
+      "GET /user/interaction-limits",
+      {},
+      { renamed: ["interactions", "getRestrictionsForAuthenticatedUser"] }
+    ],
+    removeRestrictionsForAuthenticatedUser: ["DELETE /user/interaction-limits"],
+    removeRestrictionsForOrg: ["DELETE /orgs/{org}/interaction-limits"],
+    removeRestrictionsForRepo: [
+      "DELETE /repos/{owner}/{repo}/interaction-limits"
+    ],
+    removeRestrictionsForYourPublicRepos: [
+      "DELETE /user/interaction-limits",
+      {},
+      { renamed: ["interactions", "removeRestrictionsForAuthenticatedUser"] }
+    ],
+    setRestrictionsForAuthenticatedUser: ["PUT /user/interaction-limits"],
+    setRestrictionsForOrg: ["PUT /orgs/{org}/interaction-limits"],
+    setRestrictionsForRepo: ["PUT /repos/{owner}/{repo}/interaction-limits"],
+    setRestrictionsForYourPublicRepos: [
+      "PUT /user/interaction-limits",
+      {},
+      { renamed: ["interactions", "setRestrictionsForAuthenticatedUser"] }
+    ]
+  },
+  issues: {
+    addAssignees: [
+      "POST /repos/{owner}/{repo}/issues/{issue_number}/assignees"
+    ],
+    addBlockedByDependency: [
+      "POST /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by"
+    ],
+    addLabels: ["POST /repos/{owner}/{repo}/issues/{issue_number}/labels"],
+    addSubIssue: [
+      "POST /repos/{owner}/{repo}/issues/{issue_number}/sub_issues"
+    ],
+    checkUserCanBeAssigned: ["GET /repos/{owner}/{repo}/assignees/{assignee}"],
+    checkUserCanBeAssignedToIssue: [
+      "GET /repos/{owner}/{repo}/issues/{issue_number}/assignees/{assignee}"
+    ],
+    create: ["POST /repos/{owner}/{repo}/issues"],
+    createComment: [
+      "POST /repos/{owner}/{repo}/issues/{issue_number}/comments"
+    ],
+    createLabel: ["POST /repos/{owner}/{repo}/labels"],
+    createMilestone: ["POST /repos/{owner}/{repo}/milestones"],
+    deleteComment: [
+      "DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}"
+    ],
+    deleteLabel: ["DELETE /repos/{owner}/{repo}/labels/{name}"],
+    deleteMilestone: [
+      "DELETE /repos/{owner}/{repo}/milestones/{milestone_number}"
+    ],
+    get: ["GET /repos/{owner}/{repo}/issues/{issue_number}"],
+    getComment: ["GET /repos/{owner}/{repo}/issues/comments/{comment_id}"],
+    getEvent: ["GET /repos/{owner}/{repo}/issues/events/{event_id}"],
+    getLabel: ["GET /repos/{owner}/{repo}/labels/{name}"],
+    getMilestone: ["GET /repos/{owner}/{repo}/milestones/{milestone_number}"],
+    getParent: ["GET /repos/{owner}/{repo}/issues/{issue_number}/parent"],
+    list: ["GET /issues"],
+    listAssignees: ["GET /repos/{owner}/{repo}/assignees"],
+    listComments: ["GET /repos/{owner}/{repo}/issues/{issue_number}/comments"],
+    listCommentsForRepo: ["GET /repos/{owner}/{repo}/issues/comments"],
+    listDependenciesBlockedBy: [
+      "GET /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by"
+    ],
+    listDependenciesBlocking: [
+      "GET /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocking"
+    ],
+    listEvents: ["GET /repos/{owner}/{repo}/issues/{issue_number}/events"],
+    listEventsForRepo: ["GET /repos/{owner}/{repo}/issues/events"],
+    listEventsForTimeline: [
+      "GET /repos/{owner}/{repo}/issues/{issue_number}/timeline"
+    ],
+    listForAuthenticatedUser: ["GET /user/issues"],
+    listForOrg: ["GET /orgs/{org}/issues"],
+    listForRepo: ["GET /repos/{owner}/{repo}/issues"],
+    listLabelsForMilestone: [
+      "GET /repos/{owner}/{repo}/milestones/{milestone_number}/labels"
+    ],
+    listLabelsForRepo: ["GET /repos/{owner}/{repo}/labels"],
+    listLabelsOnIssue: [
+      "GET /repos/{owner}/{repo}/issues/{issue_number}/labels"
+    ],
+    listMilestones: ["GET /repos/{owner}/{repo}/milestones"],
+    listSubIssues: [
+      "GET /repos/{owner}/{repo}/issues/{issue_number}/sub_issues"
+    ],
+    lock: ["PUT /repos/{owner}/{repo}/issues/{issue_number}/lock"],
+    removeAllLabels: [
+      "DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels"
+    ],
+    removeAssignees: [
+      "DELETE /repos/{owner}/{repo}/issues/{issue_number}/assignees"
+    ],
+    removeDependencyBlockedBy: [
+      "DELETE /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by/{issue_id}"
+    ],
+    removeLabel: [
+      "DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels/{name}"
+    ],
+    removeSubIssue: [
+      "DELETE /repos/{owner}/{repo}/issues/{issue_number}/sub_issue"
+    ],
+    reprioritizeSubIssue: [
+      "PATCH /repos/{owner}/{repo}/issues/{issue_number}/sub_issues/priority"
+    ],
+    setLabels: ["PUT /repos/{owner}/{repo}/issues/{issue_number}/labels"],
+    unlock: ["DELETE /repos/{owner}/{repo}/issues/{issue_number}/lock"],
+    update: ["PATCH /repos/{owner}/{repo}/issues/{issue_number}"],
+    updateComment: ["PATCH /repos/{owner}/{repo}/issues/comments/{comment_id}"],
+    updateLabel: ["PATCH /repos/{owner}/{repo}/labels/{name}"],
+    updateMilestone: [
+      "PATCH /repos/{owner}/{repo}/milestones/{milestone_number}"
+    ]
+  },
+  licenses: {
+    get: ["GET /licenses/{license}"],
+    getAllCommonlyUsed: ["GET /licenses"],
+    getForRepo: ["GET /repos/{owner}/{repo}/license"]
+  },
+  markdown: {
+    render: ["POST /markdown"],
+    renderRaw: [
+      "POST /markdown/raw",
+      { headers: { "content-type": "text/plain; charset=utf-8" } }
+    ]
+  },
+  meta: {
+    get: ["GET /meta"],
+    getAllVersions: ["GET /versions"],
+    getOctocat: ["GET /octocat"],
+    getZen: ["GET /zen"],
+    root: ["GET /"]
+  },
+  migrations: {
+    deleteArchiveForAuthenticatedUser: [
+      "DELETE /user/migrations/{migration_id}/archive"
+    ],
+    deleteArchiveForOrg: [
+      "DELETE /orgs/{org}/migrations/{migration_id}/archive"
+    ],
+    downloadArchiveForOrg: [
+      "GET /orgs/{org}/migrations/{migration_id}/archive"
+    ],
+    getArchiveForAuthenticatedUser: [
+      "GET /user/migrations/{migration_id}/archive"
+    ],
+    getStatusForAuthenticatedUser: ["GET /user/migrations/{migration_id}"],
+    getStatusForOrg: ["GET /orgs/{org}/migrations/{migration_id}"],
+    listForAuthenticatedUser: ["GET /user/migrations"],
+    listForOrg: ["GET /orgs/{org}/migrations"],
+    listReposForAuthenticatedUser: [
+      "GET /user/migrations/{migration_id}/repositories"
+    ],
+    listReposForOrg: ["GET /orgs/{org}/migrations/{migration_id}/repositories"],
+    listReposForUser: [
+      "GET /user/migrations/{migration_id}/repositories",
+      {},
+      { renamed: ["migrations", "listReposForAuthenticatedUser"] }
+    ],
+    startForAuthenticatedUser: ["POST /user/migrations"],
+    startForOrg: ["POST /orgs/{org}/migrations"],
+    unlockRepoForAuthenticatedUser: [
+      "DELETE /user/migrations/{migration_id}/repos/{repo_name}/lock"
+    ],
+    unlockRepoForOrg: [
+      "DELETE /orgs/{org}/migrations/{migration_id}/repos/{repo_name}/lock"
+    ]
+  },
+  oidc: {
+    getOidcCustomSubTemplateForOrg: [
+      "GET /orgs/{org}/actions/oidc/customization/sub"
+    ],
+    updateOidcCustomSubTemplateForOrg: [
+      "PUT /orgs/{org}/actions/oidc/customization/sub"
+    ]
+  },
+  orgs: {
+    addSecurityManagerTeam: [
+      "PUT /orgs/{org}/security-managers/teams/{team_slug}",
+      {},
+      {
+        deprecated: "octokit.rest.orgs.addSecurityManagerTeam() is deprecated, see https://docs.github.com/rest/orgs/security-managers#add-a-security-manager-team"
+      }
+    ],
+    assignTeamToOrgRole: [
+      "PUT /orgs/{org}/organization-roles/teams/{team_slug}/{role_id}"
+    ],
+    assignUserToOrgRole: [
+      "PUT /orgs/{org}/organization-roles/users/{username}/{role_id}"
+    ],
+    blockUser: ["PUT /orgs/{org}/blocks/{username}"],
+    cancelInvitation: ["DELETE /orgs/{org}/invitations/{invitation_id}"],
+    checkBlockedUser: ["GET /orgs/{org}/blocks/{username}"],
+    checkMembershipForUser: ["GET /orgs/{org}/members/{username}"],
+    checkPublicMembershipForUser: ["GET /orgs/{org}/public_members/{username}"],
+    convertMemberToOutsideCollaborator: [
+      "PUT /orgs/{org}/outside_collaborators/{username}"
+    ],
+    createArtifactStorageRecord: [
+      "POST /orgs/{org}/artifacts/metadata/storage-record"
+    ],
+    createInvitation: ["POST /orgs/{org}/invitations"],
+    createIssueType: ["POST /orgs/{org}/issue-types"],
+    createWebhook: ["POST /orgs/{org}/hooks"],
+    customPropertiesForOrgsCreateOrUpdateOrganizationValues: [
+      "PATCH /organizations/{org}/org-properties/values"
+    ],
+    customPropertiesForOrgsGetOrganizationValues: [
+      "GET /organizations/{org}/org-properties/values"
+    ],
+    customPropertiesForReposCreateOrUpdateOrganizationDefinition: [
+      "PUT /orgs/{org}/properties/schema/{custom_property_name}"
+    ],
+    customPropertiesForReposCreateOrUpdateOrganizationDefinitions: [
+      "PATCH /orgs/{org}/properties/schema"
+    ],
+    customPropertiesForReposCreateOrUpdateOrganizationValues: [
+      "PATCH /orgs/{org}/properties/values"
+    ],
+    customPropertiesForReposDeleteOrganizationDefinition: [
+      "DELETE /orgs/{org}/properties/schema/{custom_property_name}"
+    ],
+    customPropertiesForReposGetOrganizationDefinition: [
+      "GET /orgs/{org}/properties/schema/{custom_property_name}"
+    ],
+    customPropertiesForReposGetOrganizationDefinitions: [
+      "GET /orgs/{org}/properties/schema"
+    ],
+    customPropertiesForReposGetOrganizationValues: [
+      "GET /orgs/{org}/properties/values"
+    ],
+    delete: ["DELETE /orgs/{org}"],
+    deleteAttestationsBulk: ["POST /orgs/{org}/attestations/delete-request"],
+    deleteAttestationsById: [
+      "DELETE /orgs/{org}/attestations/{attestation_id}"
+    ],
+    deleteAttestationsBySubjectDigest: [
+      "DELETE /orgs/{org}/attestations/digest/{subject_digest}"
+    ],
+    deleteIssueType: ["DELETE /orgs/{org}/issue-types/{issue_type_id}"],
+    deleteWebhook: ["DELETE /orgs/{org}/hooks/{hook_id}"],
+    disableSelectedRepositoryImmutableReleasesOrganization: [
+      "DELETE /orgs/{org}/settings/immutable-releases/repositories/{repository_id}"
+    ],
+    enableSelectedRepositoryImmutableReleasesOrganization: [
+      "PUT /orgs/{org}/settings/immutable-releases/repositories/{repository_id}"
+    ],
+    get: ["GET /orgs/{org}"],
+    getImmutableReleasesSettings: [
+      "GET /orgs/{org}/settings/immutable-releases"
+    ],
+    getImmutableReleasesSettingsRepositories: [
+      "GET /orgs/{org}/settings/immutable-releases/repositories"
+    ],
+    getMembershipForAuthenticatedUser: ["GET /user/memberships/orgs/{org}"],
+    getMembershipForUser: ["GET /orgs/{org}/memberships/{username}"],
+    getOrgRole: ["GET /orgs/{org}/organization-roles/{role_id}"],
+    getOrgRulesetHistory: ["GET /orgs/{org}/rulesets/{ruleset_id}/history"],
+    getOrgRulesetVersion: [
+      "GET /orgs/{org}/rulesets/{ruleset_id}/history/{version_id}"
+    ],
+    getWebhook: ["GET /orgs/{org}/hooks/{hook_id}"],
+    getWebhookConfigForOrg: ["GET /orgs/{org}/hooks/{hook_id}/config"],
+    getWebhookDelivery: [
+      "GET /orgs/{org}/hooks/{hook_id}/deliveries/{delivery_id}"
+    ],
+    list: ["GET /organizations"],
+    listAppInstallations: ["GET /orgs/{org}/installations"],
+    listArtifactStorageRecords: [
+      "GET /orgs/{org}/artifacts/{subject_digest}/metadata/storage-records"
+    ],
+    listAttestationRepositories: ["GET /orgs/{org}/attestations/repositories"],
+    listAttestations: ["GET /orgs/{org}/attestations/{subject_digest}"],
+    listAttestationsBulk: [
+      "POST /orgs/{org}/attestations/bulk-list{?per_page,before,after}"
+    ],
+    listBlockedUsers: ["GET /orgs/{org}/blocks"],
+    listFailedInvitations: ["GET /orgs/{org}/failed_invitations"],
+    listForAuthenticatedUser: ["GET /user/orgs"],
+    listForUser: ["GET /users/{username}/orgs"],
+    listInvitationTeams: ["GET /orgs/{org}/invitations/{invitation_id}/teams"],
+    listIssueTypes: ["GET /orgs/{org}/issue-types"],
+    listMembers: ["GET /orgs/{org}/members"],
+    listMembershipsForAuthenticatedUser: ["GET /user/memberships/orgs"],
+    listOrgRoleTeams: ["GET /orgs/{org}/organization-roles/{role_id}/teams"],
+    listOrgRoleUsers: ["GET /orgs/{org}/organization-roles/{role_id}/users"],
+    listOrgRoles: ["GET /orgs/{org}/organization-roles"],
+    listOrganizationFineGrainedPermissions: [
+      "GET /orgs/{org}/organization-fine-grained-permissions"
+    ],
+    listOutsideCollaborators: ["GET /orgs/{org}/outside_collaborators"],
+    listPatGrantRepositories: [
+      "GET /orgs/{org}/personal-access-tokens/{pat_id}/repositories"
+    ],
+    listPatGrantRequestRepositories: [
+      "GET /orgs/{org}/personal-access-token-requests/{pat_request_id}/repositories"
+    ],
+    listPatGrantRequests: ["GET /orgs/{org}/personal-access-token-requests"],
+    listPatGrants: ["GET /orgs/{org}/personal-access-tokens"],
+    listPendingInvitations: ["GET /orgs/{org}/invitations"],
+    listPublicMembers: ["GET /orgs/{org}/public_members"],
+    listSecurityManagerTeams: [
+      "GET /orgs/{org}/security-managers",
+      {},
+      {
+        deprecated: "octokit.rest.orgs.listSecurityManagerTeams() is deprecated, see https://docs.github.com/rest/orgs/security-managers#list-security-manager-teams"
+      }
+    ],
+    listWebhookDeliveries: ["GET /orgs/{org}/hooks/{hook_id}/deliveries"],
+    listWebhooks: ["GET /orgs/{org}/hooks"],
+    pingWebhook: ["POST /orgs/{org}/hooks/{hook_id}/pings"],
+    redeliverWebhookDelivery: [
+      "POST /orgs/{org}/hooks/{hook_id}/deliveries/{delivery_id}/attempts"
+    ],
+    removeMember: ["DELETE /orgs/{org}/members/{username}"],
+    removeMembershipForUser: ["DELETE /orgs/{org}/memberships/{username}"],
+    removeOutsideCollaborator: [
+      "DELETE /orgs/{org}/outside_collaborators/{username}"
+    ],
+    removePublicMembershipForAuthenticatedUser: [
+      "DELETE /orgs/{org}/public_members/{username}"
+    ],
+    removeSecurityManagerTeam: [
+      "DELETE /orgs/{org}/security-managers/teams/{team_slug}",
+      {},
+      {
+        deprecated: "octokit.rest.orgs.removeSecurityManagerTeam() is deprecated, see https://docs.github.com/rest/orgs/security-managers#remove-a-security-manager-team"
+      }
+    ],
+    reviewPatGrantRequest: [
+      "POST /orgs/{org}/personal-access-token-requests/{pat_request_id}"
+    ],
+    reviewPatGrantRequestsInBulk: [
+      "POST /orgs/{org}/personal-access-token-requests"
+    ],
+    revokeAllOrgRolesTeam: [
+      "DELETE /orgs/{org}/organization-roles/teams/{team_slug}"
+    ],
+    revokeAllOrgRolesUser: [
+      "DELETE /orgs/{org}/organization-roles/users/{username}"
+    ],
+    revokeOrgRoleTeam: [
+      "DELETE /orgs/{org}/organization-roles/teams/{team_slug}/{role_id}"
+    ],
+    revokeOrgRoleUser: [
+      "DELETE /orgs/{org}/organization-roles/users/{username}/{role_id}"
+    ],
+    setImmutableReleasesSettings: [
+      "PUT /orgs/{org}/settings/immutable-releases"
+    ],
+    setImmutableReleasesSettingsRepositories: [
+      "PUT /orgs/{org}/settings/immutable-releases/repositories"
+    ],
+    setMembershipForUser: ["PUT /orgs/{org}/memberships/{username}"],
+    setPublicMembershipForAuthenticatedUser: [
+      "PUT /orgs/{org}/public_members/{username}"
+    ],
+    unblockUser: ["DELETE /orgs/{org}/blocks/{username}"],
+    update: ["PATCH /orgs/{org}"],
+    updateIssueType: ["PUT /orgs/{org}/issue-types/{issue_type_id}"],
+    updateMembershipForAuthenticatedUser: [
+      "PATCH /user/memberships/orgs/{org}"
+    ],
+    updatePatAccess: ["POST /orgs/{org}/personal-access-tokens/{pat_id}"],
+    updatePatAccesses: ["POST /orgs/{org}/personal-access-tokens"],
+    updateWebhook: ["PATCH /orgs/{org}/hooks/{hook_id}"],
+    updateWebhookConfigForOrg: ["PATCH /orgs/{org}/hooks/{hook_id}/config"]
+  },
+  packages: {
+    deletePackageForAuthenticatedUser: [
+      "DELETE /user/packages/{package_type}/{package_name}"
+    ],
+    deletePackageForOrg: [
+      "DELETE /orgs/{org}/packages/{package_type}/{package_name}"
+    ],
+    deletePackageForUser: [
+      "DELETE /users/{username}/packages/{package_type}/{package_name}"
+    ],
+    deletePackageVersionForAuthenticatedUser: [
+      "DELETE /user/packages/{package_type}/{package_name}/versions/{package_version_id}"
+    ],
+    deletePackageVersionForOrg: [
+      "DELETE /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}"
+    ],
+    deletePackageVersionForUser: [
+      "DELETE /users/{username}/packages/{package_type}/{package_name}/versions/{package_version_id}"
+    ],
+    getAllPackageVersionsForAPackageOwnedByAnOrg: [
+      "GET /orgs/{org}/packages/{package_type}/{package_name}/versions",
+      {},
+      { renamed: ["packages", "getAllPackageVersionsForPackageOwnedByOrg"] }
+    ],
+    getAllPackageVersionsForAPackageOwnedByTheAuthenticatedUser: [
+      "GET /user/packages/{package_type}/{package_name}/versions",
+      {},
+      {
+        renamed: [
+          "packages",
+          "getAllPackageVersionsForPackageOwnedByAuthenticatedUser"
+        ]
+      }
+    ],
+    getAllPackageVersionsForPackageOwnedByAuthenticatedUser: [
+      "GET /user/packages/{package_type}/{package_name}/versions"
+    ],
+    getAllPackageVersionsForPackageOwnedByOrg: [
+      "GET /orgs/{org}/packages/{package_type}/{package_name}/versions"
+    ],
+    getAllPackageVersionsForPackageOwnedByUser: [
+      "GET /users/{username}/packages/{package_type}/{package_name}/versions"
+    ],
+    getPackageForAuthenticatedUser: [
+      "GET /user/packages/{package_type}/{package_name}"
+    ],
+    getPackageForOrganization: [
+      "GET /orgs/{org}/packages/{package_type}/{package_name}"
+    ],
+    getPackageForUser: [
+      "GET /users/{username}/packages/{package_type}/{package_name}"
+    ],
+    getPackageVersionForAuthenticatedUser: [
+      "GET /user/packages/{package_type}/{package_name}/versions/{package_version_id}"
+    ],
+    getPackageVersionForOrganization: [
+      "GET /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}"
+    ],
+    getPackageVersionForUser: [
+      "GET /users/{username}/packages/{package_type}/{package_name}/versions/{package_version_id}"
+    ],
+    listDockerMigrationConflictingPackagesForAuthenticatedUser: [
+      "GET /user/docker/conflicts"
+    ],
+    listDockerMigrationConflictingPackagesForOrganization: [
+      "GET /orgs/{org}/docker/conflicts"
+    ],
+    listDockerMigrationConflictingPackagesForUser: [
+      "GET /users/{username}/docker/conflicts"
+    ],
+    listPackagesForAuthenticatedUser: ["GET /user/packages"],
+    listPackagesForOrganization: ["GET /orgs/{org}/packages"],
+    listPackagesForUser: ["GET /users/{username}/packages"],
+    restorePackageForAuthenticatedUser: [
+      "POST /user/packages/{package_type}/{package_name}/restore{?token}"
+    ],
+    restorePackageForOrg: [
+      "POST /orgs/{org}/packages/{package_type}/{package_name}/restore{?token}"
+    ],
+    restorePackageForUser: [
+      "POST /users/{username}/packages/{package_type}/{package_name}/restore{?token}"
+    ],
+    restorePackageVersionForAuthenticatedUser: [
+      "POST /user/packages/{package_type}/{package_name}/versions/{package_version_id}/restore"
+    ],
+    restorePackageVersionForOrg: [
+      "POST /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}/restore"
+    ],
+    restorePackageVersionForUser: [
+      "POST /users/{username}/packages/{package_type}/{package_name}/versions/{package_version_id}/restore"
+    ]
+  },
+  privateRegistries: {
+    createOrgPrivateRegistry: ["POST /orgs/{org}/private-registries"],
+    deleteOrgPrivateRegistry: [
+      "DELETE /orgs/{org}/private-registries/{secret_name}"
+    ],
+    getOrgPrivateRegistry: ["GET /orgs/{org}/private-registries/{secret_name}"],
+    getOrgPublicKey: ["GET /orgs/{org}/private-registries/public-key"],
+    listOrgPrivateRegistries: ["GET /orgs/{org}/private-registries"],
+    updateOrgPrivateRegistry: [
+      "PATCH /orgs/{org}/private-registries/{secret_name}"
+    ]
+  },
+  projects: {
+    addItemForOrg: ["POST /orgs/{org}/projectsV2/{project_number}/items"],
+    addItemForUser: [
+      "POST /users/{username}/projectsV2/{project_number}/items"
+    ],
+    deleteItemForOrg: [
+      "DELETE /orgs/{org}/projectsV2/{project_number}/items/{item_id}"
+    ],
+    deleteItemForUser: [
+      "DELETE /users/{username}/projectsV2/{project_number}/items/{item_id}"
+    ],
+    getFieldForOrg: [
+      "GET /orgs/{org}/projectsV2/{project_number}/fields/{field_id}"
+    ],
+    getFieldForUser: [
+      "GET /users/{username}/projectsV2/{project_number}/fields/{field_id}"
+    ],
+    getForOrg: ["GET /orgs/{org}/projectsV2/{project_number}"],
+    getForUser: ["GET /users/{username}/projectsV2/{project_number}"],
+    getOrgItem: ["GET /orgs/{org}/projectsV2/{project_number}/items/{item_id}"],
+    getUserItem: [
+      "GET /users/{username}/projectsV2/{project_number}/items/{item_id}"
+    ],
+    listFieldsForOrg: ["GET /orgs/{org}/projectsV2/{project_number}/fields"],
+    listFieldsForUser: [
+      "GET /users/{username}/projectsV2/{project_number}/fields"
+    ],
+    listForOrg: ["GET /orgs/{org}/projectsV2"],
+    listForUser: ["GET /users/{username}/projectsV2"],
+    listItemsForOrg: ["GET /orgs/{org}/projectsV2/{project_number}/items"],
+    listItemsForUser: [
+      "GET /users/{username}/projectsV2/{project_number}/items"
+    ],
+    updateItemForOrg: [
+      "PATCH /orgs/{org}/projectsV2/{project_number}/items/{item_id}"
+    ],
+    updateItemForUser: [
+      "PATCH /users/{username}/projectsV2/{project_number}/items/{item_id}"
+    ]
+  },
+  pulls: {
+    checkIfMerged: ["GET /repos/{owner}/{repo}/pulls/{pull_number}/merge"],
+    create: ["POST /repos/{owner}/{repo}/pulls"],
+    createReplyForReviewComment: [
+      "POST /repos/{owner}/{repo}/pulls/{pull_number}/comments/{comment_id}/replies"
+    ],
+    createReview: ["POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews"],
+    createReviewComment: [
+      "POST /repos/{owner}/{repo}/pulls/{pull_number}/comments"
+    ],
+    deletePendingReview: [
+      "DELETE /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}"
+    ],
+    deleteReviewComment: [
+      "DELETE /repos/{owner}/{repo}/pulls/comments/{comment_id}"
+    ],
+    dismissReview: [
+      "PUT /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/dismissals"
+    ],
+    get: ["GET /repos/{owner}/{repo}/pulls/{pull_number}"],
+    getReview: [
+      "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}"
+    ],
+    getReviewComment: ["GET /repos/{owner}/{repo}/pulls/comments/{comment_id}"],
+    list: ["GET /repos/{owner}/{repo}/pulls"],
+    listCommentsForReview: [
+      "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/comments"
+    ],
+    listCommits: ["GET /repos/{owner}/{repo}/pulls/{pull_number}/commits"],
+    listFiles: ["GET /repos/{owner}/{repo}/pulls/{pull_number}/files"],
+    listRequestedReviewers: [
+      "GET /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers"
+    ],
+    listReviewComments: [
+      "GET /repos/{owner}/{repo}/pulls/{pull_number}/comments"
+    ],
+    listReviewCommentsForRepo: ["GET /repos/{owner}/{repo}/pulls/comments"],
+    listReviews: ["GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews"],
+    merge: ["PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge"],
+    removeRequestedReviewers: [
+      "DELETE /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers"
+    ],
+    requestReviewers: [
+      "POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers"
+    ],
+    submitReview: [
+      "POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/events"
+    ],
+    update: ["PATCH /repos/{owner}/{repo}/pulls/{pull_number}"],
+    updateBranch: [
+      "PUT /repos/{owner}/{repo}/pulls/{pull_number}/update-branch"
+    ],
+    updateReview: [
+      "PUT /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}"
+    ],
+    updateReviewComment: [
+      "PATCH /repos/{owner}/{repo}/pulls/comments/{comment_id}"
+    ]
+  },
+  rateLimit: { get: ["GET /rate_limit"] },
+  reactions: {
+    createForCommitComment: [
+      "POST /repos/{owner}/{repo}/comments/{comment_id}/reactions"
+    ],
+    createForIssue: [
+      "POST /repos/{owner}/{repo}/issues/{issue_number}/reactions"
+    ],
+    createForIssueComment: [
+      "POST /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions"
+    ],
+    createForPullRequestReviewComment: [
+      "POST /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions"
+    ],
+    createForRelease: [
+      "POST /repos/{owner}/{repo}/releases/{release_id}/reactions"
+    ],
+    createForTeamDiscussionCommentInOrg: [
+      "POST /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}/reactions"
+    ],
+    createForTeamDiscussionInOrg: [
+      "POST /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/reactions"
+    ],
+    deleteForCommitComment: [
+      "DELETE /repos/{owner}/{repo}/comments/{comment_id}/reactions/{reaction_id}"
+    ],
+    deleteForIssue: [
+      "DELETE /repos/{owner}/{repo}/issues/{issue_number}/reactions/{reaction_id}"
+    ],
+    deleteForIssueComment: [
+      "DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions/{reaction_id}"
+    ],
+    deleteForPullRequestComment: [
+      "DELETE /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions/{reaction_id}"
+    ],
+    deleteForRelease: [
+      "DELETE /repos/{owner}/{repo}/releases/{release_id}/reactions/{reaction_id}"
+    ],
+    deleteForTeamDiscussion: [
+      "DELETE /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/reactions/{reaction_id}"
+    ],
+    deleteForTeamDiscussionComment: [
+      "DELETE /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}/reactions/{reaction_id}"
+    ],
+    listForCommitComment: [
+      "GET /repos/{owner}/{repo}/comments/{comment_id}/reactions"
+    ],
+    listForIssue: ["GET /repos/{owner}/{repo}/issues/{issue_number}/reactions"],
+    listForIssueComment: [
+      "GET /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions"
+    ],
+    listForPullRequestReviewComment: [
+      "GET /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions"
+    ],
+    listForRelease: [
+      "GET /repos/{owner}/{repo}/releases/{release_id}/reactions"
+    ],
+    listForTeamDiscussionCommentInOrg: [
+      "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}/reactions"
+    ],
+    listForTeamDiscussionInOrg: [
+      "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/reactions"
+    ]
+  },
+  repos: {
+    acceptInvitation: [
+      "PATCH /user/repository_invitations/{invitation_id}",
+      {},
+      { renamed: ["repos", "acceptInvitationForAuthenticatedUser"] }
+    ],
+    acceptInvitationForAuthenticatedUser: [
+      "PATCH /user/repository_invitations/{invitation_id}"
+    ],
+    addAppAccessRestrictions: [
+      "POST /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/apps",
+      {},
+      { mapToData: "apps" }
+    ],
+    addCollaborator: ["PUT /repos/{owner}/{repo}/collaborators/{username}"],
+    addStatusCheckContexts: [
+      "POST /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks/contexts",
+      {},
+      { mapToData: "contexts" }
+    ],
+    addTeamAccessRestrictions: [
+      "POST /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/teams",
+      {},
+      { mapToData: "teams" }
+    ],
+    addUserAccessRestrictions: [
+      "POST /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/users",
+      {},
+      { mapToData: "users" }
+    ],
+    cancelPagesDeployment: [
+      "POST /repos/{owner}/{repo}/pages/deployments/{pages_deployment_id}/cancel"
+    ],
+    checkAutomatedSecurityFixes: [
+      "GET /repos/{owner}/{repo}/automated-security-fixes"
+    ],
+    checkCollaborator: ["GET /repos/{owner}/{repo}/collaborators/{username}"],
+    checkImmutableReleases: ["GET /repos/{owner}/{repo}/immutable-releases"],
+    checkPrivateVulnerabilityReporting: [
+      "GET /repos/{owner}/{repo}/private-vulnerability-reporting"
+    ],
+    checkVulnerabilityAlerts: [
+      "GET /repos/{owner}/{repo}/vulnerability-alerts"
+    ],
+    codeownersErrors: ["GET /repos/{owner}/{repo}/codeowners/errors"],
+    compareCommits: ["GET /repos/{owner}/{repo}/compare/{base}...{head}"],
+    compareCommitsWithBasehead: [
+      "GET /repos/{owner}/{repo}/compare/{basehead}"
+    ],
+    createAttestation: ["POST /repos/{owner}/{repo}/attestations"],
+    createAutolink: ["POST /repos/{owner}/{repo}/autolinks"],
+    createCommitComment: [
+      "POST /repos/{owner}/{repo}/commits/{commit_sha}/comments"
+    ],
+    createCommitSignatureProtection: [
+      "POST /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures"
+    ],
+    createCommitStatus: ["POST /repos/{owner}/{repo}/statuses/{sha}"],
+    createDeployKey: ["POST /repos/{owner}/{repo}/keys"],
+    createDeployment: ["POST /repos/{owner}/{repo}/deployments"],
+    createDeploymentBranchPolicy: [
+      "POST /repos/{owner}/{repo}/environments/{environment_name}/deployment-branch-policies"
+    ],
+    createDeploymentProtectionRule: [
+      "POST /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules"
+    ],
+    createDeploymentStatus: [
+      "POST /repos/{owner}/{repo}/deployments/{deployment_id}/statuses"
+    ],
+    createDispatchEvent: ["POST /repos/{owner}/{repo}/dispatches"],
+    createForAuthenticatedUser: ["POST /user/repos"],
+    createFork: ["POST /repos/{owner}/{repo}/forks"],
+    createInOrg: ["POST /orgs/{org}/repos"],
+    createOrUpdateEnvironment: [
+      "PUT /repos/{owner}/{repo}/environments/{environment_name}"
+    ],
+    createOrUpdateFileContents: ["PUT /repos/{owner}/{repo}/contents/{path}"],
+    createOrgRuleset: ["POST /orgs/{org}/rulesets"],
+    createPagesDeployment: ["POST /repos/{owner}/{repo}/pages/deployments"],
+    createPagesSite: ["POST /repos/{owner}/{repo}/pages"],
+    createRelease: ["POST /repos/{owner}/{repo}/releases"],
+    createRepoRuleset: ["POST /repos/{owner}/{repo}/rulesets"],
+    createUsingTemplate: [
+      "POST /repos/{template_owner}/{template_repo}/generate"
+    ],
+    createWebhook: ["POST /repos/{owner}/{repo}/hooks"],
+    customPropertiesForReposCreateOrUpdateRepositoryValues: [
+      "PATCH /repos/{owner}/{repo}/properties/values"
+    ],
+    customPropertiesForReposGetRepositoryValues: [
+      "GET /repos/{owner}/{repo}/properties/values"
+    ],
+    declineInvitation: [
+      "DELETE /user/repository_invitations/{invitation_id}",
+      {},
+      { renamed: ["repos", "declineInvitationForAuthenticatedUser"] }
+    ],
+    declineInvitationForAuthenticatedUser: [
+      "DELETE /user/repository_invitations/{invitation_id}"
+    ],
+    delete: ["DELETE /repos/{owner}/{repo}"],
+    deleteAccessRestrictions: [
+      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/restrictions"
+    ],
+    deleteAdminBranchProtection: [
+      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/enforce_admins"
+    ],
+    deleteAnEnvironment: [
+      "DELETE /repos/{owner}/{repo}/environments/{environment_name}"
+    ],
+    deleteAutolink: ["DELETE /repos/{owner}/{repo}/autolinks/{autolink_id}"],
+    deleteBranchProtection: [
+      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection"
+    ],
+    deleteCommitComment: ["DELETE /repos/{owner}/{repo}/comments/{comment_id}"],
+    deleteCommitSignatureProtection: [
+      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures"
+    ],
+    deleteDeployKey: ["DELETE /repos/{owner}/{repo}/keys/{key_id}"],
+    deleteDeployment: [
+      "DELETE /repos/{owner}/{repo}/deployments/{deployment_id}"
+    ],
+    deleteDeploymentBranchPolicy: [
+      "DELETE /repos/{owner}/{repo}/environments/{environment_name}/deployment-branch-policies/{branch_policy_id}"
+    ],
+    deleteFile: ["DELETE /repos/{owner}/{repo}/contents/{path}"],
+    deleteInvitation: [
+      "DELETE /repos/{owner}/{repo}/invitations/{invitation_id}"
+    ],
+    deleteOrgRuleset: ["DELETE /orgs/{org}/rulesets/{ruleset_id}"],
+    deletePagesSite: ["DELETE /repos/{owner}/{repo}/pages"],
+    deletePullRequestReviewProtection: [
+      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/required_pull_request_reviews"
+    ],
+    deleteRelease: ["DELETE /repos/{owner}/{repo}/releases/{release_id}"],
+    deleteReleaseAsset: [
+      "DELETE /repos/{owner}/{repo}/releases/assets/{asset_id}"
+    ],
+    deleteRepoRuleset: ["DELETE /repos/{owner}/{repo}/rulesets/{ruleset_id}"],
+    deleteWebhook: ["DELETE /repos/{owner}/{repo}/hooks/{hook_id}"],
+    disableAutomatedSecurityFixes: [
+      "DELETE /repos/{owner}/{repo}/automated-security-fixes"
+    ],
+    disableDeploymentProtectionRule: [
+      "DELETE /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules/{protection_rule_id}"
+    ],
+    disableImmutableReleases: [
+      "DELETE /repos/{owner}/{repo}/immutable-releases"
+    ],
+    disablePrivateVulnerabilityReporting: [
+      "DELETE /repos/{owner}/{repo}/private-vulnerability-reporting"
+    ],
+    disableVulnerabilityAlerts: [
+      "DELETE /repos/{owner}/{repo}/vulnerability-alerts"
+    ],
+    downloadArchive: [
+      "GET /repos/{owner}/{repo}/zipball/{ref}",
+      {},
+      { renamed: ["repos", "downloadZipballArchive"] }
+    ],
+    downloadTarballArchive: ["GET /repos/{owner}/{repo}/tarball/{ref}"],
+    downloadZipballArchive: ["GET /repos/{owner}/{repo}/zipball/{ref}"],
+    enableAutomatedSecurityFixes: [
+      "PUT /repos/{owner}/{repo}/automated-security-fixes"
+    ],
+    enableImmutableReleases: ["PUT /repos/{owner}/{repo}/immutable-releases"],
+    enablePrivateVulnerabilityReporting: [
+      "PUT /repos/{owner}/{repo}/private-vulnerability-reporting"
+    ],
+    enableVulnerabilityAlerts: [
+      "PUT /repos/{owner}/{repo}/vulnerability-alerts"
+    ],
+    generateReleaseNotes: [
+      "POST /repos/{owner}/{repo}/releases/generate-notes"
+    ],
+    get: ["GET /repos/{owner}/{repo}"],
+    getAccessRestrictions: [
+      "GET /repos/{owner}/{repo}/branches/{branch}/protection/restrictions"
+    ],
+    getAdminBranchProtection: [
+      "GET /repos/{owner}/{repo}/branches/{branch}/protection/enforce_admins"
+    ],
+    getAllDeploymentProtectionRules: [
+      "GET /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules"
+    ],
+    getAllEnvironments: ["GET /repos/{owner}/{repo}/environments"],
+    getAllStatusCheckContexts: [
+      "GET /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks/contexts"
+    ],
+    getAllTopics: ["GET /repos/{owner}/{repo}/topics"],
+    getAppsWithAccessToProtectedBranch: [
+      "GET /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/apps"
+    ],
+    getAutolink: ["GET /repos/{owner}/{repo}/autolinks/{autolink_id}"],
+    getBranch: ["GET /repos/{owner}/{repo}/branches/{branch}"],
+    getBranchProtection: [
+      "GET /repos/{owner}/{repo}/branches/{branch}/protection"
+    ],
+    getBranchRules: ["GET /repos/{owner}/{repo}/rules/branches/{branch}"],
+    getClones: ["GET /repos/{owner}/{repo}/traffic/clones"],
+    getCodeFrequencyStats: ["GET /repos/{owner}/{repo}/stats/code_frequency"],
+    getCollaboratorPermissionLevel: [
+      "GET /repos/{owner}/{repo}/collaborators/{username}/permission"
+    ],
+    getCombinedStatusForRef: ["GET /repos/{owner}/{repo}/commits/{ref}/status"],
+    getCommit: ["GET /repos/{owner}/{repo}/commits/{ref}"],
+    getCommitActivityStats: ["GET /repos/{owner}/{repo}/stats/commit_activity"],
+    getCommitComment: ["GET /repos/{owner}/{repo}/comments/{comment_id}"],
+    getCommitSignatureProtection: [
+      "GET /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures"
+    ],
+    getCommunityProfileMetrics: ["GET /repos/{owner}/{repo}/community/profile"],
+    getContent: ["GET /repos/{owner}/{repo}/contents/{path}"],
+    getContributorsStats: ["GET /repos/{owner}/{repo}/stats/contributors"],
+    getCustomDeploymentProtectionRule: [
+      "GET /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules/{protection_rule_id}"
+    ],
+    getDeployKey: ["GET /repos/{owner}/{repo}/keys/{key_id}"],
+    getDeployment: ["GET /repos/{owner}/{repo}/deployments/{deployment_id}"],
+    getDeploymentBranchPolicy: [
+      "GET /repos/{owner}/{repo}/environments/{environment_name}/deployment-branch-policies/{branch_policy_id}"
+    ],
+    getDeploymentStatus: [
+      "GET /repos/{owner}/{repo}/deployments/{deployment_id}/statuses/{status_id}"
+    ],
+    getEnvironment: [
+      "GET /repos/{owner}/{repo}/environments/{environment_name}"
+    ],
+    getLatestPagesBuild: ["GET /repos/{owner}/{repo}/pages/builds/latest"],
+    getLatestRelease: ["GET /repos/{owner}/{repo}/releases/latest"],
+    getOrgRuleSuite: ["GET /orgs/{org}/rulesets/rule-suites/{rule_suite_id}"],
+    getOrgRuleSuites: ["GET /orgs/{org}/rulesets/rule-suites"],
+    getOrgRuleset: ["GET /orgs/{org}/rulesets/{ruleset_id}"],
+    getOrgRulesets: ["GET /orgs/{org}/rulesets"],
+    getPages: ["GET /repos/{owner}/{repo}/pages"],
+    getPagesBuild: ["GET /repos/{owner}/{repo}/pages/builds/{build_id}"],
+    getPagesDeployment: [
+      "GET /repos/{owner}/{repo}/pages/deployments/{pages_deployment_id}"
+    ],
+    getPagesHealthCheck: ["GET /repos/{owner}/{repo}/pages/health"],
+    getParticipationStats: ["GET /repos/{owner}/{repo}/stats/participation"],
+    getPullRequestReviewProtection: [
+      "GET /repos/{owner}/{repo}/branches/{branch}/protection/required_pull_request_reviews"
+    ],
+    getPunchCardStats: ["GET /repos/{owner}/{repo}/stats/punch_card"],
+    getReadme: ["GET /repos/{owner}/{repo}/readme"],
+    getReadmeInDirectory: ["GET /repos/{owner}/{repo}/readme/{dir}"],
+    getRelease: ["GET /repos/{owner}/{repo}/releases/{release_id}"],
+    getReleaseAsset: ["GET /repos/{owner}/{repo}/releases/assets/{asset_id}"],
+    getReleaseByTag: ["GET /repos/{owner}/{repo}/releases/tags/{tag}"],
+    getRepoRuleSuite: [
+      "GET /repos/{owner}/{repo}/rulesets/rule-suites/{rule_suite_id}"
+    ],
+    getRepoRuleSuites: ["GET /repos/{owner}/{repo}/rulesets/rule-suites"],
+    getRepoRuleset: ["GET /repos/{owner}/{repo}/rulesets/{ruleset_id}"],
+    getRepoRulesetHistory: [
+      "GET /repos/{owner}/{repo}/rulesets/{ruleset_id}/history"
+    ],
+    getRepoRulesetVersion: [
+      "GET /repos/{owner}/{repo}/rulesets/{ruleset_id}/history/{version_id}"
+    ],
+    getRepoRulesets: ["GET /repos/{owner}/{repo}/rulesets"],
+    getStatusChecksProtection: [
+      "GET /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks"
+    ],
+    getTeamsWithAccessToProtectedBranch: [
+      "GET /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/teams"
+    ],
+    getTopPaths: ["GET /repos/{owner}/{repo}/traffic/popular/paths"],
+    getTopReferrers: ["GET /repos/{owner}/{repo}/traffic/popular/referrers"],
+    getUsersWithAccessToProtectedBranch: [
+      "GET /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/users"
+    ],
+    getViews: ["GET /repos/{owner}/{repo}/traffic/views"],
+    getWebhook: ["GET /repos/{owner}/{repo}/hooks/{hook_id}"],
+    getWebhookConfigForRepo: [
+      "GET /repos/{owner}/{repo}/hooks/{hook_id}/config"
+    ],
+    getWebhookDelivery: [
+      "GET /repos/{owner}/{repo}/hooks/{hook_id}/deliveries/{delivery_id}"
+    ],
+    listActivities: ["GET /repos/{owner}/{repo}/activity"],
+    listAttestations: [
+      "GET /repos/{owner}/{repo}/attestations/{subject_digest}"
+    ],
+    listAutolinks: ["GET /repos/{owner}/{repo}/autolinks"],
+    listBranches: ["GET /repos/{owner}/{repo}/branches"],
+    listBranchesForHeadCommit: [
+      "GET /repos/{owner}/{repo}/commits/{commit_sha}/branches-where-head"
+    ],
+    listCollaborators: ["GET /repos/{owner}/{repo}/collaborators"],
+    listCommentsForCommit: [
+      "GET /repos/{owner}/{repo}/commits/{commit_sha}/comments"
+    ],
+    listCommitCommentsForRepo: ["GET /repos/{owner}/{repo}/comments"],
+    listCommitStatusesForRef: [
+      "GET /repos/{owner}/{repo}/commits/{ref}/statuses"
+    ],
+    listCommits: ["GET /repos/{owner}/{repo}/commits"],
+    listContributors: ["GET /repos/{owner}/{repo}/contributors"],
+    listCustomDeploymentRuleIntegrations: [
+      "GET /repos/{owner}/{repo}/environments/{environment_name}/deployment_protection_rules/apps"
+    ],
+    listDeployKeys: ["GET /repos/{owner}/{repo}/keys"],
+    listDeploymentBranchPolicies: [
+      "GET /repos/{owner}/{repo}/environments/{environment_name}/deployment-branch-policies"
+    ],
+    listDeploymentStatuses: [
+      "GET /repos/{owner}/{repo}/deployments/{deployment_id}/statuses"
+    ],
+    listDeployments: ["GET /repos/{owner}/{repo}/deployments"],
+    listForAuthenticatedUser: ["GET /user/repos"],
+    listForOrg: ["GET /orgs/{org}/repos"],
+    listForUser: ["GET /users/{username}/repos"],
+    listForks: ["GET /repos/{owner}/{repo}/forks"],
+    listInvitations: ["GET /repos/{owner}/{repo}/invitations"],
+    listInvitationsForAuthenticatedUser: ["GET /user/repository_invitations"],
+    listLanguages: ["GET /repos/{owner}/{repo}/languages"],
+    listPagesBuilds: ["GET /repos/{owner}/{repo}/pages/builds"],
+    listPublic: ["GET /repositories"],
+    listPullRequestsAssociatedWithCommit: [
+      "GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls"
+    ],
+    listReleaseAssets: [
+      "GET /repos/{owner}/{repo}/releases/{release_id}/assets"
+    ],
+    listReleases: ["GET /repos/{owner}/{repo}/releases"],
+    listTags: ["GET /repos/{owner}/{repo}/tags"],
+    listTeams: ["GET /repos/{owner}/{repo}/teams"],
+    listWebhookDeliveries: [
+      "GET /repos/{owner}/{repo}/hooks/{hook_id}/deliveries"
+    ],
+    listWebhooks: ["GET /repos/{owner}/{repo}/hooks"],
+    merge: ["POST /repos/{owner}/{repo}/merges"],
+    mergeUpstream: ["POST /repos/{owner}/{repo}/merge-upstream"],
+    pingWebhook: ["POST /repos/{owner}/{repo}/hooks/{hook_id}/pings"],
+    redeliverWebhookDelivery: [
+      "POST /repos/{owner}/{repo}/hooks/{hook_id}/deliveries/{delivery_id}/attempts"
+    ],
+    removeAppAccessRestrictions: [
+      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/apps",
+      {},
+      { mapToData: "apps" }
+    ],
+    removeCollaborator: [
+      "DELETE /repos/{owner}/{repo}/collaborators/{username}"
+    ],
+    removeStatusCheckContexts: [
+      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks/contexts",
+      {},
+      { mapToData: "contexts" }
+    ],
+    removeStatusCheckProtection: [
+      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks"
+    ],
+    removeTeamAccessRestrictions: [
+      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/teams",
+      {},
+      { mapToData: "teams" }
+    ],
+    removeUserAccessRestrictions: [
+      "DELETE /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/users",
+      {},
+      { mapToData: "users" }
+    ],
+    renameBranch: ["POST /repos/{owner}/{repo}/branches/{branch}/rename"],
+    replaceAllTopics: ["PUT /repos/{owner}/{repo}/topics"],
+    requestPagesBuild: ["POST /repos/{owner}/{repo}/pages/builds"],
+    setAdminBranchProtection: [
+      "POST /repos/{owner}/{repo}/branches/{branch}/protection/enforce_admins"
+    ],
+    setAppAccessRestrictions: [
+      "PUT /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/apps",
+      {},
+      { mapToData: "apps" }
+    ],
+    setStatusCheckContexts: [
+      "PUT /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks/contexts",
+      {},
+      { mapToData: "contexts" }
+    ],
+    setTeamAccessRestrictions: [
+      "PUT /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/teams",
+      {},
+      { mapToData: "teams" }
+    ],
+    setUserAccessRestrictions: [
+      "PUT /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/users",
+      {},
+      { mapToData: "users" }
+    ],
+    testPushWebhook: ["POST /repos/{owner}/{repo}/hooks/{hook_id}/tests"],
+    transfer: ["POST /repos/{owner}/{repo}/transfer"],
+    update: ["PATCH /repos/{owner}/{repo}"],
+    updateBranchProtection: [
+      "PUT /repos/{owner}/{repo}/branches/{branch}/protection"
+    ],
+    updateCommitComment: ["PATCH /repos/{owner}/{repo}/comments/{comment_id}"],
+    updateDeploymentBranchPolicy: [
+      "PUT /repos/{owner}/{repo}/environments/{environment_name}/deployment-branch-policies/{branch_policy_id}"
+    ],
+    updateInformationAboutPagesSite: ["PUT /repos/{owner}/{repo}/pages"],
+    updateInvitation: [
+      "PATCH /repos/{owner}/{repo}/invitations/{invitation_id}"
+    ],
+    updateOrgRuleset: ["PUT /orgs/{org}/rulesets/{ruleset_id}"],
+    updatePullRequestReviewProtection: [
+      "PATCH /repos/{owner}/{repo}/branches/{branch}/protection/required_pull_request_reviews"
+    ],
+    updateRelease: ["PATCH /repos/{owner}/{repo}/releases/{release_id}"],
+    updateReleaseAsset: [
+      "PATCH /repos/{owner}/{repo}/releases/assets/{asset_id}"
+    ],
+    updateRepoRuleset: ["PUT /repos/{owner}/{repo}/rulesets/{ruleset_id}"],
+    updateStatusCheckPotection: [
+      "PATCH /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks",
+      {},
+      { renamed: ["repos", "updateStatusCheckProtection"] }
+    ],
+    updateStatusCheckProtection: [
+      "PATCH /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks"
+    ],
+    updateWebhook: ["PATCH /repos/{owner}/{repo}/hooks/{hook_id}"],
+    updateWebhookConfigForRepo: [
+      "PATCH /repos/{owner}/{repo}/hooks/{hook_id}/config"
+    ],
+    uploadReleaseAsset: [
+      "POST /repos/{owner}/{repo}/releases/{release_id}/assets{?name,label}",
+      { baseUrl: "https://uploads.github.com" }
+    ]
+  },
+  search: {
+    code: ["GET /search/code"],
+    commits: ["GET /search/commits"],
+    issuesAndPullRequests: ["GET /search/issues"],
+    labels: ["GET /search/labels"],
+    repos: ["GET /search/repositories"],
+    topics: ["GET /search/topics"],
+    users: ["GET /search/users"]
+  },
+  secretScanning: {
+    createPushProtectionBypass: [
+      "POST /repos/{owner}/{repo}/secret-scanning/push-protection-bypasses"
+    ],
+    getAlert: [
+      "GET /repos/{owner}/{repo}/secret-scanning/alerts/{alert_number}"
+    ],
+    getScanHistory: ["GET /repos/{owner}/{repo}/secret-scanning/scan-history"],
+    listAlertsForOrg: ["GET /orgs/{org}/secret-scanning/alerts"],
+    listAlertsForRepo: ["GET /repos/{owner}/{repo}/secret-scanning/alerts"],
+    listLocationsForAlert: [
+      "GET /repos/{owner}/{repo}/secret-scanning/alerts/{alert_number}/locations"
+    ],
+    listOrgPatternConfigs: [
+      "GET /orgs/{org}/secret-scanning/pattern-configurations"
+    ],
+    updateAlert: [
+      "PATCH /repos/{owner}/{repo}/secret-scanning/alerts/{alert_number}"
+    ],
+    updateOrgPatternConfigs: [
+      "PATCH /orgs/{org}/secret-scanning/pattern-configurations"
+    ]
+  },
+  securityAdvisories: {
+    createFork: [
+      "POST /repos/{owner}/{repo}/security-advisories/{ghsa_id}/forks"
+    ],
+    createPrivateVulnerabilityReport: [
+      "POST /repos/{owner}/{repo}/security-advisories/reports"
+    ],
+    createRepositoryAdvisory: [
+      "POST /repos/{owner}/{repo}/security-advisories"
+    ],
+    createRepositoryAdvisoryCveRequest: [
+      "POST /repos/{owner}/{repo}/security-advisories/{ghsa_id}/cve"
+    ],
+    getGlobalAdvisory: ["GET /advisories/{ghsa_id}"],
+    getRepositoryAdvisory: [
+      "GET /repos/{owner}/{repo}/security-advisories/{ghsa_id}"
+    ],
+    listGlobalAdvisories: ["GET /advisories"],
+    listOrgRepositoryAdvisories: ["GET /orgs/{org}/security-advisories"],
+    listRepositoryAdvisories: ["GET /repos/{owner}/{repo}/security-advisories"],
+    updateRepositoryAdvisory: [
+      "PATCH /repos/{owner}/{repo}/security-advisories/{ghsa_id}"
+    ]
+  },
+  teams: {
+    addOrUpdateMembershipForUserInOrg: [
+      "PUT /orgs/{org}/teams/{team_slug}/memberships/{username}"
+    ],
+    addOrUpdateRepoPermissionsInOrg: [
+      "PUT /orgs/{org}/teams/{team_slug}/repos/{owner}/{repo}"
+    ],
+    checkPermissionsForRepoInOrg: [
+      "GET /orgs/{org}/teams/{team_slug}/repos/{owner}/{repo}"
+    ],
+    create: ["POST /orgs/{org}/teams"],
+    createDiscussionCommentInOrg: [
+      "POST /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments"
+    ],
+    createDiscussionInOrg: ["POST /orgs/{org}/teams/{team_slug}/discussions"],
+    deleteDiscussionCommentInOrg: [
+      "DELETE /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}"
+    ],
+    deleteDiscussionInOrg: [
+      "DELETE /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}"
+    ],
+    deleteInOrg: ["DELETE /orgs/{org}/teams/{team_slug}"],
+    getByName: ["GET /orgs/{org}/teams/{team_slug}"],
+    getDiscussionCommentInOrg: [
+      "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}"
+    ],
+    getDiscussionInOrg: [
+      "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}"
+    ],
+    getMembershipForUserInOrg: [
+      "GET /orgs/{org}/teams/{team_slug}/memberships/{username}"
+    ],
+    list: ["GET /orgs/{org}/teams"],
+    listChildInOrg: ["GET /orgs/{org}/teams/{team_slug}/teams"],
+    listDiscussionCommentsInOrg: [
+      "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments"
+    ],
+    listDiscussionsInOrg: ["GET /orgs/{org}/teams/{team_slug}/discussions"],
+    listForAuthenticatedUser: ["GET /user/teams"],
+    listMembersInOrg: ["GET /orgs/{org}/teams/{team_slug}/members"],
+    listPendingInvitationsInOrg: [
+      "GET /orgs/{org}/teams/{team_slug}/invitations"
+    ],
+    listReposInOrg: ["GET /orgs/{org}/teams/{team_slug}/repos"],
+    removeMembershipForUserInOrg: [
+      "DELETE /orgs/{org}/teams/{team_slug}/memberships/{username}"
+    ],
+    removeRepoInOrg: [
+      "DELETE /orgs/{org}/teams/{team_slug}/repos/{owner}/{repo}"
+    ],
+    updateDiscussionCommentInOrg: [
+      "PATCH /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}"
+    ],
+    updateDiscussionInOrg: [
+      "PATCH /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}"
+    ],
+    updateInOrg: ["PATCH /orgs/{org}/teams/{team_slug}"]
+  },
+  users: {
+    addEmailForAuthenticated: [
+      "POST /user/emails",
+      {},
+      { renamed: ["users", "addEmailForAuthenticatedUser"] }
+    ],
+    addEmailForAuthenticatedUser: ["POST /user/emails"],
+    addSocialAccountForAuthenticatedUser: ["POST /user/social_accounts"],
+    block: ["PUT /user/blocks/{username}"],
+    checkBlocked: ["GET /user/blocks/{username}"],
+    checkFollowingForUser: ["GET /users/{username}/following/{target_user}"],
+    checkPersonIsFollowedByAuthenticated: ["GET /user/following/{username}"],
+    createGpgKeyForAuthenticated: [
+      "POST /user/gpg_keys",
+      {},
+      { renamed: ["users", "createGpgKeyForAuthenticatedUser"] }
+    ],
+    createGpgKeyForAuthenticatedUser: ["POST /user/gpg_keys"],
+    createPublicSshKeyForAuthenticated: [
+      "POST /user/keys",
+      {},
+      { renamed: ["users", "createPublicSshKeyForAuthenticatedUser"] }
+    ],
+    createPublicSshKeyForAuthenticatedUser: ["POST /user/keys"],
+    createSshSigningKeyForAuthenticatedUser: ["POST /user/ssh_signing_keys"],
+    deleteAttestationsBulk: [
+      "POST /users/{username}/attestations/delete-request"
+    ],
+    deleteAttestationsById: [
+      "DELETE /users/{username}/attestations/{attestation_id}"
+    ],
+    deleteAttestationsBySubjectDigest: [
+      "DELETE /users/{username}/attestations/digest/{subject_digest}"
+    ],
+    deleteEmailForAuthenticated: [
+      "DELETE /user/emails",
+      {},
+      { renamed: ["users", "deleteEmailForAuthenticatedUser"] }
+    ],
+    deleteEmailForAuthenticatedUser: ["DELETE /user/emails"],
+    deleteGpgKeyForAuthenticated: [
+      "DELETE /user/gpg_keys/{gpg_key_id}",
+      {},
+      { renamed: ["users", "deleteGpgKeyForAuthenticatedUser"] }
+    ],
+    deleteGpgKeyForAuthenticatedUser: ["DELETE /user/gpg_keys/{gpg_key_id}"],
+    deletePublicSshKeyForAuthenticated: [
+      "DELETE /user/keys/{key_id}",
+      {},
+      { renamed: ["users", "deletePublicSshKeyForAuthenticatedUser"] }
+    ],
+    deletePublicSshKeyForAuthenticatedUser: ["DELETE /user/keys/{key_id}"],
+    deleteSocialAccountForAuthenticatedUser: ["DELETE /user/social_accounts"],
+    deleteSshSigningKeyForAuthenticatedUser: [
+      "DELETE /user/ssh_signing_keys/{ssh_signing_key_id}"
+    ],
+    follow: ["PUT /user/following/{username}"],
+    getAuthenticated: ["GET /user"],
+    getById: ["GET /user/{account_id}"],
+    getByUsername: ["GET /users/{username}"],
+    getContextForUser: ["GET /users/{username}/hovercard"],
+    getGpgKeyForAuthenticated: [
+      "GET /user/gpg_keys/{gpg_key_id}",
+      {},
+      { renamed: ["users", "getGpgKeyForAuthenticatedUser"] }
+    ],
+    getGpgKeyForAuthenticatedUser: ["GET /user/gpg_keys/{gpg_key_id}"],
+    getPublicSshKeyForAuthenticated: [
+      "GET /user/keys/{key_id}",
+      {},
+      { renamed: ["users", "getPublicSshKeyForAuthenticatedUser"] }
+    ],
+    getPublicSshKeyForAuthenticatedUser: ["GET /user/keys/{key_id}"],
+    getSshSigningKeyForAuthenticatedUser: [
+      "GET /user/ssh_signing_keys/{ssh_signing_key_id}"
+    ],
+    list: ["GET /users"],
+    listAttestations: ["GET /users/{username}/attestations/{subject_digest}"],
+    listAttestationsBulk: [
+      "POST /users/{username}/attestations/bulk-list{?per_page,before,after}"
+    ],
+    listBlockedByAuthenticated: [
+      "GET /user/blocks",
+      {},
+      { renamed: ["users", "listBlockedByAuthenticatedUser"] }
+    ],
+    listBlockedByAuthenticatedUser: ["GET /user/blocks"],
+    listEmailsForAuthenticated: [
+      "GET /user/emails",
+      {},
+      { renamed: ["users", "listEmailsForAuthenticatedUser"] }
+    ],
+    listEmailsForAuthenticatedUser: ["GET /user/emails"],
+    listFollowedByAuthenticated: [
+      "GET /user/following",
+      {},
+      { renamed: ["users", "listFollowedByAuthenticatedUser"] }
+    ],
+    listFollowedByAuthenticatedUser: ["GET /user/following"],
+    listFollowersForAuthenticatedUser: ["GET /user/followers"],
+    listFollowersForUser: ["GET /users/{username}/followers"],
+    listFollowingForUser: ["GET /users/{username}/following"],
+    listGpgKeysForAuthenticated: [
+      "GET /user/gpg_keys",
+      {},
+      { renamed: ["users", "listGpgKeysForAuthenticatedUser"] }
+    ],
+    listGpgKeysForAuthenticatedUser: ["GET /user/gpg_keys"],
+    listGpgKeysForUser: ["GET /users/{username}/gpg_keys"],
+    listPublicEmailsForAuthenticated: [
+      "GET /user/public_emails",
+      {},
+      { renamed: ["users", "listPublicEmailsForAuthenticatedUser"] }
+    ],
+    listPublicEmailsForAuthenticatedUser: ["GET /user/public_emails"],
+    listPublicKeysForUser: ["GET /users/{username}/keys"],
+    listPublicSshKeysForAuthenticated: [
+      "GET /user/keys",
+      {},
+      { renamed: ["users", "listPublicSshKeysForAuthenticatedUser"] }
+    ],
+    listPublicSshKeysForAuthenticatedUser: ["GET /user/keys"],
+    listSocialAccountsForAuthenticatedUser: ["GET /user/social_accounts"],
+    listSocialAccountsForUser: ["GET /users/{username}/social_accounts"],
+    listSshSigningKeysForAuthenticatedUser: ["GET /user/ssh_signing_keys"],
+    listSshSigningKeysForUser: ["GET /users/{username}/ssh_signing_keys"],
+    setPrimaryEmailVisibilityForAuthenticated: [
+      "PATCH /user/email/visibility",
+      {},
+      { renamed: ["users", "setPrimaryEmailVisibilityForAuthenticatedUser"] }
+    ],
+    setPrimaryEmailVisibilityForAuthenticatedUser: [
+      "PATCH /user/email/visibility"
+    ],
+    unblock: ["DELETE /user/blocks/{username}"],
+    unfollow: ["DELETE /user/following/{username}"],
+    updateAuthenticated: ["PATCH /user"]
+  }
+};
+var endpoints_default = Endpoints;
+
+// node_modules/@octokit/rest/node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/endpoints-to-methods.js
+var endpointMethodsMap = /* @__PURE__ */ new Map;
+for (const [scope, endpoints] of Object.entries(endpoints_default)) {
+  for (const [methodName, endpoint2] of Object.entries(endpoints)) {
+    const [route, defaults2, decorations] = endpoint2;
+    const [method, url5] = route.split(/ /);
+    const endpointDefaults = Object.assign({
+      method,
+      url: url5
+    }, defaults2);
+    if (!endpointMethodsMap.has(scope)) {
+      endpointMethodsMap.set(scope, /* @__PURE__ */ new Map);
+    }
+    endpointMethodsMap.get(scope).set(methodName, {
+      scope,
+      methodName,
+      endpointDefaults,
+      decorations
+    });
+  }
+}
+var handler = {
+  has({ scope }, methodName) {
+    return endpointMethodsMap.get(scope).has(methodName);
+  },
+  getOwnPropertyDescriptor(target, methodName) {
+    return {
+      value: this.get(target, methodName),
+      configurable: true,
+      writable: true,
+      enumerable: true
+    };
+  },
+  defineProperty(target, methodName, descriptor) {
+    Object.defineProperty(target.cache, methodName, descriptor);
+    return true;
+  },
+  deleteProperty(target, methodName) {
+    delete target.cache[methodName];
+    return true;
+  },
+  ownKeys({ scope }) {
+    return [...endpointMethodsMap.get(scope).keys()];
+  },
+  set(target, methodName, value) {
+    return target.cache[methodName] = value;
+  },
+  get({ octokit, scope, cache: cache3 }, methodName) {
+    if (cache3[methodName]) {
+      return cache3[methodName];
+    }
+    const method = endpointMethodsMap.get(scope).get(methodName);
+    if (!method) {
+      return;
+    }
+    const { endpointDefaults, decorations } = method;
+    if (decorations) {
+      cache3[methodName] = decorate(octokit, scope, methodName, endpointDefaults, decorations);
+    } else {
+      cache3[methodName] = octokit.request.defaults(endpointDefaults);
+    }
+    return cache3[methodName];
+  }
+};
+function endpointsToMethods(octokit) {
+  const newMethods = {};
+  for (const scope of endpointMethodsMap.keys()) {
+    newMethods[scope] = new Proxy({ octokit, scope, cache: {} }, handler);
+  }
+  return newMethods;
+}
+function decorate(octokit, scope, methodName, defaults2, decorations) {
+  const requestWithDefaults = octokit.request.defaults(defaults2);
+  function withDecorations(...args) {
+    let options = requestWithDefaults.endpoint.merge(...args);
+    if (decorations.mapToData) {
+      options = Object.assign({}, options, {
+        data: options[decorations.mapToData],
+        [decorations.mapToData]: undefined
+      });
+      return requestWithDefaults(options);
+    }
+    if (decorations.renamed) {
+      const [newScope, newMethodName] = decorations.renamed;
+      octokit.log.warn(`octokit.${scope}.${methodName}() has been renamed to octokit.${newScope}.${newMethodName}()`);
+    }
+    if (decorations.deprecated) {
+      octokit.log.warn(decorations.deprecated);
+    }
+    if (decorations.renamedParameters) {
+      const options2 = requestWithDefaults.endpoint.merge(...args);
+      for (const [name, alias] of Object.entries(decorations.renamedParameters)) {
+        if (name in options2) {
+          octokit.log.warn(`"${name}" parameter is deprecated for "octokit.${scope}.${methodName}()". Use "${alias}" instead`);
+          if (!(alias in options2)) {
+            options2[alias] = options2[name];
+          }
+          delete options2[name];
+        }
+      }
+      return requestWithDefaults(options2);
+    }
+    return requestWithDefaults(...args);
+  }
+  return Object.assign(withDecorations, requestWithDefaults);
+}
+
+// node_modules/@octokit/rest/node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/index.js
+function restEndpointMethods(octokit) {
+  const api5 = endpointsToMethods(octokit);
+  return {
+    rest: api5
+  };
+}
+restEndpointMethods.VERSION = VERSION8;
+function legacyRestEndpointMethods(octokit) {
+  const api5 = endpointsToMethods(octokit);
+  return {
+    ...api5,
+    rest: api5
+  };
+}
+legacyRestEndpointMethods.VERSION = VERSION8;
+
+// node_modules/@octokit/rest/dist-src/version.js
+var VERSION9 = "22.0.1";
+
+// node_modules/@octokit/rest/dist-src/index.js
+var Octokit2 = Octokit.plugin(requestLog, legacyRestEndpointMethods, paginateRest).defaults({
+  userAgent: `octokit-rest.js/${VERSION9}`
+});
+
+// app/models/platform.ts
+class Platform {
+}
+
+// app/github.ts
+class GithubPlatform extends Platform {
+  async fetchRawPatch(params) {
+    const url5 = `https://patch-diff.githubusercontent.com/raw/${params.owner}/${params.repo}/pull/${params.pullNo}.patch`;
+    if (params.token) {
+      try {
+        const octokit = new Octokit2({ auth: params.token });
+        const res2 = await octokit.request("GET /repos/{owner}/{repo}/pulls/{pull_number}", {
+          owner: params.owner,
+          repo: params.repo,
+          pull_number: params.pullNo,
+          headers: {
+            accept: "application/vnd.github.v3.patch"
+          }
+        });
+        const patch = typeof res2.data === "string" ? res2.data : "";
+        if (!patch.trim()) {
+          throw new Error("GitHub returned an empty patch response.");
+        }
+        return patch;
+      } catch (error188) {
+        throw new Error(`Failed to fetch pull request patch from GitHub API: ${this.errorMessage(error188)}`);
+      }
+    }
+    let res;
+    try {
+      res = await fetch(url5);
+    } catch (error188) {
+      throw new Error(`Failed to fetch pull request patch from patch URL: ${this.errorMessage(error188)}`);
+    }
+    if (!res.ok) {
+      throw new Error(`Failed to fetch pull request patch from patch URL: ${res.status} ${res.statusText}`);
+    }
+    const text = await res.text();
+    if (!text.trim()) {
+      throw new Error("Patch URL returned an empty patch response.");
+    }
+    return text;
+  }
+  async commentInPr(params) {
+    try {
+      if (!params.token) {
+        throw new Error("Missing GitHub token. Provide github_token input or GITHUB_TOKEN env.");
+      }
+      const octokit = new Octokit2({ auth: params.token });
+      await octokit.rest.issues.createComment({
+        owner: params.owner,
+        repo: params.repo,
+        issue_number: params.pullNo,
+        body: params.summary
+      });
+    } catch (error188) {
+      throw new Error(`Failed to create pull request comment: ${this.errorMessage(error188)}`);
+    }
+  }
+  async createReviewComment(params) {
+    try {
+      if (!params.token) {
+        throw new Error("Missing GitHub token. Provide github_token input or GITHUB_TOKEN env.");
+      }
+      if (!params.body.trim()) {
+        throw new Error("Review comment body cannot be empty.");
+      }
+      const hasPosition = typeof params.position === "number";
+      const hasLine = typeof params.line === "number";
+      const hasSide = typeof params.side === "string";
+      const hasStartLine = typeof params.startLine === "number";
+      const hasStartSide = typeof params.startSide === "string";
+      if (hasPosition === (hasLine || hasSide)) {
+        throw new Error("Review comment requires exactly one location mode: position or line+side.");
+      }
+      if ((hasStartLine || hasStartSide) && !(hasLine && hasSide)) {
+        throw new Error("Multi-line review comments require line and side.");
+      }
+      if (hasStartLine !== hasStartSide) {
+        throw new Error("startLine and startSide must be provided together.");
+      }
+      const octokit = new Octokit2({ auth: params.token });
+      const location2 = hasPosition ? { position: params.position } : {
+        line: params.line,
+        side: params.side,
+        ...hasStartLine ? { start_line: params.startLine } : {},
+        ...hasStartSide ? { start_side: params.startSide } : {}
+      };
+      await octokit.rest.pulls.createReviewComment({
+        owner: params.owner,
+        repo: params.repo,
+        pull_number: params.pullNo,
+        body: params.body,
+        commit_id: params.commitId,
+        path: params.path,
+        ...location2
+      });
+    } catch (error188) {
+      throw new Error(`Failed to create review comment: ${this.errorMessage(error188)}`);
+    }
+  }
+  errorMessage(error188) {
+    return error188 instanceof Error ? error188.message : String(error188);
+  }
+}
+
 // app/main.ts
-function getInputs() {
-  const { owner, repo } = github.context.repo;
-  const prNumber = github.context.payload.pull_request?.number;
-  const commitId = github.context.payload.pull_request?.head?.sha;
+function getInputs(deps = {}) {
+  const context3 = deps.context ?? github.context;
+  const coreModule = deps.coreModule ?? core5;
+  const env2 = deps.env ?? process.env;
+  const { owner, repo } = context3.repo;
+  const prNumber = context3.payload.pull_request?.number;
+  const commitId = context3.payload.pull_request?.head?.sha;
   if (!prNumber) {
     throw new Error("No pull request context found. This action must be run on pull_request events");
   }
   if (!commitId) {
     throw new Error("No pull request commit SHA found in event payload");
   }
-  let provider = core5.getInput("provider");
-  let apiKey = core5.getInput("api_key");
-  let model = core5.getInput("model");
-  let githubToken = core5.getInput("github_token") || process.env.GITHUB_TOKEN;
   return {
     owner,
     repo,
     prNumber,
     commitId,
-    provider,
-    apiKey,
-    model,
-    githubToken
+    provider: coreModule.getInput("provider"),
+    apiKey: coreModule.getInput("api_key"),
+    model: coreModule.getInput("model"),
+    githubToken: coreModule.getInput("github_token") || env2.GITHUB_TOKEN || ""
   };
 }
-var getProvider = (provider, params) => {
-  switch (provider) {
-    case "openai":
-      return new OpenAIProvider(params);
-    case "gemini":
-      return new GeminiProvider(params);
-    default:
-      throw new Error("Invalid LLM Provider unable to initialize application");
-  }
-};
 var getAgentModel = (provider, params) => {
   switch (provider) {
     case "openai":
@@ -214047,22 +213284,26 @@ var getAgentModel = (provider, params) => {
       throw new Error("Invalid LLM Provider unable to initialize application");
   }
 };
-var main = async () => {
-  const inputs = getInputs();
-  let kitsu = new Kitsu(getProvider(inputs.provider, {
+async function main(deps = {}) {
+  const inputs = getInputs(deps);
+  const platform = deps.platform ?? new GithubPlatform;
+  const agent = deps.agentFactory?.(inputs, platform) ?? new Agent(getAgentModel(inputs.provider, {
     apikey: inputs.apiKey,
     model: inputs.model
-  }), new GithubPlatform);
-  const agent = new Agent(getAgentModel(inputs.provider, {
-    apikey: inputs.apiKey,
-    model: inputs.model
-  }), new GithubPlatform);
+  }), platform);
   await agent.run({
     owner: inputs.owner,
     repo: inputs.repo,
     pullNo: inputs.prNumber,
-    token: inputs.githubToken || "",
+    token: inputs.githubToken,
     commitId: inputs.commitId
   });
+}
+if (!process.env.JEST_WORKER_ID) {
+  main().catch((error188) => console.error(error188));
+}
+export {
+  main,
+  getInputs,
+  getAgentModel
 };
-main().catch((e) => console.error(e));

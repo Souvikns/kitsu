@@ -6,6 +6,12 @@ export class OpenAIProvider extends Provider {
 
   constructor(params: ProviderParams) {
     super();
+    if (!params.apikey) {
+      throw new Error("OpenAI API key is required.");
+    }
+    if (!params.model) {
+      throw new Error("OpenAI model is required.");
+    }
     this.openai = new ChatOpenAI({
       apiKey: params.apikey,
       model: params.model,

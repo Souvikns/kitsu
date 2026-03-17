@@ -1,3 +1,9 @@
+jest.mock("@langchain/google-genai", () => ({
+  ChatGoogleGenerativeAI: jest.fn().mockImplementation(() => ({
+    invoke: jest.fn(),
+  })),
+}));
+
 import { GeminiProvider } from "kitsu/providers/gemini";
 
 describe("Gemini Provider", () => {
