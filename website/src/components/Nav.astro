@@ -1,0 +1,132 @@
+---
+const currentPath = Astro.url.pathname;
+---
+
+<nav class="primary-nav">
+  <div class="nav-container">
+    <a href="/kitsu/" class="logo-link" aria-label="Kitsu Home">
+      <img src="/kitsu/kitsu.svg" alt="" class="logo-img" width="32" height="32" />
+      <span class="logo-text">Kitsu</span>
+    </a>
+
+    <div class="nav-links">
+      <a href="/kitsu/docs/" class={`nav-link ${currentPath.startsWith('/kitsu/docs') ? 'active' : ''}`}>Docs</a>
+      <a href="https://github.com/Souvikns/kitsu" class="nav-link" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+
+    <a href="/kitsu/docs/#setup-guide" class="nav-cta">Get started</a>
+  </div>
+</nav>
+
+<style>
+  .primary-nav {
+    background-color: var(--color-canvas);
+    height: 56px;
+    border-bottom: 1px solid var(--color-hairline-soft);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .nav-container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-xl);
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-lg);
+  }
+
+  .logo-link {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--color-ink);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 18px;
+  }
+
+  .logo-link:hover {
+    text-decoration: none;
+    opacity: 0.8;
+  }
+
+  .logo-img {
+    display: block;
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+    flex: 1;
+    justify-content: center;
+  }
+
+  .nav-link {
+    color: var(--color-ink);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.5;
+    text-decoration: none;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--rounded-md);
+    transition: background-color 0.15s ease;
+  }
+
+  .nav-link:hover {
+    text-decoration: none;
+    background-color: var(--color-surface-soft);
+  }
+
+  .nav-link.active {
+    background-color: var(--color-surface-card);
+    color: var(--color-ink);
+  }
+
+  .nav-cta {
+    background-color: var(--color-primary);
+    color: var(--color-on-primary);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.5;
+    padding: 8px 16px;
+    height: 40px;
+    border-radius: var(--rounded-md);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    transition: background-color 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .nav-cta:hover {
+    text-decoration: none;
+    background-color: var(--color-primary-pressed);
+  }
+
+  @media (max-width: 768px) {
+    .nav-links {
+      gap: var(--spacing-sm);
+    }
+    .nav-link {
+      font-size: 14px;
+      padding: var(--spacing-xs);
+    }
+    .nav-container {
+      padding: 0 var(--spacing-lg);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .nav-links {
+      display: none;
+    }
+    .nav-container {
+      padding: 0 var(--spacing-md);
+    }
+  }
+</style>
