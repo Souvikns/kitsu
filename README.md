@@ -1,6 +1,6 @@
 <h1 align="center">Kitsu</h1>
 <p align="center">
-<img src="./assets/kitsu.svg" height=200 width=200 align=center />
+<img src="https://github.com/Souvikns/kitsu/blob/main/assets/kitsu.svg" height=200 width=200 align=center />
 </p>
 <p align="center">
 Kitsu is your open-source AI PR reviewer for GitHub. It reads a pull request patch, posts inline review comments for actionable findings, and falls back to a general PR comment when a finding cannot be placed safely in the diff.
